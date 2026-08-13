@@ -81,85 +81,108 @@ with app.app_context():
 # ==========================================
 # Layout Template
 # ==========================================
+
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Credit Bank System</title>
+    <title>ธนาคารหน่วยกิต - มทร.ตะวันออก</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Sarabun', sans-serif; }
     </style>
 </head>
-<body class="bg-gray-50 flex h-screen overflow-hidden">
-    {% if session.get('user_id') %}
-    <aside class="w-64 bg-blue-900 text-white flex flex-col flex-shrink-0 shadow-lg">
-        <div class="p-5 border-b border-blue-800 flex items-center space-x-3">
-            <div class="bg-white text-blue-900 p-2 rounded-lg font-bold">
-                <i class="fa-solid fa-graduation-cap text-xl"></i>
-            </div>
-            <div>
-                <h1 class="font-bold text-sm leading-tight">CREDIT BANK</h1>
-                <p class="text-xs text-blue-200">LIFELONG LEARNING</p>
+<body class="bg-gray-50 flex flex-col min-h-screen text-gray-800">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center gap-2">
+                        <div class="w-9 h-9 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-sm">
+                            CB
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-gray-900 text-base leading-tight">Credit Bank</span>
+                            <span class="text-[10px] text-gray-500 font-medium">มทร.ตะวันออก</span>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="hidden md:flex items-center space-x-1 lg:space-x-4 text-sm font-medium">
+                    <a href="/" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">หน้าแรก</a>
+                    <a href="/courses" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">รายวิชาเปิดรับเทียบโอน</a>
+                    <a href="/submit_credit" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">ยื่นคำขอเทียบโอน</a>
+                    <a href="/history" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">ประวัติคำขอ</a>
+                </div>
+
+                <div class="flex items-center md:hidden">
+                    <button id="mobile-menu-btn" type="button" class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path id="menu-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <nav class="flex-1 p-4 space-y-1 text-sm">
-            {% if session.get('role') == 'admin' %}
-                <div class="px-4 py-2 text-xs font-semibold text-blue-300 uppercase tracking-wider">แผงควบคุมเจ้าหน้าที่</div>
-                <a href="/dashboard" class="flex items-center space-x-3 px-4 py-3 text-blue-100 hover:bg-blue-800 rounded-lg transition"><i class="fa-solid fa-gauge w-5"></i><span>แผงควบคุม</span></a>
-                <a href="/available_courses" class="flex items-center space-x-3 px-4 py-3 text-blue-100 hover:bg-blue-800 rounded-lg transition"><i class="fa-solid fa-book-open w-5"></i><span>หลักสูตรที่เปิดรับ</span></a>
-            {% else %}
-                <a href="/dashboard" class="flex items-center space-x-3 px-4 py-3 text-blue-100 hover:bg-blue-800 rounded-lg transition"><i class="fa-solid fa-house w-5"></i><span>หน้าแรก</span></a>
-                <a href="/profile" class="flex items-center space-x-3 px-4 py-3 text-blue-100 hover:bg-blue-800 rounded-lg transition"><i class="fa-solid fa-id-card w-5"></i><span>โปรไฟล์</span></a>
-                <a href="/credits" class="flex items-center space-x-3 px-4 py-3 text-blue-100 hover:bg-blue-800 rounded-lg transition"><i class="fa-solid fa-wallet w-5"></i><span>หน่วยกิตของฉัน</span></a>
-                <a href="/available_courses" class="flex items-center space-x-3 px-4 py-3 text-blue-100 hover:bg-blue-800 rounded-lg transition"><i class="fa-solid fa-book-open w-5"></i><span>หลักสูตรที่เปิดรับ</span></a>
-                <a href="/submit_credit" class="flex items-center space-x-3 px-4 py-3 text-blue-100 hover:bg-blue-800 rounded-lg transition"><i class="fa-solid fa-paper-plane w-5"></i><span>ส่งคำขอเทียบโอน</span></a>
-                <a href="/history" class="flex items-center space-x-3 px-4 py-3 text-blue-100 hover:bg-blue-800 rounded-lg transition"><i class="fa-solid fa-clock-rotate-left w-5"></i><span>ประวัติคำร้อง</span></a>
-            {% endif %}
-        </nav>
-
-        <div class="p-4 border-t border-blue-800">
-            <a href="/logout" class="flex items-center space-x-3 px-4 py-2.5 text-red-200 hover:bg-red-900/50 rounded-lg text-sm transition">
-                <i class="fa-solid fa-right-from-bracket w-5"></i><span>ออกจากระบบ</span>
-            </a>
+        <div id="mobile-menu" class="hidden md:hidden border-t border-gray-100 bg-white px-4 pt-2 pb-4 space-y-1 shadow-lg">
+            <a href="/" class="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600">หน้าแรก</a>
+            <a href="/courses" class="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600">รายวิชาเปิดรับเทียบโอน</a>
+            <a href="/submit_credit" class="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600">ยื่นคำขอเทียบโอน</a>
+            <a href="/history" class="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600">ประวัติคำขอ</a>
         </div>
-    </aside>
-    {% endif %}
+    </nav>
 
-    <div class="flex-1 flex flex-col h-screen overflow-y-auto">
-        {% if not session.get('user_id') %}
-        <header class="bg-white border-b px-8 py-4 flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <div class="bg-blue-900 text-white p-2 rounded-lg font-bold"><i class="fa-solid fa-graduation-cap"></i></div>
-                <span class="font-bold text-lg text-blue-900">CREDIT BANK LIFELONG LEARNING</span>
+    <!-- ส่วนที่จะเอาเนื้อหาของแต่ละหน้ามาแสดง -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {content}
+    </main>
+
+    <!-- Responsive Footer -->
+    <footer class="bg-slate-900 text-slate-300 mt-auto border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6 border-b border-slate-800">
+                <div class="md:col-span-2 space-y-2">
+                    <span class="inline-block text-[11px] font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        Information System Project
+                    </span>
+                    <h4 class="text-sm sm:text-base font-bold text-white leading-relaxed">
+                        โปรเจคพัฒนาระบบสารสนเทศสำหรับเก็บสะสมหน่วยกิต และการเทียบโอน เพื่อการเรียนรู้ตลอดชีวิต (ธนาคารหน่วยกิต)
+                    </h4>
+                    <p class="text-xs text-slate-400">
+                        ของนักศึกษา มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก สาขาระบบสารสนเทศ
+                    </p>
+                </div>
+                <div class="space-y-2">
+                    <h5 class="text-xs font-semibold text-slate-200 uppercase tracking-wider">ลิงก์ด่วน</h5>
+                    <ul class="grid grid-cols-2 gap-2 text-xs md:block md:space-y-2">
+                        <li><a href="/" class="hover:text-blue-400 transition-colors">หน้าแรก</a></li>
+                        <li><a href="/courses" class="hover:text-blue-400 transition-colors">รายวิชาที่เปิดเทียบโอน</a></li>
+                        <li><a href="/submit_credit" class="hover:text-blue-400 transition-colors">ยื่นคำขอเทียบโอน</a></li>
+                        <li><a href="/history" class="hover:text-blue-400 transition-colors">ประวัติคำขอ</a></li>
+                    </ul>
+                </div>
             </div>
-            <div class="space-x-3">
-                <a href="/login" class="px-5 py-2 text-blue-900 border border-blue-900 font-medium rounded-lg hover:bg-blue-50">เข้าสู่ระบบ</a>
-                <a href="/register" class="px-5 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">สมัครสมาชิก</a>
+            <div class="pt-4 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-2 text-center sm:text-left">
+                <p>© 2026 Credit Bank System. Rajamangala University of Technology Tawan-ok.</p>
+                <p>สาขาวิชาระบบสารสนเทศ คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ</p>
             </div>
-        </header>
-        {% endif %}
+        </div>
+    </footer>
 
-        <main class="p-8 flex-1">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
-                {% for category, message in messages %}
-                  <div class="mb-4 p-4 rounded-lg text-sm shadow-sm {% if category == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
-                    {{ message }}
-                  </div>
-                {% endfor %}
-              {% endif %}
-            {% endwith %}
+    <script>
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
 
-            {{ content | safe }}
-        </main>
-    </div>
+        menuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+    </script>
 </body>
 </html>
 """
