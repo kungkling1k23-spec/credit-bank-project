@@ -95,9 +95,7 @@ LAYOUT_TEMPLATE = """
     <title>ธนาคารหน่วยกิต - มทร.ตะวันออก</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Sarabun', sans-serif; }
-    </style>
+    <style>body { font-family: 'Sarabun', sans-serif; }</style>
 </head>
 <body class="bg-gray-50 flex flex-col min-h-screen text-gray-800">
 
@@ -107,9 +105,7 @@ LAYOUT_TEMPLATE = """
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <a href="/" class="flex items-center gap-2">
-                        <div class="w-9 h-9 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-sm">
-                            CB
-                        </div>
+                        <div class="w-9 h-9 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-sm">CB</div>
                         <div class="flex flex-col">
                             <span class="font-bold text-gray-900 text-base leading-tight">Credit Bank</span>
                             <span class="text-[10px] text-gray-500 font-medium">มทร.ตะวันออก</span>
@@ -117,37 +113,39 @@ LAYOUT_TEMPLATE = """
                     </a>
                 </div>
 
+                <!-- ลิงก์เมนู Desktop -->
                 <div class="hidden md:flex items-center space-x-1 lg:space-x-4 text-sm font-medium">
-                    <a href="/" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">หน้าแรก</a>
-                    <a href="/courses" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">รายวิชาเปิดรับเทียบโอน</a>
-                    <a href="/submit_credit" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">ยื่นคำขอเทียบโอน</a>
-                    <a href="/history" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">ประวัติคำขอ</a>
+                    <a href="/" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50">หน้าแรก</a>
+                    <a href="/available_courses" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50">รายวิชาเปิดรับเทียบโอน</a>
+                    <a href="/submit_credit" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50">ยื่นคำขอเทียบโอน</a>
+                    <a href="/history" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50">ประวัติคำขอ</a>
                 </div>
 
                 <div class="flex items-center md:hidden">
-                    <button id="mobile-menu-btn" type="button" class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none">
+                    <button id="mobile-menu-btn" type="button" class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100">
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path id="menu-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
                     </button>
                 </div>
             </div>
         </div>
 
+        <!-- ลิงก์เมนู Mobile -->
         <div id="mobile-menu" class="hidden md:hidden border-t border-gray-100 bg-white px-4 pt-2 pb-4 space-y-1 shadow-lg">
-            <a href="/" class="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600">หน้าแรก</a>
-            <a href="/courses" class="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600">รายวิชาเปิดรับเทียบโอน</a>
-            <a href="/submit_credit" class="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600">ยื่นคำขอเทียบโอน</a>
-            <a href="/history" class="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600">ประวัติคำขอ</a>
+            <a href="/" class="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">หน้าแรก</a>
+            <a href="/available_courses" class="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">รายวิชาเปิดรับเทียบโอน</a>
+            <a href="/submit_credit" class="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">ยื่นคำขอเทียบโอน</a>
+            <a href="/history" class="block px-3 py-2.5 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">ประวัติคำขอ</a>
         </div>
     </nav>
 
-    <!-- ส่วนที่จะเอาเนื้อหาของแต่ละหน้ามาแสดง -->
+    <!-- ตรงนี้สำคัญมาก: ต้องมี {content} -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {content}
     </main>
 
-    <!-- Responsive Footer -->
+    <!-- Footer -->
     <footer class="bg-slate-900 text-slate-300 mt-auto border-t border-slate-800">
         <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6 border-b border-slate-800">
@@ -165,10 +163,10 @@ LAYOUT_TEMPLATE = """
                 <div class="space-y-2">
                     <h5 class="text-xs font-semibold text-slate-200 uppercase tracking-wider">ลิงก์ด่วน</h5>
                     <ul class="grid grid-cols-2 gap-2 text-xs md:block md:space-y-2">
-                        <li><a href="/" class="hover:text-blue-400 transition-colors">หน้าแรก</a></li>
-                        <li><a href="/courses" class="hover:text-blue-400 transition-colors">รายวิชาที่เปิดเทียบโอน</a></li>
-                        <li><a href="/submit_credit" class="hover:text-blue-400 transition-colors">ยื่นคำขอเทียบโอน</a></li>
-                        <li><a href="/history" class="hover:text-blue-400 transition-colors">ประวัติคำขอ</a></li>
+                        <li><a href="/" class="hover:text-blue-400">หน้าแรก</a></li>
+                        <li><a href="/available_courses" class="hover:text-blue-400">รายวิชาที่เปิดเทียบโอน</a></li>
+                        <li><a href="/submit_credit" class="hover:text-blue-400">ยื่นคำขอเทียบโอน</a></li>
+                        <li><a href="/history" class="hover:text-blue-400">ประวัติคำขอ</a></li>
                     </ul>
                 </div>
             </div>
@@ -182,10 +180,7 @@ LAYOUT_TEMPLATE = """
     <script>
         const menuBtn = document.getElementById('mobile-menu-btn');
         const mobileMenu = document.getElementById('mobile-menu');
-
-        menuBtn.addEventListener('click', () => {
-            mobileMenu.classList.toggle('hidden');
-        });
+        menuBtn.addEventListener('click', () => { mobileMenu.classList.toggle('hidden'); });
     </script>
 </body>
 </html>
