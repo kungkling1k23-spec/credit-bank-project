@@ -8,7 +8,11 @@ from sqlalchemy import text
 
 app = Flask(__name__)
 app.secret_key = 'credit_bank_secret_key_2026'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///credit_bank.db'
+db_url = os.environ.get('DATABASE_URL')
+if db_url and db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///credit_bank.db'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # จำกัดขนาดไฟล์อัปโหลดไม่เกิน 16MB
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
