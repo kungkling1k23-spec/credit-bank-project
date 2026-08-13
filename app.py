@@ -1,6 +1,5 @@
 import os
 import uuid
-import numpy as np
 from datetime import datetime
 from collections import defaultdict
 from flask import Flask, render_template_string, request, redirect, url_for, session, flash
@@ -8,13 +7,6 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy import text
-
-# ป้องกัน OpenCV Crash บน Linux Cloud Server
-try:
-    import cv2
-    HAS_OPENCV = True
-except Exception:
-    HAS_OPENCV = False
 
 app = Flask(__name__)
 app.secret_key = 'credit_bank_secret_key_2026'
@@ -24,7 +16,7 @@ if db_url and db_url.startswith("postgres://"):
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///credit_bank.db'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # ไม่เกิน 16MB
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db = SQLAlchemy(app)
@@ -130,23 +122,6 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     if province: parts.append(f"จ.{province.strip()}")
     if postal_code: parts.append(f"{postal_code.strip()}")
     return " ".join(parts)
-
-def is_valid_id_card(image_bytes):
-    if not HAS_OPENCV:
-        return True, "ผ่านการตรวจสอบ (โหมดคลาวด์)"
-    try:
-        np_arr = np.frombuffer(image_bytes, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        if img is None: return False, "ไฟล์ที่อัปโหลดไม่ใช่รูปภาพที่ถูกต้อง"
-        height, width, _ = img.shape
-        if width < 250 or height < 150: return False, "ความละเอียดของรูปภาพต่ำเกินไป กรุณาถ่ายรูปบัตรประชาชนให้ชัดเจน"
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
-        if len(faces) == 0: return False, "ระบบตรวจไม่พบรูปใบหน้าบนบัตรประชาชน"
-        return True, "ผ่านการตรวจสอบ"
-    except Exception:
-        return True, "ผ่านการตรวจสอบ (สำรอง)"
 
 # ==========================================
 # Layout Template
@@ -812,16 +787,9 @@ def register():
                 flash('กรุณาอัปโหลดรูปถ่ายบัตรประชาชนเพื่อยืนยันตัวตน', 'error')
                 return redirect(url_for('register', step='2'))
 
-            image_bytes = file.read()
-            is_valid, msg = is_valid_id_card(image_bytes)
-            if not is_valid:
-                flash(f'การตรวจบัตรประชาชนไม่ผ่าน: {msg}', 'error')
-                return redirect(url_for('register', step='2'))
-
             filename = secure_filename(f"verify_{username}_{file.filename}")
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            with open(filepath, 'wb') as f:
-                f.write(image_bytes)
+            file.save(filepath)
 
             new_member_id = generate_member_id()
 
