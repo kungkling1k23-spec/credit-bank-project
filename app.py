@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_secret_key_2026'
+app.secret_key = 'credit_bank_secret_key_2026_fixed'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -17,7 +17,7 @@ if db_url and db_url.startswith("postgres://"):
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///credit_bank.db'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # ไม่เกิน 16MB
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db = SQLAlchemy(app)
@@ -127,10 +127,6 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     if postal_code: parts.append(f"{postal_code.strip()}")
     return " ".join(parts)
 
-def is_valid_id_card(image_bytes):
-    # ข้ามการสแกนผ่าน OpenCV บน Server เพื่อป้องกัน Error
-    return True, "ผ่านการตรวจสอบ"
-
 # ==========================================
 # Layout Template
 # ==========================================
@@ -209,7 +205,7 @@ LAYOUT_TEMPLATE = """
                     <a href="/history" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">ประวัติคำขอ</a>
                 {% endif %}
                 <a href="/profile" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">โปรไฟล์</a>
-                <a href="/logout" class="block px-3 py-2 rounded-lg text-base font-medium text-red-600 hover:bg-red-50">ออกจากระบบ</a>
+                <a href="/logout" class="block px-3 py-2 rounded-lg text-red-600 hover:bg-red-50">ออกจากระบบ</a>
             {% else %}
                 <a href="/login" class="block px-3 py-2 rounded-lg text-base font-medium text-blue-600 hover:bg-blue-50">เข้าสู่ระบบ</a>
                 <a href="/register" class="block px-3 py-2 rounded-lg text-base font-medium text-blue-600 hover:bg-blue-50">สมัครสมาชิก</a>
@@ -496,126 +492,128 @@ def login():
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
 
+# ==========================================
+# ระบบสมัครสมาชิก (รวมเป็นขั้นตอนเดียวเพื่อป้องกัน Session หลุดบน Cloud)
+# ==========================================
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    step = request.args.get('step', '1')
     if request.method == 'POST':
-        current_step = request.form.get('step')
-        if current_step == '1':
-            id_card_input = request.form.get('id_card', '').strip()
-            if User.query.filter_by(id_card=id_card_input).first():
-                flash('เลขบัตรประชาชนนี้เคยลงทะเบียนในระบบแล้ว', 'error')
-                return redirect(url_for('register', step='1'))
+        prefix = request.form.get('prefix', 'นาย')
+        fullname = request.form.get('fullname', '').strip()
+        id_card = request.form.get('id_card', '').strip()
+        dob = request.form.get('dob', '')
+        phone = request.form.get('phone', '').strip()
+        email = request.form.get('email', '').strip()
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
 
-            house_no = request.form.get('house_no', '')
-            moo = request.form.get('moo', '')
-            soi = request.form.get('soi', '')
-            subdistrict = request.form.get('subdistrict', '')
-            district = request.form.get('district', '')
-            province = request.form.get('province', '')
-            postal_code = request.form.get('postal_code', '')
+        house_no = request.form.get('house_no', '')
+        moo = request.form.get('moo', '')
+        soi = request.form.get('soi', '')
+        subdistrict = request.form.get('subdistrict', '')
+        district = request.form.get('district', '')
+        province = request.form.get('province', '')
+        postal_code = request.form.get('postal_code', '')
 
-            full_addr = format_address(house_no, moo, soi, subdistrict, district, province, postal_code)
+        full_addr = format_address(house_no, moo, soi, subdistrict, district, province, postal_code)
 
-            session['reg_prefix'] = request.form.get('prefix')
-            session['reg_fullname'] = request.form.get('fullname')
-            session['reg_id_card'] = id_card_input
-            session['reg_dob'] = request.form.get('dob')
-            session['reg_phone'] = request.form.get('phone')
-            session['reg_email'] = request.form.get('email')
-            session['reg_address'] = full_addr
+        if User.query.filter_by(id_card=id_card).first():
+            flash('เลขบัตรประชาชนนี้เคยลงทะเบียนในระบบแล้ว', 'error')
+            return redirect(url_for('register'))
 
-            return redirect(url_for('register', step='2'))
+        if User.query.filter_by(username=username).first():
+            flash('Username นี้ถูกใช้งานแล้ว กรุณาเลือกชื่อผู้ใช้ใหม่', 'error')
+            return redirect(url_for('register'))
 
-        elif current_step == '2':
-            username = request.form.get('username')
-            if User.query.filter_by(username=username).first():
-                flash('Username นี้ถูกใช้งานแล้ว กรุณาเลือกชื่อผู้ใช้ใหม่', 'error')
-                return redirect(url_for('register', step='2'))
+        filename = "default_id_card.png"
+        file = request.files.get('id_card_img')
+        if file and file.filename != '':
+            try:
+                filename = secure_filename(f"verify_{username}_{file.filename}")
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+            except Exception:
+                filename = "default_id_card.png"
 
-            filename = "default_id_card.png"
-            file = request.files.get('id_card_img')
-            if file and file.filename != '':
-                try:
-                    filename = secure_filename(f"verify_{username}_{file.filename}")
-                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    file.save(filepath)
-                except Exception:
-                    filename = "default_id_card.png"
+        new_member_id = generate_member_id()
 
-            new_member_id = generate_member_id()
+        new_user = User(
+            member_id=new_member_id,
+            prefix=prefix,
+            fullname=fullname,
+            id_card=id_card,
+            dob=dob,
+            phone=phone,
+            email=email,
+            address=full_addr,
+            id_card_img=filename,
+            username=username,
+            password=generate_password_hash(password)
+        )
+        db.session.add(new_user)
+        db.session.commit()
 
-            new_user = User(
-                member_id=new_member_id,
-                prefix=session.get('reg_prefix'),
-                fullname=session.get('reg_fullname'),
-                id_card=session.get('reg_id_card'),
-                dob=session.get('reg_dob'),
-                phone=session.get('reg_phone'),
-                email=session.get('reg_email'),
-                address=session.get('reg_address'),
-                id_card_img=filename,
-                username=username,
-                password=generate_password_hash(request.form.get('password'))
-            )
-            db.session.add(new_user)
-            db.session.commit()
+        flash(f'สมัครสมาชิกเรียบร้อยแล้ว! รหัสสมาชิกของคุณคือ: {new_member_id}', 'success')
+        return redirect(url_for('login'))
 
-            session['created_member_id'] = new_member_id
-            return redirect(url_for('register', step='3'))
-
-    content = f"""
-    <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
+    content = """
+    <div class="max-w-3xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
         <h2 class="text-2xl font-bold text-center text-blue-900 mb-6">สมัครสมาชิกนักศึกษา</h2>
-        <form method="POST" class="space-y-4">
-            <input type="hidden" name="step" value="1">
-            <div class="grid grid-cols-3 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">คำนำหน้า</label>
-                    <select name="prefix" class="w-full border rounded-lg p-2.5 text-sm">
-                        <option value="นาย">นาย</option>
-                        <option value="นาง">นาง</option>
-                        <option value="นางสาว">นางสาว</option>
-                    </select>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อ-นามสกุล</label>
-                    <input type="text" name="fullname" required class="w-full border rounded-lg p-2.5 text-sm">
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">เลขบัตรประชาชน (13 หลัก)</label>
-                    <input type="text" name="id_card" maxlength="13" required class="w-full border rounded-lg p-2.5 text-sm">
-                </div>
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">วัน/เดือน/ปีเกิด</label><input type="date" name="dob" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">เบอร์โทรศัพท์</label><input type="tel" name="phone" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">อีเมล</label><input type="email" name="email" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-            </div>
-            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700">ถัดไป: ยืนยันตัวตน</button>
-        </form>
-    </div>
-    """ if step == '1' else f"""
-    <div class="max-w-xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
-        <h2 class="text-2xl font-bold text-center text-blue-900 mb-6">ยืนยันตัวตน & ตั้งรหัสผ่าน</h2>
         <form method="POST" enctype="multipart/form-data" class="space-y-4">
-            <input type="hidden" name="step" value="2">
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">อัปโหลดรูปถ่ายบัตรประชาชนจริง *</label>
-                <input type="file" name="id_card_img" accept="image/*" required class="w-full border rounded-lg p-2 text-sm bg-gray-50">
+            
+            <div class="border-b pb-4">
+                <h3 class="text-sm font-bold text-gray-700 mb-3"><i class="fa-solid fa-user text-blue-600 mr-2"></i>ข้อมูลส่วนตัว</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">คำนำหน้า *</label>
+                        <select name="prefix" class="w-full border rounded-lg p-2.5 text-sm">
+                            <option value="นาย">นาย</option>
+                            <option value="นาง">นาง</option>
+                            <option value="นางสาว">นางสาว</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อ-นามสกุล *</label>
+                        <input type="text" name="fullname" required placeholder="ชื่อ นามสกุล" class="w-full border rounded-lg p-2.5 text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">เลขบัตรประชาชน (13 หลัก) *</label>
+                        <input type="text" name="id_card" maxlength="13" required placeholder="เลขบัตรประชาชน" class="w-full border rounded-lg p-2.5 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">วัน/เดือน/ปีเกิด *</label>
+                        <input type="date" name="dob" required class="w-full border rounded-lg p-2.5 text-sm">
+                    </div>
+                </div>
             </div>
-            <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อผู้ใช้งาน (Username)</label><input type="text" name="username" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-            <div><label class="block text-xs font-semibold text-gray-600 mb-1">รหัสผ่าน (Password)</label><input type="password" name="password" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700">ยืนยันการสมัคร</button>
+
+            <div class="border-b pb-4">
+                <h3 class="text-sm font-bold text-gray-700 mb-3"><i class="fa-solid fa-address-book text-blue-600 mr-2"></i>ข้อมูลการติดต่อ</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">เบอร์โทรศัพท์ *</label><input type="tel" name="phone" required placeholder="08X-XXX-XXXX" class="w-full border rounded-lg p-2.5 text-sm"></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">อีเมล *</label><input type="email" name="email" required placeholder="student@rmutto.ac.th" class="w-full border rounded-lg p-2.5 text-sm"></div>
+                </div>
+            </div>
+
+            <div class="border-b pb-4">
+                <h3 class="text-sm font-bold text-gray-700 mb-3"><i class="fa-solid fa-lock text-blue-600 mr-2"></i>ยืนยันตัวตน & รหัสผ่าน</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อผู้ใช้งาน (Username) *</label><input type="text" name="username" required placeholder="ตั้งชื่อผู้ใช้งาน" class="w-full border rounded-lg p-2.5 text-sm"></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">รหัสผ่าน (Password) *</label><input type="password" name="password" required placeholder="กำหนดรหัสผ่าน" class="w-full border rounded-lg p-2.5 text-sm"></div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">อัปโหลดรูปถ่ายบัตรประชาชน *</label>
+                    <input type="file" name="id_card_img" accept="image/*" class="w-full border rounded-lg p-2 text-sm bg-gray-50">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition shadow-sm text-base">
+                <i class="fa-solid fa-user-plus mr-1"></i> ยืนยันการสมัครสมาชิก
+            </button>
         </form>
-    </div>
-    """ if step == '2' else f"""
-    <div class="max-w-md mx-auto bg-white p-8 rounded-2xl border shadow-sm text-center">
-        <h2 class="text-2xl font-bold text-gray-800 mb-1">สมัครสมาชิกเสร็จสิ้น!</h2>
-        <p class="text-sm font-semibold text-blue-600 mb-4">รหัสสมาชิกของคุณคือ: {session.get('created_member_id', '-')}</p>
-        <a href="/login" class="block w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700">เข้าสู่ระบบทันที</a>
     </div>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
