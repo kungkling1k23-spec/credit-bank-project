@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_secret_key_2026_final'
+app.secret_key = 'credit_bank_secret_key_2026_cloud_fix'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -18,7 +18,11 @@ if db_url and db_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///credit_bank.db'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+try:
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+except Exception:
+    pass
 
 db = SQLAlchemy(app)
 
@@ -107,14 +111,14 @@ with app.app_context():
 # Helper Functions
 # ==========================================
 def generate_member_id():
-    last_user = User.query.filter(User.member_id.like('MB%')).order_by(User.id.desc()).first()
-    if not last_user or not last_user.member_id:
-        return "MB00001"
     try:
+        last_user = User.query.filter(User.member_id.like('MB%')).order_by(User.id.desc()).first()
+        if not last_user or not last_user.member_id:
+            return "MB00001"
         last_num = int(last_user.member_id.replace("MB", ""))
         return f"MB{last_num + 1:05d}"
-    except ValueError:
-        return "MB00001"
+    except Exception:
+        return f"MB{uuid.uuid4().hex[:5].upper()}"
 
 def format_address(house_no, moo, soi, subdistrict, district, province, postal_code):
     parts = []
@@ -140,7 +144,6 @@ LAYOUT_TEMPLATE = """
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>body { font-family: 'Sarabun', sans-serif; }</style>
 </head>
 <body class="bg-gray-50 flex flex-col min-h-screen text-gray-800">
@@ -278,16 +281,24 @@ def home():
         """
         return render_template_string(LAYOUT_TEMPLATE, content=content)
 
-    user = User.query.get(session['user_id'])
+    try:
+        user = User.query.get(session['user_id'])
+    except Exception:
+        session.clear()
+        return redirect(url_for('login'))
+
     if not user:
         session.clear()
         return redirect(url_for('login'))
     
     if user.role in ['admin', 'superadmin']:
-        pending_credits = CreditRequest.query.filter_by(status='Pending').count()
-        pending_edits = ProfileEditRequest.query.filter_by(status='Pending').count()
-        total_members = User.query.filter_by(role='student').count()
-        total_admins = User.query.filter(User.role.in_(['admin', 'superadmin'])).count()
+        try:
+            pending_credits = CreditRequest.query.filter_by(status='Pending').count()
+            pending_edits = ProfileEditRequest.query.filter_by(status='Pending').count()
+            total_members = User.query.filter_by(role='student').count()
+            total_admins = User.query.filter(User.role.in_(['admin', 'superadmin'])).count()
+        except Exception:
+            pending_credits, pending_edits, total_members, total_admins = 0, 0, 0, 1
 
         content = f"""
         <div class="mb-6">
@@ -334,7 +345,11 @@ def home():
         """
         return render_template_string(LAYOUT_TEMPLATE, content=content)
 
-    user_requests = CreditRequest.query.filter_by(user_id=user.id).all()
+    try:
+        user_requests = CreditRequest.query.filter_by(user_id=user.id).all()
+    except Exception:
+        user_requests = []
+
     approved_reqs = [r for r in user_requests if r.status == 'Approved']
     approved_credits = sum(r.credits for r in approved_reqs)
     pending_credits = sum(r.credits for r in user_requests if r.status == 'Pending')
@@ -399,17 +414,20 @@ def home():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        login_input = request.form['username'].strip()
-        password_input = request.form['password'].strip()
+        login_input = request.form.get('username', '').strip()
+        password_input = request.form.get('password', '').strip()
 
-        user = User.query.filter((User.username == login_input) | (User.id_card == login_input)).first()
-        if user and check_password_hash(user.password, password_input):
-            session['user_id'] = user.id
-            session['fullname'] = user.fullname
-            session['role'] = user.role
-            session['member_id'] = user.member_id
-            return redirect(url_for('home'))
-            
+        try:
+            user = User.query.filter((User.username == login_input) | (User.id_card == login_input)).first()
+            if user and check_password_hash(user.password, password_input):
+                session['user_id'] = user.id
+                session['fullname'] = user.fullname
+                session['role'] = user.role
+                session['member_id'] = user.member_id
+                return redirect(url_for('home'))
+        except Exception:
+            pass
+
         flash('ชื่อผู้ใช้งาน/เลขบัตรประชาชน หรือรหัสผ่านไม่ถูกต้อง', 'error')
 
     content = """
@@ -445,16 +463,6 @@ def register():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
 
-        house_no = request.form.get('house_no', '')
-        moo = request.form.get('moo', '')
-        soi = request.form.get('soi', '')
-        subdistrict = request.form.get('subdistrict', '')
-        district = request.form.get('district', '')
-        province = request.form.get('province', '')
-        postal_code = request.form.get('postal_code', '')
-
-        full_addr = format_address(house_no, moo, soi, subdistrict, district, province, postal_code)
-
         if User.query.filter_by(id_card=id_card).first():
             flash('เลขบัตรประชาชนนี้เคยลงทะเบียนในระบบแล้ว', 'error')
             return redirect(url_for('register'))
@@ -462,16 +470,6 @@ def register():
         if User.query.filter_by(username=username).first():
             flash('Username นี้ถูกใช้งานแล้ว กรุณาเลือกชื่อผู้ใช้ใหม่', 'error')
             return redirect(url_for('register'))
-
-        filename = "default_id_card.png"
-        file = request.files.get('id_card_img')
-        if file and file.filename != '':
-            try:
-                filename = secure_filename(f"verify_{username}_{file.filename}")
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)
-            except Exception:
-                filename = "default_id_card.png"
 
         new_member_id = generate_member_id()
 
@@ -483,8 +481,7 @@ def register():
             dob=dob,
             phone=phone,
             email=email,
-            address=full_addr,
-            id_card_img=filename,
+            id_card_img="default_id_card.png",
             username=username,
             password=generate_password_hash(password)
         )
@@ -495,60 +492,47 @@ def register():
         return redirect(url_for('login'))
 
     content = """
-    <div class="max-w-3xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
         <h2 class="text-2xl font-bold text-center text-blue-900 mb-6">สมัครสมาชิกนักศึกษา</h2>
-        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+        <form method="POST" class="space-y-4">
             
-            <div class="border-b pb-4">
-                <h3 class="text-sm font-bold text-gray-700 mb-3"><i class="fa-solid fa-user text-blue-600 mr-2"></i>ข้อมูลส่วนตัว</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">คำนำหน้า *</label>
-                        <select name="prefix" class="w-full border rounded-lg p-2.5 text-sm">
-                            <option value="นาย">นาย</option>
-                            <option value="นาง">นาง</option>
-                            <option value="นางสาว">นางสาว</option>
-                        </select>
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อ-นามสกุล *</label>
-                        <input type="text" name="fullname" required placeholder="ชื่อ นามสกุล" class="w-full border rounded-lg p-2.5 text-sm">
-                    </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">คำนำหน้า *</label>
+                    <select name="prefix" class="w-full border rounded-lg p-2.5 text-sm">
+                        <option value="นาย">นาย</option>
+                        <option value="นาง">นาง</option>
+                        <option value="นางสาว">นางสาว</option>
+                    </select>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">เลขบัตรประชาชน (13 หลัก) *</label>
-                        <input type="text" name="id_card" maxlength="13" required placeholder="เลขบัตรประชาชน" class="w-full border rounded-lg p-2.5 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">วัน/เดือน/ปีเกิด *</label>
-                        <input type="date" name="dob" required class="w-full border rounded-lg p-2.5 text-sm">
-                    </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อ-นามสกุล *</label>
+                    <input type="text" name="fullname" required placeholder="ชื่อ นามสกุล" class="w-full border rounded-lg p-2.5 text-sm">
                 </div>
             </div>
 
-            <div class="border-b pb-4">
-                <h3 class="text-sm font-bold text-gray-700 mb-3"><i class="fa-solid fa-address-book text-blue-600 mr-2"></i>ข้อมูลการติดต่อ</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">เบอร์โทรศัพท์ *</label><input type="tel" name="phone" required placeholder="08X-XXX-XXXX" class="w-full border rounded-lg p-2.5 text-sm"></div>
-                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">อีเมล *</label><input type="email" name="email" required placeholder="student@rmutto.ac.th" class="w-full border rounded-lg p-2.5 text-sm"></div>
-                </div>
-            </div>
-
-            <div class="border-b pb-4">
-                <h3 class="text-sm font-bold text-gray-700 mb-3"><i class="fa-solid fa-lock text-blue-600 mr-2"></i>ยืนยันตัวตน & รหัสผ่าน</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อผู้ใช้งาน (Username) *</label><input type="text" name="username" required placeholder="ตั้งชื่อผู้ใช้งาน" class="w-full border rounded-lg p-2.5 text-sm"></div>
-                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">รหัสผ่าน (Password) *</label><input type="password" name="password" required placeholder="กำหนดรหัสผ่าน" class="w-full border rounded-lg p-2.5 text-sm"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">เลขบัตรประชาชน (13 หลัก) *</label>
+                    <input type="text" name="id_card" maxlength="13" required placeholder="เลขบัตรประชาชน" class="w-full border rounded-lg p-2.5 text-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">อัปโหลดรูปถ่ายบัตรประชาชน *</label>
-                    <input type="file" name="id_card_img" accept="image/*" class="w-full border rounded-lg p-2 text-sm bg-gray-50">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">วัน/เดือน/ปีเกิด *</label>
+                    <input type="date" name="dob" required class="w-full border rounded-lg p-2.5 text-sm">
                 </div>
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition shadow-sm text-base">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><label class="block text-xs font-semibold text-gray-600 mb-1">เบอร์โทรศัพท์ *</label><input type="tel" name="phone" required placeholder="08X-XXX-XXXX" class="w-full border rounded-lg p-2.5 text-sm"></div>
+                <div><label class="block text-xs font-semibold text-gray-600 mb-1">อีเมล *</label><input type="email" name="email" required placeholder="student@rmutto.ac.th" class="w-full border rounded-lg p-2.5 text-sm"></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อผู้ใช้งาน (Username) *</label><input type="text" name="username" required placeholder="ตั้งชื่อผู้ใช้งาน" class="w-full border rounded-lg p-2.5 text-sm"></div>
+                <div><label class="block text-xs font-semibold text-gray-600 mb-1">รหัสผ่าน (Password) *</label><input type="password" name="password" required placeholder="กำหนดรหัสผ่าน" class="w-full border rounded-lg p-2.5 text-sm"></div>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition shadow-sm text-base mt-2">
                 <i class="fa-solid fa-user-plus mr-1"></i> ยืนยันการสมัครสมาชิก
             </button>
         </form>
@@ -890,16 +874,6 @@ def request_edit_profile():
 def submit_credit():
     if 'user_id' not in session: return redirect(url_for('login'))
     if request.method == 'POST':
-        file = request.files.get('doc_img')
-        unique_filename = "default_doc.png"
-        if file and file.filename != '':
-            try:
-                ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
-                unique_filename = f"doc_{session['user_id']}_{uuid.uuid4().hex[:8]}.{ext}"
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
-            except Exception:
-                unique_filename = "default_doc.png"
-
         req = CreditRequest(
             user_id=session['user_id'], 
             course_name=request.form.get('course_name', 'วิชาเทียบโอน'), 
@@ -908,7 +882,7 @@ def submit_credit():
             category=request.form.get('category', 'ในระบบ'),
             faculty=request.form.get('faculty', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ'),
             major=request.form.get('major', 'สาขาการจัดการ'),
-            doc_img=unique_filename
+            doc_img="default_doc.png"
         )
         db.session.add(req)
         db.session.commit()
@@ -918,7 +892,7 @@ def submit_credit():
     content = """
     <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
         <h3 class="text-xl font-bold text-gray-800 mb-6">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
-        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+        <form method="POST" class="space-y-4">
             <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อหลักสูตร / รายวิชา</label><input type="text" name="course_name" required class="w-full border rounded-lg p-2.5 text-sm"></div>
             <div><label class="block text-xs font-semibold text-gray-600 mb-1">สถาบัน / แหล่งเรียนรู้</label><input type="text" name="institution" required class="w-full border rounded-lg p-2.5 text-sm"></div>
             <div class="grid grid-cols-2 gap-4">
@@ -931,10 +905,6 @@ def submit_credit():
                         <option value="ตามอัธยาศัย">ตามอัธยาศัย</option>
                     </select>
                 </div>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">แนบเอกสารประกอบ *</label>
-                <input type="file" name="doc_img" accept="image/*,.pdf" required class="w-full border rounded-lg p-2 text-sm bg-gray-50">
             </div>
             <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700">ส่งคำร้องขอเทียบโอน</button>
         </form>
@@ -949,7 +919,6 @@ def history():
     rows = ""
     for r in user_requests:
         badge = '<span class="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">รอการพิจารณา</span>' if r.status == 'Pending' else ('<span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">อนุมัติแล้ว</span>' if r.status == 'Approved' else '<span class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">ไม่อนุมัติ</span>')
-        doc_link = f'<a href="{url_for("static", filename="uploads/" + r.doc_img)}" target="_blank" class="text-blue-600 hover:underline text-xs"><i class="fa-solid fa-file"></i> เอกสาร</a>' if r.doc_img else '-'
 
         rows += f"""
         <tr class="border-b text-sm">
@@ -957,7 +926,6 @@ def history():
             <td class="py-3 px-4 font-medium text-gray-800">{r.course_name}</td>
             <td class="py-3 px-4 text-gray-600">{r.institution}</td>
             <td class="py-3 px-4 font-bold text-blue-900">{r.credits}</td>
-            <td class="py-3 px-4">{doc_link}</td>
             <td class="py-3 px-4 text-xs text-gray-500">{r.approved_by or "-"}</td>
             <td class="py-3 px-4">{badge}</td>
         </tr>
@@ -966,8 +934,8 @@ def history():
     <div class="bg-white p-6 rounded-2xl border shadow-sm overflow-x-auto">
         <h3 class="text-xl font-bold text-gray-800 mb-4">ประวัติคำร้องเทียบโอน</h3>
         <table class="w-full text-left min-w-[700px]">
-            <thead class="bg-gray-50 border-b text-xs text-gray-500 uppercase"><tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">สถาบัน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">เอกสาร</th><th class="py-3 px-4">เจ้าหน้าที่ผู้ตรวจ</th><th class="py-3 px-4">สถานะ</th></tr></thead>
-            <tbody>{rows if rows else '<tr><td colspan="7" class="py-6 text-center text-gray-400">ไม่มีรายการประวัติคำร้อง</td></tr>'}</tbody>
+            <thead class="bg-gray-50 border-b text-xs text-gray-500 uppercase"><tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">สถาบัน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">เจ้าหน้าที่ผู้ตรวจ</th><th class="py-3 px-4">สถานะ</th></tr></thead>
+            <tbody>{rows if rows else '<tr><td colspan="6" class="py-6 text-center text-gray-400">ไม่มีรายการประวัติคำร้อง</td></tr>'}</tbody>
         </table>
     </div>
     """
@@ -1033,7 +1001,7 @@ def admin_requests():
         rows += f"""
         <tr class="border-b text-sm hover:bg-gray-50">
             <td class="py-3 px-4 font-mono font-bold text-blue-900">{r.req_code}</td>
-            <td class="py-3 px-4 font-medium">{r.user.fullname}<br><span class="text-xs text-blue-600">({r.user.member_id})</span></td>
+            <td class="py-3 px-4 font-medium">{r.user.fullname if r.user else '-'}<br><span class="text-xs text-blue-600">({r.user.member_id if r.user else '-'})</span></td>
             <td class="py-3 px-4 text-gray-600">{r.course_name}</td>
             <td class="py-3 px-4 text-gray-500">{r.date_submitted}</td>
             <td class="py-3 px-4">{status_badge}</td>
@@ -1061,26 +1029,15 @@ def admin_review(req_id):
     if session.get('role') not in ['admin', 'superadmin']: return redirect(url_for('login'))
     req = CreditRequest.query.get_or_404(req_id)
 
-    doc_preview = f"""
-    <div class="mt-4 p-4 bg-gray-50 border rounded-xl">
-        <p class="text-xs font-semibold text-gray-600 mb-2"><i class="fa-solid fa-paperclip mr-1"></i> เอกสารหลักฐานประกอบคำร้อง:</p>
-        <a href="{url_for('static', filename='uploads/' + req.doc_img)}" target="_blank" class="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-xs font-bold border border-blue-200 hover:bg-blue-100 transition">
-            <i class="fa-solid fa-file-pdf text-base"></i> เปิดดูไฟล์หลักฐาน
-        </a>
-    </div>
-    """ if req.doc_img else ''
-
     content = f"""
     <div class="max-w-4xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
         <h3 class="text-xl font-bold text-gray-800 mb-4">พิจารณาคำร้องเทียบโอน #{req.req_code}</h3>
         <div class="grid md:grid-cols-2 gap-4 text-sm mb-4">
-            <div><span class="text-gray-400 block text-xs">ผู้ยื่นคำร้อง</span><b>{req.user.fullname}</b> (รหัส: {req.user.member_id})</div>
+            <div><span class="text-gray-400 block text-xs">ผู้ยื่นคำร้อง</span><b>{req.user.fullname if req.user else '-'}</b> (รหัส: {req.user.member_id if req.user else '-'})</div>
             <div><span class="text-gray-400 block text-xs">หมวดหมู่</span><b>{req.category}</b></div>
             <div><span class="text-gray-400 block text-xs">รายวิชา</span><b>{req.course_name}</b> ({req.credits} หน่วยกิต)</div>
             <div><span class="text-gray-400 block text-xs">สถานะปัจจุบัน</span><b>{req.status}</b></div>
         </div>
-        
-        {doc_preview}
 
         <div class="flex justify-end space-x-3 mt-6 border-t pt-4">
             <a href="/admin/reject/{req.id}" class="px-5 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700">ไม่อนุมัติ</a>
