@@ -72,36 +72,36 @@ class ProfileEditRequest(db.Model):
 with app.app_context():
     try:
         with db.engine.connect() as conn:
-            # เพิ่มคอลัมน์สำหรับ User
-            try:
-                conn.execute(text("ALTER TABLE \"user\" ADD COLUMN member_id VARCHAR(20)"))
-            except Exception: pass
-            try:
-                conn.execute(text("ALTER TABLE \"user\" ADD COLUMN prefix VARCHAR(20) DEFAULT 'นาย'"))
-            except Exception: pass
-
-            # เพิ่มคอลัมน์สำหรับ CreditRequest
-            try:
-                conn.execute(text("ALTER TABLE credit_request ADD COLUMN faculty VARCHAR(100) DEFAULT 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ'"))
-            except Exception: pass
-            try:
-                conn.execute(text("ALTER TABLE credit_request ADD COLUMN major VARCHAR(100) DEFAULT 'สาขาการจัดการ'"))
-            except Exception: pass
-            try:
-                conn.execute(text("ALTER TABLE credit_request ADD COLUMN req_code VARCHAR(20) DEFAULT 'TR2569001'"))
-            except Exception: pass
-            try:
-                conn.execute(text("ALTER TABLE credit_request ADD COLUMN approved_by VARCHAR(100)"))
-            except Exception: pass
-
-            # เพิ่มคอลัมน์สำหรับ ProfileEditRequest
-            try:
-                conn.execute(text("ALTER TABLE profile_edit_request ADD COLUMN approved_by VARCHAR(100)"))
-            except Exception: pass
-
+            # สั่งลบตาราง credit_request เดิมที่โครงสร้างไม่ครบ แล้วสร้างใหม่
+            conn.execute(text("DROP TABLE IF EXISTS credit_request CASCADE;"))
             conn.commit()
+            print("Successfully dropped old credit_request table.")
     except Exception as e:
-        print(f"Migration error: {e}")
+        print(f"Drop table error: {e}")
+
+    # สร้างตารางทั้งหมดใหม่ตามโครงสร้างล่าสุดใน Models
+    db.create_all()
+
+    # สร้างบัญชี Super Admin
+    try:
+        main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
+        if not main_admin:
+            main_admin = User(
+                member_id='ADM000',
+                prefix='นาย',
+                fullname='ผู้ดูแลระบบหลัก (Super Admin)', 
+                id_card='0000000000000',
+                username='Admin_rmutto', 
+                password=generate_password_hash('rmutto2026'), 
+                role='superadmin', 
+                phone="081-000-0000",
+                email="admin@rmutto.ac.th"
+            )
+            db.session.add(main_admin)
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Admin creation error: {e}")
 
     db.create_all()
 
