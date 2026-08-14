@@ -71,14 +71,37 @@ class ProfileEditRequest(db.Model):
     user = db.relationship('User', backref=db.backref('edit_requests', lazy=True))
 
 with app.app_context():
-    db.create_all()
     try:
         with db.engine.connect() as conn:
+            # เพิ่มคอลัมน์ที่อาจจะขาดหายไปในตาราง user
+            conn.execute(text("ALTER TABLE \"user\" ADD COLUMN member_id VARCHAR(20)"))
+            conn.execute(text("ALTER TABLE \"user\" ADD COLUMN prefix VARCHAR(20) DEFAULT 'นาย'"))
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN approved_by VARCHAR(100)"))
             conn.execute(text("ALTER TABLE profile_edit_request ADD COLUMN approved_by VARCHAR(100)"))
             conn.commit()
     except Exception:
         pass
+
+    db.create_all()
+
+    main_admin = User.query.filter_by(username='admin').first()
+    if not main_admin:
+        main_admin = User(
+            member_id='ADM000',
+            prefix='นาย',
+            fullname='ผู้ดูแลระบบหลัก (Super Admin)', 
+            id_card='0000000000000',
+            username='admin', 
+            password=generate_password_hash('admin123'), 
+            role='superadmin', 
+            phone="081-000-0000",
+            email="admin@rmutto.ac.th"
+        )
+        db.session.add(main_admin)
+    else:
+        main_admin.role = 'superadmin'
+        main_admin.password = generate_password_hash('admin123')
+    db.session.commit()
 
     main_admin = User.query.filter_by(username='admin').first()
     if not main_admin:
