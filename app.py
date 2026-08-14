@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_secret_key_2026_rmutto_v5_sidebar'
+app.secret_key = 'credit_bank_secret_key_2026_rmutto_v6_sidebar_toggle'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -131,7 +131,7 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     return " ".join(parts)
 
 # ==========================================
-# Layout Template (พร้อม Sidebar หุบ/ขยายได้)
+# Layout Template (ย้ายปุ่มย่อ-ขยายใต้โลโก้)
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -172,9 +172,10 @@ LAYOUT_TEMPLATE = """
     <!-- Collapsible Left Sidebar -->
     <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-slate-900 text-slate-300 min-h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-2xl border-r border-slate-800 hidden md:flex shrink-0">
         
-        <!-- Header Logo -->
-        <div class="p-5 flex items-center justify-between border-b border-slate-800 h-20">
-            <a href="/" class="flex items-center gap-3 overflow-hidden">
+        <!-- Header Logo Zone -->
+        <div class="p-5 flex flex-col border-b border-slate-800/80">
+            <!-- Logo Section -->
+            <a href="/" class="flex items-center gap-3 overflow-hidden justify-center md:justify-start">
                 <div class="w-10 h-10 bg-gradient-to-tr from-blue-700 to-indigo-600 text-amber-400 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 shadow-md shadow-blue-900/40">
                     CB
                 </div>
@@ -183,9 +184,14 @@ LAYOUT_TEMPLATE = """
                     <span class="text-[10px] text-amber-400 font-bold tracking-wider uppercase">มทร.ตะวันออก</span>
                 </div>
             </a>
-            <button id="sidebar-toggle" class="hidden md:flex w-8 h-8 rounded-xl bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700 items-center justify-center transition-all shrink-0">
-                <i class="fa-solid fa-chevron-left text-xs toggle-icon transition-transform duration-300"></i>
-            </button>
+
+            <!-- Toggle Button BELOW Logo -->
+            <div class="mt-4 pt-3 border-t border-slate-800/60 hidden md:flex justify-center">
+                <button id="sidebar-toggle" class="w-full py-1.5 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-amber-400 flex items-center justify-center gap-2 transition-all group border border-slate-700/50">
+                    <i class="fa-solid fa-chevron-left text-xs toggle-icon transition-transform duration-300"></i>
+                    <span class="nav-text text-xs font-bold text-slate-300 group-hover:text-amber-400">ย่อแถบเมนู</span>
+                </button>
+            </div>
         </div>
 
         <!-- Navigation Links -->
@@ -343,7 +349,6 @@ def home():
                     <i class="fa-solid fa-sparkles text-amber-600"></i> ธนาคารหน่วยกิต มทร.ตะวันออก
                 </span>
                 
-                <!-- Fixed Thai Text Spacing Issue -->
                 <div class="space-y-3 mb-6">
                     <h1 class="text-4xl sm:text-5xl font-black text-slate-900 leading-relaxed tracking-normal">
                         สะสมหน่วยกิต
