@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_secret_key_2026_rmutto_v6_sidebar_toggle'
+app.secret_key = 'credit_bank_secret_key_2026_rmutto_v7_students_list'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -70,39 +70,6 @@ class ProfileEditRequest(db.Model):
     user = db.relationship('User', backref=db.backref('edit_requests', lazy=True))
 
 with app.app_context():
-    try:
-        with db.engine.connect() as conn:
-            # สั่งลบตาราง credit_request เดิมที่โครงสร้างไม่ครบ แล้วสร้างใหม่
-            conn.execute(text("DROP TABLE IF EXISTS credit_request CASCADE;"))
-            conn.commit()
-            print("Successfully dropped old credit_request table.")
-    except Exception as e:
-        print(f"Drop table error: {e}")
-
-    # สร้างตารางทั้งหมดใหม่ตามโครงสร้างล่าสุดใน Models
-    db.create_all()
-
-    # สร้างบัญชี Super Admin
-    try:
-        main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
-        if not main_admin:
-            main_admin = User(
-                member_id='ADM000',
-                prefix='นาย',
-                fullname='ผู้ดูแลระบบหลัก (Super Admin)', 
-                id_card='0000000000000',
-                username='Admin_rmutto', 
-                password=generate_password_hash('rmutto2026'), 
-                role='superadmin', 
-                phone="081-000-0000",
-                email="admin@rmutto.ac.th"
-            )
-            db.session.add(main_admin)
-            db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        print(f"Admin creation error: {e}")
-
     db.create_all()
 
     try:
@@ -154,7 +121,7 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     return " ".join(parts)
 
 # ==========================================
-# Layout Template (ย้ายปุ่มย่อ-ขยายใต้โลโก้)
+# Layout Template
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -197,7 +164,6 @@ LAYOUT_TEMPLATE = """
         
         <!-- Header Logo Zone -->
         <div class="p-5 flex flex-col border-b border-slate-800/80">
-            <!-- Logo Section -->
             <a href="/" class="flex items-center gap-3 overflow-hidden justify-center md:justify-start">
                 <div class="w-10 h-10 bg-gradient-to-tr from-blue-700 to-indigo-600 text-amber-400 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 shadow-md shadow-blue-900/40">
                     CB
@@ -229,6 +195,10 @@ LAYOUT_TEMPLATE = """
             {% if session.get('user_id') %}
                 {% if session.get('role') in ['admin', 'superadmin'] %}
                     <p class="section-title text-[11px] font-extrabold text-slate-500 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
+                    <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-users text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
+                        <span class="nav-text font-semibold">รายชื่อนักศึกษา</span>
+                    </a>
                     <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
                         <i class="fa-solid fa-file-signature text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
                         <span class="nav-text font-semibold">คำร้องเทียบโอน</span>
@@ -447,13 +417,13 @@ def home():
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <a href="/admin/students" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between hover:border-blue-500 transition card-hover">
                 <div>
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">นักศึกษาในระบบ</p>
                     <h3 class="text-3xl font-black text-slate-900">{total_members} <span class="text-xs text-slate-400 font-normal">คน</span></h3>
                 </div>
                 <div class="w-12 h-12 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-users"></i></div>
-            </div>
+            </a>
             <a href="/admin/requests" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between hover:border-amber-400 transition card-hover">
                 <div>
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">คำร้องเทียบโอนค้างพิจารณา</p>
@@ -616,6 +586,76 @@ def home():
             }}
         }});
     </script>
+    """
+    return render_template_string(LAYOUT_TEMPLATE, content=content)
+
+@app.route('/admin/students')
+def admin_students():
+    if session.get('role') not in ['admin', 'superadmin']:
+        return redirect(url_for('login'))
+
+    try:
+        students = User.query.filter_by(role='student').order_by(User.id.desc()).all()
+    except Exception:
+        students = []
+
+    rows = ""
+    for s in students:
+        try:
+            approved_credits = sum(r.credits for r in CreditRequest.query.filter_by(user_id=s.id, status='Approved').all())
+        except Exception:
+            approved_credits = 0
+
+        rows += f"""
+        <tr class="border-b border-slate-100 text-sm hover:bg-slate-50 transition">
+            <td class="py-4 px-4 font-bold text-blue-900 font-mono">
+                {s.member_id or '-'}<br>
+                <span class="text-xs text-slate-400 font-normal">({s.id_card or '-'})</span>
+            </td>
+            <td class="py-4 px-4 font-extrabold text-slate-900">
+                {s.prefix or ''} {s.fullname}
+            </td>
+            <td class="py-4 px-4 text-xs text-slate-600 font-medium leading-relaxed">
+                <i class="fa-solid fa-phone text-slate-400 mr-1"></i>{s.phone or '-'}<br>
+                <i class="fa-solid fa-envelope text-slate-400 mr-1"></i>{s.email or '-'}
+            </td>
+            <td class="py-4 px-4 text-xs text-slate-600 max-w-xs leading-relaxed">
+                {s.address or '-'}
+            </td>
+            <td class="py-4 px-4 font-black text-center">
+                <span class="bg-blue-50 text-blue-900 px-3 py-1 rounded-full text-xs font-bold border border-blue-200">
+                    {approved_credits} หน่วยกิต
+                </span>
+            </td>
+        </tr>
+        """
+
+    content = f"""
+    <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+                <h3 class="text-xl font-black text-slate-900"><i class="fa-solid fa-users text-blue-900 mr-2"></i>รายชื่อนักศึกษาในระบบทั้งหมด</h3>
+                <p class="text-xs text-slate-500 mt-1">แสดงข้อมูลนักศึกษาและจำนวนหน่วยกิตที่ได้รับการอนุมัติ</p>
+            </div>
+            <div class="bg-blue-50 text-blue-900 px-4 py-2 rounded-2xl border border-blue-100 text-xs font-bold">
+                นักศึกษาในระบบ: {len(students)} คน
+            </div>
+        </div>
+        <table class="w-full text-left min-w-[700px]">
+            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <tr>
+                    <th class="py-3 px-4">รหัสสมาชิก / บัตรประชาชน</th>
+                    <th class="py-3 px-4">ชื่อ-นามสกุล</th>
+                    <th class="py-3 px-4">ข้อมูลติดต่อ</th>
+                    <th class="py-3 px-4">ที่อยู่</th>
+                    <th class="py-3 px-4 text-center">หน่วยกิตสะสม</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {rows if rows else '<tr><td colspan="5" class="py-12 text-center text-slate-400">ยังไม่มีนักศึกษาลงทะเบียนในระบบ</td></tr>'}
+            </tbody>
+        </table>
+    </div>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
 
@@ -1083,12 +1123,10 @@ def request_edit_profile():
 
 @app.route('/submit_credit', methods=['GET', 'POST'])
 def submit_credit():
-    if 'user_id' not in session: 
-        return redirect(url_for('login'))
-        
+    if 'user_id' not in session: return redirect(url_for('login'))
+    
     if request.method == 'POST':
         try:
-            # ดึงค่าและแปลงหน่วยกิตให้อยู่ในรูปแบบตัวเลขอย่างปลอดภัย
             credits_raw = request.form.get('credits', '3')
             try:
                 credits_val = int(credits_raw)
@@ -1101,7 +1139,6 @@ def submit_credit():
             faculty = request.form.get('faculty', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ')
             major = request.form.get('major', 'สาขาการจัดการ')
 
-            # สร้าง Request Code สุ่มกันซ้ำ
             req_code = f"TR2569{uuid.uuid4().hex[:4].upper()}"
 
             req = CreditRequest(
@@ -1119,17 +1156,14 @@ def submit_credit():
             )
             db.session.add(req)
             db.session.commit()
-            
             flash('ยื่นคำขอเทียบโอนเรียบร้อยแล้ว!', 'success')
             return redirect(url_for('history'))
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error submitting credit request: {e}")
             flash(f'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง ({str(e)})', 'error')
             return redirect(url_for('submit_credit'))
 
-    # กรณีเข้ามาหน้ายื่นแบบ GET
     init_course = request.args.get('course', '')
     init_inst = request.args.get('inst', '')
     init_credits = request.args.get('credits', '3')
@@ -1141,19 +1175,10 @@ def submit_credit():
     <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
         <h3 class="text-2xl font-black text-slate-900 mb-6">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
         <form method="POST" class="space-y-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อหลักสูตร / รายวิชา *</label>
-                <input type="text" name="course_name" value="{init_course}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">สถาบันเดิม / แหล่งเรียนรู้ *</label>
-                <input type="text" name="institution" value="{init_inst}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
-            </div>
+            <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อหลักสูตร / รายวิชา *</label><input type="text" name="course_name" value="{init_course}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
+            <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">สถาบันเดิม / แหล่งเรียนรู้ *</label><input type="text" name="institution" value="{init_inst}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
             <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">จำนวนหน่วยกิต *</label>
-                    <input type="number" name="credits" value="{init_credits}" min="1" max="10" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
-                </div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">จำนวนหน่วยกิต *</label><input type="number" name="credits" value="{init_credits}" min="1" max="10" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">หมวดหมู่การเรียนรู้</label>
                     <select name="category" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
@@ -1165,9 +1190,7 @@ def submit_credit():
             </div>
             <input type="hidden" name="faculty" value="{init_fac}">
             <input type="hidden" name="major" value="{init_maj}">
-            <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-2">
-                ส่งคำร้องขอเทียบโอน
-            </button>
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-2">ส่งคำร้องขอเทียบโอน</button>
         </form>
     </div>
     """
