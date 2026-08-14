@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_secret_key_2026_fixed'
+app.secret_key = 'credit_bank_secret_key_2026_final'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -279,6 +279,9 @@ def home():
         return render_template_string(LAYOUT_TEMPLATE, content=content)
 
     user = User.query.get(session['user_id'])
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     
     if user.role in ['admin', 'superadmin']:
         pending_credits = CreditRequest.query.filter_by(status='Pending').count()
@@ -336,27 +339,6 @@ def home():
     approved_credits = sum(r.credits for r in approved_reqs)
     pending_credits = sum(r.credits for r in user_requests if r.status == 'Pending')
 
-    cat_counts = defaultdict(int)
-    for r in approved_reqs: cat_counts[r.category] += r.credits
-    
-    doughnut_labels = ['ในระบบ', 'นอกระบบ', 'ตามอัธยาศัย']
-    doughnut_data = [cat_counts.get('ในระบบ', 0), cat_counts.get('นอกระบบ', 0), cat_counts.get('ตามอัธยาศัย', 0)]
-
-    months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
-    monthly_credits = [0] * 12
-    for r in approved_reqs:
-        if r.date_submitted and '-' in r.date_submitted:
-            try:
-                m = int(r.date_submitted.split('-')[1]) - 1
-                if 0 <= m < 12: monthly_credits[m] += r.credits
-            except ValueError: monthly_credits[7] += r.credits
-        else: monthly_credits[7] += r.credits
-
-    cumulative_credits, running = [], 0
-    for c in monthly_credits:
-        running += c
-        cumulative_credits.append(running)
-
     content = f"""
     <div class="mb-6">
         <h2 class="text-2xl font-bold text-gray-800">สวัสดีครับ, {user.prefix or ''} {user.fullname}</h2>
@@ -394,17 +376,6 @@ def home():
         </div>
     </div>
 
-    <div class="grid md:grid-cols-3 gap-6 mb-8">
-        <div class="md:col-span-2 bg-white p-5 rounded-2xl border shadow-sm">
-            <h4 class="font-bold text-gray-700 text-sm mb-4"><i class="fa-solid fa-chart-line text-blue-600 mr-2"></i>หน่วยกิตสะสมรายเดือน</h4>
-            <canvas id="lineChart" class="max-h-56"></canvas>
-        </div>
-        <div class="bg-white p-5 rounded-2xl border shadow-sm">
-            <h4 class="font-bold text-gray-700 text-sm mb-4"><i class="fa-solid fa-chart-pie text-blue-600 mr-2"></i>สัดส่วนประเภทหน่วยกิต</h4>
-            <canvas id="doughnutChart" class="max-h-56"></canvas>
-        </div>
-    </div>
-
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <a href="/available_courses" class="bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md hover:border-blue-300 transition block">
             <i class="fa-solid fa-book-open text-3xl text-blue-600 mb-3"></i>
@@ -422,36 +393,6 @@ def home():
             <p class="text-xs text-gray-500">แจ้งเรื่องขอเปลี่ยนชื่อ-สกุล อีเมล หรือเบอร์โทรศัพท์ถึงเจ้าหน้าที่</p>
         </a>
     </div>
-
-    <script>
-        new Chart(document.getElementById('lineChart').getContext('2d'), {{
-            type: 'line',
-            data: {{
-                labels: {months},
-                datasets: [{{
-                    label: 'หน่วยกิตสะสม',
-                    data: {cumulative_credits},
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    fill: true,
-                    tension: 0.3
-                }}]
-            }},
-            options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }} }}
-        }});
-
-        new Chart(document.getElementById('doughnutChart').getContext('2d'), {{
-            type: 'doughnut',
-            data: {{
-                labels: {doughnut_labels},
-                datasets: [{{
-                    data: {doughnut_data},
-                    backgroundColor: ['#2563eb', '#f59e0b', '#10b981']
-                }}]
-            }},
-            options: {{ responsive: true }}
-        }});
-    </script>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
 
@@ -492,9 +433,6 @@ def login():
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
 
-# ==========================================
-# ระบบสมัครสมาชิก (รวมเป็นขั้นตอนเดียวเพื่อป้องกัน Session หลุดบน Cloud)
-# ==========================================
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -964,12 +902,12 @@ def submit_credit():
 
         req = CreditRequest(
             user_id=session['user_id'], 
-            course_name=request.form['course_name'], 
-            institution=request.form['institution'], 
-            credits=int(request.form['credits']),
+            course_name=request.form.get('course_name', 'วิชาเทียบโอน'), 
+            institution=request.form.get('institution', 'สถาบันการศึกษา'), 
+            credits=int(request.form.get('credits', 3)),
             category=request.form.get('category', 'ในระบบ'),
-            faculty=request.form.get('faculty'),
-            major=request.form.get('major'),
+            faculty=request.form.get('faculty', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ'),
+            major=request.form.get('major', 'สาขาการจัดการ'),
             doc_img=unique_filename
         )
         db.session.add(req)
@@ -1066,6 +1004,7 @@ def credits():
 def profile():
     if 'user_id' not in session: return redirect(url_for('login'))
     user = User.query.get(session['user_id'])
+    if not user: return redirect(url_for('login'))
     display_title = "เจ้าหน้าที่" if user.role in ['admin', 'superadmin'] else f"{user.prefix or ''} {user.fullname}"
     
     content = f"""
