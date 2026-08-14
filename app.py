@@ -1060,23 +1060,53 @@ def request_edit_profile():
 
 @app.route('/submit_credit', methods=['GET', 'POST'])
 def submit_credit():
-    if 'user_id' not in session: return redirect(url_for('login'))
+    if 'user_id' not in session: 
+        return redirect(url_for('login'))
+        
     if request.method == 'POST':
-        req = CreditRequest(
-            user_id=session['user_id'], 
-            course_name=request.form.get('course_name', 'วิชาเทียบโอน'), 
-            institution=request.form.get('institution', 'สถาบันการศึกษา'), 
-            credits=int(request.form.get('credits', 3)),
-            category=request.form.get('category', 'ในระบบ'),
-            faculty=request.form.get('faculty', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ'),
-            major=request.form.get('major', 'สาขาการจัดการ'),
-            doc_img="default_doc.png"
-        )
-        db.session.add(req)
-        db.session.commit()
-        flash('ยื่นคำขอเทียบโอนเรียบร้อยแล้ว', 'success')
-        return redirect(url_for('history'))
+        try:
+            # ดึงค่าและแปลงหน่วยกิตให้อยู่ในรูปแบบตัวเลขอย่างปลอดภัย
+            credits_raw = request.form.get('credits', '3')
+            try:
+                credits_val = int(credits_raw)
+            except (ValueError, TypeError):
+                credits_val = 3
 
+            course_name = request.form.get('course_name', '').strip() or 'รายวิชาเทียบโอน'
+            institution = request.form.get('institution', '').strip() or 'สถาบันเดิม'
+            category = request.form.get('category', 'ในระบบ')
+            faculty = request.form.get('faculty', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ')
+            major = request.form.get('major', 'สาขาการจัดการ')
+
+            # สร้าง Request Code สุ่มกันซ้ำ
+            req_code = f"TR2569{uuid.uuid4().hex[:4].upper()}"
+
+            req = CreditRequest(
+                req_code=req_code,
+                user_id=session['user_id'], 
+                course_name=course_name, 
+                institution=institution, 
+                credits=credits_val,
+                category=category,
+                faculty=faculty,
+                major=major,
+                date_submitted=datetime.now().strftime("%Y-%m-%d"),
+                doc_img="default_doc.png",
+                status='Pending'
+            )
+            db.session.add(req)
+            db.session.commit()
+            
+            flash('ยื่นคำขอเทียบโอนเรียบร้อยแล้ว!', 'success')
+            return redirect(url_for('history'))
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error submitting credit request: {e}")
+            flash(f'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง ({str(e)})', 'error')
+            return redirect(url_for('submit_credit'))
+
+    # กรณีเข้ามาหน้ายื่นแบบ GET
     init_course = request.args.get('course', '')
     init_inst = request.args.get('inst', '')
     init_credits = request.args.get('credits', '3')
@@ -1088,22 +1118,33 @@ def submit_credit():
     <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
         <h3 class="text-2xl font-black text-slate-900 mb-6">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
         <form method="POST" class="space-y-4">
-            <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อหลักสูตร / รายวิชา *</label><input type="text" name="course_name" value="{init_course}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
-            <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">สถาบันเดิม / แหล่งเรียนรู้ *</label><input type="text" name="institution" value="{init_inst}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อหลักสูตร / รายวิชา *</label>
+                <input type="text" name="course_name" value="{init_course}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">สถาบันเดิม / แหล่งเรียนรู้ *</label>
+                <input type="text" name="institution" value="{init_inst}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
+            </div>
             <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">จำนวนหน่วยกิต *</label><input type="number" name="credits" value="{init_credits}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">จำนวนหน่วยกิต *</label>
+                    <input type="number" name="credits" value="{init_credits}" min="1" max="10" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
+                </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">หมวดหมู่การเรียนรู้</label>
                     <select name="category" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
-                        <option value="ในระบบ" {'selected' if init_cat=='ในระบบ' or init_cat=='หมวดวิชาเฉพาะ' or init_cat=='หมวดวิชาศึกษาทั่วไป' else ''}>ในระบบ</option>
+                        <option value="ในระบบ" {'selected' if init_cat in ['ในระบบ', 'หมวดวิชาเฉพาะ', 'หมวดวิชาศึกษาทั่วไป'] else ''}>ในระบบ</option>
                         <option value="นอกระบบ" {'selected' if init_cat=='นอกระบบ' else ''}>นอกระบบ</option>
-                        <option value="ตามอัธยาศัย" {'selected' if init_cat=='ตามอัธยาศัย' or init_cat=='หมวดวิชาเลือกเสรี' else ''}>ตามอัธยาศัย</option>
+                        <option value="ตามอัธยาศัย" {'selected' if init_cat in ['ตามอัธยาศัย', 'หมวดวิชาเลือกเสรี'] else ''}>ตามอัธยาศัย</option>
                     </select>
                 </div>
             </div>
             <input type="hidden" name="faculty" value="{init_fac}">
             <input type="hidden" name="major" value="{init_maj}">
-            <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-2">ส่งคำร้องขอเทียบโอน</button>
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-2">
+                ส่งคำร้องขอเทียบโอน
+            </button>
         </form>
     </div>
     """
