@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_secret_key_2026_rmutto_all_campuses'
+app.secret_key = 'credit_bank_secret_key_2026_rmutto_ui_premium'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -126,7 +126,7 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     return " ".join(parts)
 
 # ==========================================
-# Layout Template
+# Layout Template (อัปเกรดดีไซน์ใหม่)
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -136,102 +136,131 @@ LAYOUT_TEMPLATE = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ธนาคารหน่วยกิต - มทร.ตะวันออก</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>body { font-family: 'Sarabun', sans-serif; }</style>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
+        .hero-gradient { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1e1b4b 100%); }
+        .gold-gradient { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .card-hover { transition: all 0.25s ease-in-out; }
+        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.08); }
+    </style>
 </head>
-<body class="bg-gray-50 flex flex-col min-h-screen text-gray-800">
+<body class="bg-slate-50 flex flex-col min-h-screen text-slate-800 antialiased">
 
-    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <!-- Header Navigation Bar -->
+    <nav class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-sm transition-all">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <a href="/" class="flex items-center gap-2">
-                        <div class="w-9 h-9 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-sm">CB</div>
-                        <div class="flex flex-col">
-                            <span class="font-bold text-gray-900 text-base leading-tight">Credit Bank</span>
-                            <span class="text-[10px] text-gray-500 font-medium">มทร.ตะวันออก</span>
-                        </div>
-                    </a>
-                </div>
+            <div class="flex justify-between h-20 items-center">
+                <!-- Logo -->
+                <a href="/" class="flex items-center gap-3 group">
+                    <div class="w-11 h-11 bg-gradient-to-tr from-blue-900 to-indigo-700 text-amber-400 rounded-2xl flex items-center justify-center font-extrabold text-xl shadow-md shadow-blue-900/20 group-hover:scale-105 transition-transform">
+                        CB
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="font-extrabold text-slate-900 text-lg leading-tight tracking-tight group-hover:text-blue-900 transition-colors">Credit Bank</span>
+                        <span class="text-[11px] text-amber-600 font-bold uppercase tracking-wider">มทร.ตะวันออก (RMUTTO)</span>
+                    </div>
+                </a>
 
-                <div class="hidden md:flex items-center space-x-1 lg:space-x-2 text-sm font-medium">
-                    <a href="/" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">หน้าแรก</a>
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-1 lg:space-x-2 text-sm font-semibold">
+                    <a href="/" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">หน้าแรก</a>
                     {% if session.get('user_id') %}
                         {% if session.get('role') in ['admin', 'superadmin'] %}
-                            <a href="/admin/requests" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">คำร้องเทียบโอน</a>
-                            <a href="/admin/profile_requests" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">คำร้องแก้ไขข้อมูล</a>
-                            <a href="/admin/manage_admins" class="px-3 py-2 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition font-bold shadow-md flex items-center gap-1">
-                                <i class="fa-solid fa-user-plus"></i> เพิ่ม/จัดการเจ้าหน้าที่
+                            <a href="/admin/requests" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">คำร้องเทียบโอน</a>
+                            <a href="/admin/profile_requests" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">คำร้องแก้ไขข้อมูล</a>
+                            <a href="/admin/manage_admins" class="px-4 py-2.5 rounded-xl text-white bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 transition font-bold shadow-md shadow-blue-900/20 flex items-center gap-2">
+                                <i class="fa-solid fa-user-plus text-amber-400"></i> เพิ่ม/จัดการเจ้าหน้าที่
                             </a>
                         {% else %}
-                            <a href="/available_courses" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">รายวิชาเปิดรับเทียบโอน</a>
-                            <a href="/submit_credit" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">ยื่นคำขอเทียบโอน</a>
-                            <a href="/credits" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">หน่วยกิตสะสม</a>
-                            <a href="/history" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">ประวัติคำขอ</a>
+                            <a href="/available_courses" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">รายวิชาเปิดรับเทียบโอน</a>
+                            <a href="/submit_credit" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">ยื่นคำขอเทียบโอน</a>
+                            <a href="/credits" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">หน่วยกิตสะสม</a>
+                            <a href="/history" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">ประวัติคำขอ</a>
                         {% endif %}
-                        <a href="/profile" class="px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition">
+                        <a href="/profile" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition flex items-center gap-1.5">
+                            <i class="fa-regular fa-id-badge text-blue-700"></i>
                             {% if session.get('role') in ['admin', 'superadmin'] %}เจ้าหน้าที่{% else %}โปรไฟล์{% endif %}
                         </a>
-                        <a href="/logout" class="px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition">ออกจากระบบ</a>
+                        <a href="/logout" class="px-4 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 transition flex items-center gap-1.5 ml-2">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i> ออกจากระบบ
+                        </a>
                     {% else %}
-                        <a href="/login" class="px-4 py-2 rounded-lg text-blue-600 hover:bg-blue-50 transition">เข้าสู่ระบบ</a>
-                        <a href="/register" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">สมัครสมาชิก</a>
+                        <a href="/login" class="px-5 py-2.5 rounded-xl text-blue-900 hover:bg-blue-50 transition font-bold">เข้าสู่ระบบ</a>
+                        <a href="/register" class="px-5 py-2.5 bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white rounded-xl transition font-bold shadow-md shadow-blue-900/20">สมัครสมาชิก</a>
                     {% endif %}
                 </div>
 
+                <!-- Mobile Menu Button -->
                 <div class="flex items-center md:hidden">
-                    <button id="mobile-menu-btn" type="button" class="p-2 rounded-lg text-gray-600 hover:text-gray-900 focus:outline-none">
-                        <i class="fa-solid fa-bars text-xl"></i>
+                    <button id="mobile-menu-btn" type="button" class="p-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none">
+                        <i class="fa-solid fa-bars text-2xl"></i>
                     </button>
                 </div>
             </div>
         </div>
 
-        <div id="mobile-menu" class="hidden md:hidden border-t border-gray-100 bg-white px-4 pt-2 pb-4 space-y-1 shadow-lg">
-            <a href="/" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">หน้าแรก</a>
+        <!-- Mobile Navigation Menu -->
+        <div id="mobile-menu" class="hidden md:hidden border-t border-slate-100 bg-white px-4 pt-3 pb-6 space-y-2 shadow-xl">
+            <a href="/" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">หน้าแรก</a>
             {% if session.get('user_id') %}
                 {% if session.get('role') in ['admin', 'superadmin'] %}
-                    <a href="/admin/requests" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">คำร้องเทียบโอน</a>
-                    <a href="/admin/profile_requests" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">คำร้องแก้ไขข้อมูล</a>
-                    <a href="/admin/manage_admins" class="block px-3 py-2 rounded-lg text-base font-bold text-white bg-blue-600 hover:bg-blue-700">เพิ่ม/จัดการเจ้าหน้าที่</a>
+                    <a href="/admin/requests" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">คำร้องเทียบโอน</a>
+                    <a href="/admin/profile_requests" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">คำร้องแก้ไขข้อมูล</a>
+                    <a href="/admin/manage_admins" class="block px-4 py-3 rounded-xl text-base font-bold text-white bg-blue-900">เพิ่ม/จัดการเจ้าหน้าที่</a>
                 {% else %}
-                    <a href="/available_courses" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">รายวิชาเปิดรับเทียบโอน</a>
-                    <a href="/submit_credit" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">ยื่นคำขอเทียบโอน</a>
-                    <a href="/credits" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">หน่วยกิตสะสม</a>
-                    <a href="/history" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">ประวัติคำขอ</a>
+                    <a href="/available_courses" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">รายวิชาเปิดรับเทียบโอน</a>
+                    <a href="/submit_credit" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">ยื่นคำขอเทียบโอน</a>
+                    <a href="/credits" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">หน่วยกิตสะสม</a>
+                    <a href="/history" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">ประวัติคำขอ</a>
                 {% endif %}
-                <a href="/profile" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-blue-50">โปรไฟล์</a>
-                <a href="/logout" class="block px-3 py-2 rounded-lg text-red-600 hover:bg-red-50">ออกจากระบบ</a>
+                <a href="/profile" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">โปรไฟล์</a>
+                <a href="/logout" class="block px-4 py-3 rounded-xl text-base font-semibold text-rose-600 hover:bg-rose-50">ออกจากระบบ</a>
             {% else %}
-                <a href="/login" class="block px-3 py-2 rounded-lg text-base font-medium text-blue-600 hover:bg-blue-50">เข้าสู่ระบบ</a>
-                <a href="/register" class="block px-3 py-2 rounded-lg text-base font-medium text-blue-600 hover:bg-blue-50">สมัครสมาชิก</a>
+                <a href="/login" class="block px-4 py-3 rounded-xl text-base font-bold text-blue-900 hover:bg-blue-50">เข้าสู่ระบบ</a>
+                <a href="/register" class="block px-4 py-3 rounded-xl text-base font-bold text-white bg-blue-900">สมัครสมาชิก</a>
             {% endif %}
         </div>
     </nav>
 
+    <!-- Flash Notification Messages -->
     <div class="max-w-7xl mx-auto px-4 w-full mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="p-4 mb-4 text-sm rounded-xl font-medium shadow-sm flex items-center justify-between {% if category == 'error' or category == 'danger' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
-                        <span>{{ message }}</span>
-                        <button onclick="this.parentElement.remove()" class="text-xs font-bold px-2">✕</button>
+                    <div class="p-4 mb-4 text-sm rounded-2xl font-semibold shadow-sm flex items-center justify-between border transition-all animate-bounce-once {% if category == 'error' or category == 'danger' %}bg-rose-50 text-rose-700 border-rose-200{% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid {% if category == 'error' or category == 'danger' %}fa-circle-exclamation text-rose-500{% else %}fa-circle-check text-emerald-500{% endif %} text-lg"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                        <button onclick="this.parentElement.remove()" class="text-xs font-bold px-2 py-1 hover:bg-black/5 rounded-lg">✕</button>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
     </div>
 
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {{ content | safe }}
     </main>
 
-    <footer class="bg-slate-900 text-slate-300 mt-auto border-t border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-            <div class="flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2 text-center sm:text-left">
-                <p>© 2026 Credit Bank System. มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก</p>
-                <p>ระบบสารสนเทศเพื่อการเรียนรู้ตลอดชีวิต</p>
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 mt-auto border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-center md:text-left">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-blue-800 text-amber-400 font-bold flex items-center justify-center">CB</div>
+                    <div>
+                        <p class="text-slate-200 font-bold text-sm">มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก (RMUTTO)</p>
+                        <p class="text-slate-500 mt-0.5">Rajamangala University of Technology Tawan-ok</p>
+                    </div>
+                </div>
+                <div class="text-slate-400 leading-relaxed">
+                    © 2026 Credit Bank System. ระบบธนาคารหน่วยกิตเพื่อการเรียนรู้ตลอดชีวิต
+                </div>
             </div>
         </div>
     </footer>
@@ -254,22 +283,33 @@ LAYOUT_TEMPLATE = """
 def home():
     if not session.get('user_id'):
         content = """
-        <div class="max-w-5xl mx-auto py-12 grid md:grid-cols-2 gap-12 items-center">
+        <div class="max-w-5xl mx-auto py-12 md:py-16 grid md:grid-cols-2 gap-12 items-center">
             <div>
-                <h1 class="text-4xl font-extrabold text-blue-950 leading-tight mb-4">
-                    ระบบธนาคารหน่วยกิต<br><span class="text-blue-600">มทร.ตะวันออก</span>
+                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 mb-4 border border-amber-200">
+                    <i class="fa-solid fa-sparkles text-amber-600"></i> ธนาคารหน่วยกิต มทร.ตะวันออก
+                </span>
+                <h1 class="text-4xl sm:text-5xl font-black text-slate-900 leading-tight tracking-tight mb-6">
+                    สะสมหน่วยกิต<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-900 via-indigo-800 to-amber-600">เชื่อมต่อทุกโอกาสการเรียนรู้</span>
                 </h1>
-                <p class="text-gray-600 mb-8 leading-relaxed">
-                    สะสมหน่วยกิตจากการเรียนรู้ในระบบ นอกระบบ และตามอัธยาศัย เพื่อใช้เทียบโอนและต่อยอดคุณวุฒิการศึกษาตามคณะและสาขาวิชา ทั้ง 4 วิทยาเขต/เขตพื้นที่
+                <p class="text-slate-600 mb-8 leading-relaxed text-base font-normal">
+                    เทียบโอนหน่วยกิตจากการเรียนรู้ในระบบ นอกระบบ และตามอัธยาศัย เข้าสู่หลักสูตรปริญญาตรี มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก ครอบคลุมทั้ง 4 วิทยาเขต/เขตพื้นที่
                 </p>
-                <div class="space-x-4">
-                    <a href="/register" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 inline-block">สมัครสมาชิก</a>
-                    <a href="/login" class="px-6 py-3 bg-white text-blue-900 border font-semibold rounded-lg hover:bg-gray-50 inline-block">เข้าสู่ระบบ</a>
+                <div class="flex flex-wrap gap-4">
+                    <a href="/register" class="px-7 py-3.5 bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold rounded-2xl shadow-lg shadow-blue-900/20 hover:shadow-xl transition-all inline-flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus text-amber-400"></i> สมัครสมาชิกนักศึกษา
+                    </a>
+                    <a href="/login" class="px-7 py-3.5 bg-white text-slate-800 border border-slate-200 font-bold rounded-2xl hover:bg-slate-50 transition shadow-sm inline-flex items-center gap-2">
+                        เข้าสู่ระบบ
+                    </a>
                 </div>
             </div>
-            <div class="bg-blue-50 p-8 rounded-3xl border border-blue-100 text-center shadow-inner">
-                <i class="fa-solid fa-graduation-cap text-9xl text-blue-600 my-8"></i>
-                <h3 class="text-xl font-bold text-blue-900">สะสมความรู้ ปลดล็อกโอกาส</h3>
+            <div class="hero-gradient p-10 rounded-3xl text-center shadow-2xl relative overflow-hidden border border-slate-700/50">
+                <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl"></div>
+                <div class="w-24 h-24 bg-white/10 text-amber-400 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-6 backdrop-blur border border-white/10">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-white mb-2">Lifelong Learning</h3>
+                <p class="text-slate-300 text-sm leading-relaxed max-w-sm mx-auto">ระบบคลังหน่วยกิตดิจิทัลที่ช่วยยกระดับและสั่งสมศักยภาพของคุณสู่ความสำเร็จทางการศึกษา</p>
             </div>
         </div>
         """
@@ -295,45 +335,45 @@ def home():
             pending_credits, pending_edits, total_members, total_admins = 0, 0, 0, 1
 
         content = f"""
-        <div class="mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">ยินดีต้อนรับ, เจ้าหน้าที่</h2>
-            <p class="text-gray-500 text-sm">แผงควบคุมระบบตรวจสอบและอนุมัติสำหรับเจ้าหน้าที่ ({user.fullname})</p>
+        <div class="mb-8">
+            <h2 class="text-2xl font-extrabold text-slate-900">ยินดีต้อนรับ, เจ้าหน้าที่</h2>
+            <p class="text-slate-500 text-sm mt-1">แผงควบคุมระบบตรวจสอบและอนุมัติสำหรับเจ้าหน้าที่ ({user.fullname})</p>
         </div>
 
         <div class="mb-8">
-            <a href="/admin/manage_admins" class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-6 rounded-2xl shadow-md flex items-center justify-between hover:opacity-95 transition block border-2 border-blue-400">
+            <a href="/admin/manage_admins" class="hero-gradient text-white p-7 rounded-3xl shadow-xl flex items-center justify-between hover:opacity-95 transition-all block border border-slate-700/50">
                 <div>
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="bg-blue-500 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase">เมนูจัดการ</span>
-                        <h3 class="text-2xl font-bold">➕ คลิกที่นี่เพื่อ "เพิ่มเจ้าหน้าที่ช่วยตรวจงาน"</h3>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-amber-500 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">แอดมินจัดการ</span>
+                        <h3 class="text-2xl font-extrabold text-white">➕ คลิกที่นี่เพื่อ "เพิ่มเจ้าหน้าที่ช่วยตรวจงาน"</h3>
                     </div>
-                    <p class="text-sm text-blue-100 mt-1">เพิ่มบัญชีเจ้าหน้าที่ใหม่ด้วยเลขบัตรประชาชนและรหัสผ่านส่วนตัว (ปัจจุบันมีเจ้าหน้าที่ {total_admins} คน)</p>
+                    <p class="text-sm text-slate-300">เพิ่มบัญชีเจ้าหน้าที่ใหม่ด้วยเลขบัตรประชาชนและรหัสผ่านส่วนตัว (ปัจจุบันมีเจ้าหน้าที่ {total_admins} คน)</p>
                 </div>
-                <div class="w-14 h-14 bg-white/20 text-white rounded-2xl flex items-center justify-center text-2xl shrink-0"><i class="fa-solid fa-user-plus"></i></div>
+                <div class="w-14 h-14 bg-white/10 text-amber-400 rounded-2xl flex items-center justify-center text-2xl shrink-0 backdrop-blur border border-white/10"><i class="fa-solid fa-user-plus"></i></div>
             </a>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-2xl border shadow-sm flex items-center justify-between">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 mb-1">นักศึกษาในระบบ</p>
-                    <h3 class="text-2xl font-bold text-blue-900">{total_members} <span class="text-xs text-gray-400 font-normal">คน</span></h3>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">นักศึกษาในระบบ</p>
+                    <h3 class="text-3xl font-black text-slate-900">{total_members} <span class="text-xs text-slate-400 font-normal">คน</span></h3>
                 </div>
-                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-users"></i></div>
+                <div class="w-12 h-12 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-users"></i></div>
             </div>
-            <a href="/admin/requests" class="bg-white p-6 rounded-2xl border shadow-sm flex items-center justify-between hover:border-blue-400 transition">
+            <a href="/admin/requests" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between hover:border-amber-400 transition card-hover">
                 <div>
-                    <p class="text-xs text-gray-500 mb-1">คำร้องเทียบโอนค้างพิจารณา</p>
-                    <h3 class="text-2xl font-bold text-amber-600">{pending_credits} <span class="text-xs text-gray-400 font-normal">รายการ</span></h3>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">คำร้องเทียบโอนค้างพิจารณา</p>
+                    <h3 class="text-3xl font-black text-amber-600">{pending_credits} <span class="text-xs text-slate-400 font-normal">รายการ</span></h3>
                 </div>
-                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-file-signature"></i></div>
+                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-file-signature"></i></div>
             </a>
-            <a href="/admin/profile_requests" class="bg-white p-6 rounded-2xl border shadow-sm flex items-center justify-between hover:border-blue-400 transition">
+            <a href="/admin/profile_requests" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between hover:border-indigo-400 transition card-hover">
                 <div>
-                    <p class="text-xs text-gray-500 mb-1">คำร้องแก้ไขข้อมูลค้างพิจารณา</p>
-                    <h3 class="text-2xl font-bold text-indigo-600">{pending_edits} <span class="text-xs text-gray-400 font-normal">รายการ</span></h3>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">คำร้องแก้ไขข้อมูลค้างพิจารณา</p>
+                    <h3 class="text-3xl font-black text-indigo-600">{pending_edits} <span class="text-xs text-slate-400 font-normal">รายการ</span></h3>
                 </div>
-                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-user-pen"></i></div>
+                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-user-pen"></i></div>
             </a>
         </div>
         """
@@ -349,57 +389,70 @@ def home():
     pending_credits = sum(getattr(r, 'credits', 0) for r in user_requests if getattr(r, 'status', '') == 'Pending')
 
     content = f"""
-    <div class="mb-6">
-        <h2 class="text-2xl font-bold text-gray-800">สวัสดีครับ, {user.prefix or ''} {user.fullname}</h2>
-        <p class="text-sm font-semibold text-blue-600">รหัสสมาชิก: {user.member_id or '-'}</p>
+    <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-black text-slate-900">สวัสดีครับ, {user.prefix or ''} {user.fullname}</h2>
+            <p class="text-sm font-bold text-blue-900 mt-1"><i class="fa-solid fa-id-card mr-1 text-amber-500"></i> รหัสสมาชิก: {user.member_id or '-'}</p>
+        </div>
+        <a href="/submit_credit" class="bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold px-6 py-3 rounded-2xl shadow-md shadow-blue-900/20 transition-all inline-flex items-center gap-2 text-sm shrink-0">
+            <i class="fa-solid fa-file-circle-plus text-amber-400"></i> ยื่นคำขอเทียบโอนใหม่
+        </a>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white p-5 rounded-2xl border shadow-sm flex items-center justify-between">
+    <!-- Stat Overview Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between card-hover">
             <div>
-                <p class="text-xs text-gray-500 font-medium mb-1">หน่วยกิตสะสมทั้งหมด</p>
-                <h3 class="text-2xl font-bold text-blue-900">{approved_credits} <span class="text-xs font-normal text-gray-400">หน่วยกิต</span></h3>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">หน่วยกิตสะสมทั้งหมด</p>
+                <h3 class="text-3xl font-black text-blue-950">{approved_credits} <span class="text-xs font-medium text-slate-400">หน่วยกิต</span></h3>
             </div>
-            <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center"><i class="fa-solid fa-graduation-cap"></i></div>
+            <div class="w-12 h-12 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-graduation-cap"></i></div>
         </div>
-        <div class="bg-white p-5 rounded-2xl border shadow-sm flex items-center justify-between">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between card-hover">
             <div>
-                <p class="text-xs text-gray-500 font-medium mb-1">รออนุมัติเทียบโอน</p>
-                <h3 class="text-2xl font-bold text-amber-600">{pending_credits} <span class="text-xs font-normal text-gray-400">หน่วยกิต</span></h3>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">รออนุมัติเทียบโอน</p>
+                <h3 class="text-3xl font-black text-amber-600">{pending_credits} <span class="text-xs font-medium text-slate-400">หน่วยกิต</span></h3>
             </div>
-            <div class="w-10 h-10 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center"><i class="fa-solid fa-clock"></i></div>
+            <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-hourglass-half"></i></div>
         </div>
-        <div class="bg-white p-5 rounded-2xl border shadow-sm flex items-center justify-between">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between card-hover">
             <div>
-                <p class="text-xs text-gray-500 font-medium mb-1">คำร้องขอเทียบโอน</p>
-                <h3 class="text-2xl font-bold text-gray-800">{len(user_requests)} <span class="text-xs font-normal text-gray-400">รายการ</span></h3>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">คำร้องขอเทียบโอน</p>
+                <h3 class="text-3xl font-black text-slate-800">{len(user_requests)} <span class="text-xs font-medium text-slate-400">รายการ</span></h3>
             </div>
-            <div class="w-10 h-10 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center"><i class="fa-solid fa-list-check"></i></div>
+            <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-list-check"></i></div>
         </div>
-        <div class="bg-white p-5 rounded-2xl border shadow-sm flex items-center justify-between">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between card-hover">
             <div>
-                <p class="text-xs text-gray-500 font-medium mb-1">เป้าหมายหลักสูตร</p>
-                <h3 class="text-2xl font-bold text-emerald-600">120 <span class="text-xs font-normal text-gray-400">หน่วยกิต</span></h3>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">เป้าหมายหลักสูตร</p>
+                <h3 class="text-3xl font-black text-emerald-600">120 <span class="text-xs font-medium text-slate-400">หน่วยกิต</span></h3>
             </div>
-            <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center"><i class="fa-solid fa-bullseye"></i></div>
+            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-bullseye"></i></div>
         </div>
     </div>
 
+    <!-- Quick Access Features -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <a href="/available_courses" class="bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md hover:border-blue-300 transition block">
-            <i class="fa-solid fa-book-open text-3xl text-blue-600 mb-3"></i>
-            <h3 class="font-bold text-gray-800 mb-1">ค้นหารายวิชาเปิดเทียบโอน</h3>
-            <p class="text-xs text-gray-500">เลือกดูรายวิชาที่เปิดรับเทียบโอนแยกตามคณะ/สาขาวิชา และวิทยาเขต</p>
+        <a href="/available_courses" class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm card-hover block group">
+            <div class="w-12 h-12 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-book-open"></i>
+            </div>
+            <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-blue-900 transition-colors">ค้นหารายวิชาเปิดเทียบโอน</h3>
+            <p class="text-xs text-slate-500 leading-relaxed">เลือกดูรายวิชาที่เปิดรับเทียบโอนแยกตามคณะ/สาขาวิชา และวิทยาเขต</p>
         </a>
-        <a href="/submit_credit" class="bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md hover:border-blue-300 transition block">
-            <i class="fa-solid fa-file-pen text-3xl text-amber-600 mb-3"></i>
-            <h3 class="font-bold text-gray-800 mb-1">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
-            <p class="text-xs text-gray-500">ส่งเอกสารหลักฐานขอเทียบโอนรายวิชาเข้าสู่ระบบ</p>
+        <a href="/submit_credit" class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm card-hover block group">
+            <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-file-pen"></i>
+            </div>
+            <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-amber-600 transition-colors">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
+            <p class="text-xs text-slate-500 leading-relaxed">ส่งเอกสารหลักฐานขอเทียบโอนรายวิชาเข้าสู่ระบบ</p>
         </a>
-        <a href="/request_edit_profile" class="bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md hover:border-blue-300 transition block">
-            <i class="fa-solid fa-user-gear text-3xl text-purple-600 mb-3"></i>
-            <h3 class="font-bold text-gray-800 mb-1">ส่งคำร้องขอแก้ไขข้อมูลส่วนตัว</h3>
-            <p class="text-xs text-gray-500">แจ้งเรื่องขอเปลี่ยนชื่อ-สกุล อีเมล หรือเบอร์โทรศัพท์ถึงเจ้าหน้าที่</p>
+        <a href="/request_edit_profile" class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm card-hover block group">
+            <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-user-gear"></i>
+            </div>
+            <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-purple-600 transition-colors">ขอแก้ไขข้อมูลส่วนตัว</h3>
+            <p class="text-xs text-slate-500 leading-relaxed">แจ้งเรื่องขอเปลี่ยนชื่อ-สกุล อีเมล หรือเบอร์โทรศัพท์ถึงเจ้าหน้าที่</p>
         </a>
     </div>
     """
@@ -409,9 +462,7 @@ def home():
 def available_courses():
     if 'user_id' not in session: return redirect(url_for('login'))
     
-    # รวมรายวิชาเทียบโอน มทร.ตะวันออก จากไฟล์ฉบับสำรวจทุกวิทยาเขต
     all_courses = [
-        # รายวิชาเทียบโอนจริงที่พบหลักฐาน (จักรพงษภูวนารถ - คณะบริหารธุรกิจฯ)
         {"code": "04-00-101", "name": "หลักการตลาด", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "03-211-101 / 3200-1005", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการ 2568 (วิชาเดิม: หลักการตลาด / การขายเบื้องต้น)"},
         {"code": "04-00-102", "name": "หลักเศรษฐศาสตร์", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "3200-1001 / 05-000-101", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการ 2568 (วิชาเดิม: หลักเศรษฐศาสตร์)"},
         {"code": "04-00-104", "name": "กฎหมายธุรกิจและการภาษีอากร", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ / การตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30001-1055 / 20215-2004", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการและแบบเทียบโอนสาขาการตลาด 2568"},
@@ -429,24 +480,20 @@ def available_courses():
         {"code": "TR-IT04", "name": "การผลิตสื่อมัลติมีเดียสำหรับธุรกิจดิจิทัล", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30204-2204", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568"},
         {"code": "TR-IT05", "name": "การออกแบบและพัฒนาเว็บไซต์", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30901-1002", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568"},
 
-        # วิทยาเขตบางพระ (ชลบุรี)
         {"code": "00-11-001", "name": "ภาษาไทยเพื่อการสื่อสาร", "campus": "เขตพื้นที่บางพระ", "faculty": "คณะมนุษยศาสตร์และสังคมศาสตร์", "major": "หมวดวิชาศึกษาทั่วไป", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "ปวส. / มหาวิทยาลัยอื่น", "status": "มทร.ตะวันออก", "desc": "ทักษะการฟัง การพูด การอ่าน และการเขียนภาษาไทยเพื่อการสื่อสารในงานอาชีพ"},
         {"code": "00-12-002", "name": "ภาษาอังกฤษเพื่อการสื่อสารสากล", "campus": "เขตพื้นที่บางพระ", "faculty": "คณะมนุษยศาสตร์และสังคมศาสตร์", "major": "หมวดวิชาศึกษาทั่วไป", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "ปวส. / มหาวิทยาลัยอื่น", "status": "มทร.ตะวันออก", "desc": "การสื่อสารภาษาอังกฤษเบื้องต้น การนำเสนอผลงาน และไวยากรณ์ประยุกต์"},
         {"code": "01-10-101", "name": "หลักสัตวศาสตร์เบื้องต้น", "campus": "เขตพื้นที่บางพระ", "faculty": "คณะเกษตรศาสตร์และทรัพยากรธรรมชาติ", "major": "สาขาวิชาสัตวศาสตร์", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.เกษตรศาสตร์", "status": "มทร.ตะวันออก", "desc": "การเลี้ยงดูและการจัดการสัตว์เศรษฐกิจ การสุขาภิบาล และโภชนาการสัตว์"},
         {"code": "02-20-102", "name": "วิทยาศาสตร์และเทคโนโลยีเพื่อชีวิต", "campus": "เขตพื้นที่บางพระ", "faculty": "คณะวิทยาศาสตร์และเทคโนโลยี", "major": "ทุกสาขาวิชา", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "ปวส. / สถาบันเดิม", "status": "มทร.ตะวันออก", "desc": "กระบวนการทางวิทยาศาสตร์ นวัตกรรมเทคโนโลยีสมัยใหม่ และการประยุกต์ในชีวิตประจำวัน"},
         {"code": "06-10-101", "name": "การจัดการการบินเบื้องต้น", "campus": "เขตพื้นที่บางพระ", "faculty": "สถาบันเทคโนโลยีการบินและอวกาศ", "major": "สาขาวิชาการจัดการการบิน", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส. / สถานศึกษาเดิม", "status": "มทร.ตะวันออก", "desc": "ระบบการขนส่งทางอากาศ โครงสร้างอุตสาหกรรมการบิน และกฎหมายการบินเบื้องต้น"},
 
-        # วิทยาเขตอุเทนถวาย (กรุงเทพฯ)
         {"code": "08-11-101", "name": "เขียนแบบวิศวกรรม (Engineering Drawing)", "campus": "เขตพื้นที่อุเทนถวาย", "faculty": "คณะวิศวกรรมศาสตร์และสถาปัตยกรรมศาสตร์", "major": "สาขาวิชาวิศวกรรมโยธา", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.ช่างก่อสร้าง/ช่างโยธา", "status": "มทร.ตะวันออก", "desc": "ทักษะการเขียนแบบวิศวกรรม สัญลักษณ์ทางช่าง การเขียนแบบด้วยคอมพิวเตอร์ CAD"},
         {"code": "08-12-102", "name": "การสำรวจทางวิศวกรรม (Engineering Surveying)", "campus": "เขตพื้นที่อุเทนถวาย", "faculty": "คณะวิศวกรรมศาสตร์และสถาปัตยกรรมศาสตร์", "major": "สาขาวิชาวิศวกรรมสำรวจ/โยธา", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.ช่างสำรวจ/โยธา", "status": "มทร.ตะวันออก", "desc": "การใช้กล้องรังวัด การทำแผนที่ภูมิประเทศ การหาค่าระดับ และงานสำรวจเพื่อการก่อสร้าง"},
         {"code": "08-20-103", "name": "การออกแบบสถาปัตยกรรมเบื้องต้น", "campus": "เขตพื้นที่อุเทนถวาย", "faculty": "คณะวิศวกรรมศาสตร์และสถาปัตยกรรมศาสตร์", "major": "สาขาวิชาสถาปัตยกรรมภายใน", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.สถาปัตยกรรม", "status": "มทร.ตะวันออก", "desc": "องค์ประกอบศิลป์ การจัดพื้นที่ใช้สอย การเขียนแบบสถาปัตยกรรม และแนวคิดการออกแบบ"},
 
-        # วิทยาเขตจันทบุรี
         {"code": "10-11-101", "name": "การจัดการเพื่อผู้ประกอบการยุคดิจิทัล", "campus": "เขตพื้นที่จันทบุรี", "faculty": "คณะเทคโนโลยีสังคม", "major": "สาขาวิชาการจัดการเพื่อผู้ประกอบการ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.การจัดการ/การตลาด", "status": "มทร.ตะวันออก", "desc": "การเริ่มธุรกิจใหม่ การวางแผนการเงิน การตลาดดิจิทัล และนวัตกรรมสำหรับผู้ประกอบการ"},
         {"code": "10-12-102", "name": "นวัตกรรมการบริการและการท่องเที่ยว", "campus": "เขตพื้นที่จันทบุรี", "faculty": "คณะเทคโนโลยีสังคม", "major": "สาขาวิชานวัตกรรมการท่องเที่ยวและการโรงแรม", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.การท่องเที่ยวและโรงแรม", "status": "มทร.ตะวันออก", "desc": "อุตสาหกรรมการท่องเที่ยว พฤติกรรมนักท่องเที่ยว การจัดการโรงแรมและการบริการลูกค้า"},
         {"code": "10-21-103", "name": "เทคโนโลยียานยนต์ไฟฟ้า (EV Technology)", "campus": "เขตพื้นที่จันทบุรี", "faculty": "คณะวิศวกรรมศาสตร์", "major": "สาขาวิชาวิศวกรรมยานยนต์ไฟฟ้า", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.ช่างยนต์/ไฟฟ้า", "status": "มทร.ตะวันออก", "desc": "ระบบขับเคลื่อนไฟฟ้า แบตเตอรี่และการประจุพลังงาน ความปลอดภัยในยานยนต์ไฟฟ้า"},
 
-        # MOOC / เรียนรู้นอกระบบ
         {"code": "MOOC-0008", "name": "การเงินส่วนบุคคล (Personal Finance Online)", "campus": "ทุกวิทยาเขต", "faculty": "ทุกคณะ", "major": "ทุกสาขาวิชา", "main_category": "หมวดวิชาเลือกเสรี", "credits": 3, "source": "ThaiMOOC", "status": "ต้องตรวจสอบกับประกาศ", "desc": "การวางแผนการเงิน การออม การลงทุน สินเชื่อ และภาษีบุคคลธรรมดาผ่านระบบออนไลน์"}
     ]
 
@@ -464,45 +511,46 @@ def available_courses():
     cards = ""
     for c in filtered_courses:
         cards += f"""
-        <div class="bg-white p-6 rounded-2xl border shadow-sm flex flex-col justify-between hover:shadow-md transition">
+        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between card-hover">
             <div>
-                <div class="flex justify-between items-start mb-2">
-                    <span class="font-mono text-xs text-gray-500 font-bold bg-gray-100 px-2 py-0.5 rounded">{c['code']}</span>
-                    <span class="bg-blue-100 text-blue-800 text-xs px-2.5 py-1 rounded-full font-semibold">{c['main_category']}</span>
+                <div class="flex justify-between items-start mb-3 gap-2">
+                    <span class="font-mono text-xs text-slate-700 font-bold bg-slate-100 px-3 py-1 rounded-xl border border-slate-200">{c['code']}</span>
+                    <span class="bg-blue-50 text-blue-900 text-xs px-3 py-1 rounded-full font-bold border border-blue-100">{c['main_category']}</span>
                 </div>
-                <h3 class="text-base font-bold text-gray-800 mb-2 leading-snug">{c['name']}</h3>
-                <p class="text-xs text-blue-700 font-semibold mb-1"><i class="fa-solid fa-location-dot mr-1"></i> {c['campus']}</p>
-                <p class="text-xs text-gray-600 font-medium mb-1"><i class="fa-solid fa-building-columns mr-1"></i> {c['faculty']}</p>
-                <p class="text-xs text-emerald-700 font-medium mb-2"><i class="fa-solid fa-graduation-cap mr-1"></i> {c['major']}</p>
-                <p class="text-xs text-gray-500 mb-4 leading-relaxed bg-gray-50 p-2.5 rounded-lg border">{c['desc']}</p>
+                <h3 class="text-base font-extrabold text-slate-900 mb-2 leading-snug">{c['name']}</h3>
+                <p class="text-xs text-blue-900 font-bold mb-1"><i class="fa-solid fa-location-dot text-amber-500 mr-1"></i> {c['campus']}</p>
+                <p class="text-xs text-slate-600 font-medium mb-1"><i class="fa-solid fa-building-columns mr-1 text-slate-400"></i> {c['faculty']}</p>
+                <p class="text-xs text-emerald-700 font-bold mb-3"><i class="fa-solid fa-graduation-cap mr-1"></i> {c['major']}</p>
+                <p class="text-xs text-slate-500 mb-4 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-100">{c['desc']}</p>
             </div>
-            <div class="border-t pt-4 mt-2">
-                <div class="flex justify-between items-center text-xs text-gray-600 mb-4">
-                    <span><i class="fa-solid fa-school mr-1 text-gray-400"></i> วิชาเดิม: {c['source']}</span>
-                    <span class="font-bold text-blue-900 text-sm">{c['credits']} หน่วยกิต</span>
+            <div class="border-t border-slate-100 pt-4 mt-2">
+                <div class="flex justify-between items-center text-xs text-slate-600 mb-4">
+                    <span><i class="fa-solid fa-school mr-1 text-slate-400"></i> วิชาเดิม: {c['source']}</span>
+                    <span class="font-black text-blue-950 text-sm bg-blue-50 px-2.5 py-0.5 rounded-lg">{c['credits']} หน่วยกิต</span>
                 </div>
-                {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['source'] + '&credits=' + str(c['credits']) + '&cat=' + c['main_category'] + '&fac=' + c['faculty'] + '&maj=' + c['major'] + '" class="block text-center w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg text-sm transition">เทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
+                {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['source'] + '&credits=' + str(c['credits']) + '&cat=' + c['main_category'] + '&fac=' + c['faculty'] + '&maj=' + c['major'] + '" class="block text-center w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm">เทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
             </div>
         </div>
         """
 
     content = f"""
-    <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-800 text-white p-6 rounded-2xl shadow-sm mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+    <div class="hero-gradient text-white p-8 rounded-3xl shadow-xl mb-8 flex flex-col md:flex-row justify-between items-center gap-6 border border-slate-700/50">
         <div>
-            <h2 class="text-2xl font-bold">📚 รายวิชาเปิดรับเทียบโอน (มทร.ตะวันออก)</h2>
-            <p class="text-blue-100 text-xs mt-1">ฐานข้อมูลรายวิชาเปิดรับเทียบโอนฉบับสำรวจ รวบรวมทุกวิทยาเขต/เขตพื้นที่ คณะ และสาขาวิชา</p>
+            <span class="bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">RMUTTO Database</span>
+            <h2 class="text-3xl font-extrabold">📚 รายวิชาเปิดรับเทียบโอน</h2>
+            <p class="text-slate-300 text-xs mt-1.5 leading-relaxed">ฐานข้อมูลรายวิชาเปิดรับเทียบโอนฉบับสำรวจ รวบรวมทุกวิทยาเขต/เขตพื้นที่ คณะ และสาขาวิชา</p>
         </div>
-        <div class="bg-white/10 backdrop-blur px-5 py-3 rounded-xl border border-white/20 text-center min-w-[180px]">
-            <span class="text-xs text-blue-200 block">จำนวนรายวิชาที่พบ</span>
-            <span class="text-2xl font-extrabold text-white">{len(filtered_courses)}</span> <span class="text-xs text-blue-200">/ {len(all_courses)} วิชา</span>
+        <div class="bg-white/10 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 text-center shrink-0">
+            <span class="text-xs text-slate-300 block font-medium">จำนวนรายวิชาที่พบ</span>
+            <span class="text-3xl font-black text-amber-400">{len(filtered_courses)}</span> <span class="text-xs text-slate-300">/ {len(all_courses)} วิชา</span>
         </div>
     </div>
 
-    <form method="GET" action="/available_courses" class="bg-white p-5 rounded-2xl border shadow-sm mb-6 space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <form method="GET" action="/available_courses" class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm mb-8 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1"><i class="fa-solid fa-location-dot mr-1"></i> เลือกวิทยาเขต / เขตพื้นที่</label>
-                <select name="campus" onchange="this.form.submit()" class="w-full border rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-location-dot mr-1 text-amber-500"></i> วิทยาเขต / เขตพื้นที่</label>
+                <select name="campus" onchange="this.form.submit()" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                     <option value="ทั้งหมด" {'selected' if selected_campus=='ทั้งหมด' or not selected_campus else ''}>ทุกวิทยาเขต/เขตพื้นที่</option>
                     <option value="จักรพงษภูวนารถ" {'selected' if selected_campus=='จักรพงษภูวนารถ' else ''}>เขตพื้นที่จักรพงษภูวนารถ (กรุงเทพฯ)</option>
                     <option value="บางพระ" {'selected' if selected_campus=='บางพระ' else ''}>เขตพื้นที่บางพระ (ชลบุรี)</option>
@@ -511,17 +559,17 @@ def available_courses():
                 </select>
             </div>
             <div class="md:col-span-2">
-                <label class="block text-xs font-semibold text-gray-600 mb-1"><i class="fa-solid fa-magnifying-glass mr-1"></i> ค้นหาด้วยรหัสวิชา / ชื่อวิชา / คณะ / สาขา</label>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-magnifying-glass mr-1 text-blue-900"></i> ค้นหาด้วยรหัสวิชา / ชื่อวิชา / คณะ / สาขา</label>
                 <div class="flex gap-2">
-                    <input type="text" name="search" value="{search_query}" placeholder="พิมพ์คำที่ต้องการค้นหา..." class="w-full px-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-xl text-sm transition shrink-0">ค้นหา</button>
+                    <input type="text" name="search" value="{search_query}" placeholder="พิมพ์คำที่ต้องการค้นหา..." class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
+                    <button type="submit" class="bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold px-7 py-3 rounded-2xl text-sm transition shadow-md shadow-blue-900/20 shrink-0">ค้นหา</button>
                 </div>
             </div>
         </div>
     </form>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {cards if cards else '<div class="col-span-3 text-center py-12 text-gray-400 bg-white rounded-2xl border">ไม่พบรายวิชาที่ตรงกับเงื่อนไขการค้นหา</div>'}
+        {cards if cards else '<div class="col-span-3 text-center py-16 text-slate-400 bg-white rounded-3xl border border-slate-200/80">ไม่พบรายวิชาที่ตรงกับเงื่อนไขการค้นหา</div>'}
     </div>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
@@ -546,20 +594,24 @@ def login():
         flash('ชื่อผู้ใช้งาน/เลขบัตรประชาชน หรือรหัสผ่านไม่ถูกต้อง', 'error')
 
     content = """
-    <div class="max-w-md mx-auto my-8 bg-white p-8 rounded-2xl border shadow-sm">
-        <h2 class="text-2xl font-bold text-center text-blue-900 mb-6">เข้าสู่ระบบ</h2>
+    <div class="max-w-md mx-auto my-12 bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
+        <div class="text-center mb-8">
+            <div class="w-14 h-14 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center font-black text-2xl mx-auto mb-3">CB</div>
+            <h2 class="text-2xl font-black text-slate-900">เข้าสู่ระบบ</h2>
+            <p class="text-xs text-slate-500 mt-1">ระบบธนาคารหน่วยกิต มทร.ตะวันออก</p>
+        </div>
         <form method="POST" class="space-y-4">
             <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อผู้ใช้งาน หรือ เลขบัตรประชาชน</label>
-                <input type="text" name="username" required placeholder="Username / เลขบัตรประชาชน 13 หลัก" class="w-full border rounded-lg p-2.5 text-sm">
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อผู้ใช้งาน หรือ เลขบัตรประชาชน</label>
+                <input type="text" name="username" required placeholder="Username / เลขบัตรประชาชน 13 หลัก" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
             </div>
             <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">รหัสผ่าน (Password)</label>
-                <input type="password" name="password" required placeholder="รหัสผ่านของคุณ" class="w-full border rounded-lg p-2.5 text-sm">
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">รหัสผ่าน (Password)</label>
+                <input type="password" name="password" required placeholder="รหัสผ่านของคุณ" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
             </div>
-            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700 transition shadow-sm">เข้าสู่ระบบ</button>
-            <div class="text-center text-xs pt-2">
-                <a href="/register" class="text-gray-500 hover:underline">ยังไม่มีบัญชีนักศึกษา? สมัครสมาชิก</a>
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-2">เข้าสู่ระบบ</button>
+            <div class="text-center text-xs pt-4 border-t border-slate-100">
+                <a href="/register" class="text-slate-500 hover:text-blue-900 font-medium">ยังไม่มีบัญชีนักศึกษา? <span class="font-bold text-blue-900 underline">สมัครสมาชิก</span></a>
             </div>
         </form>
     </div>
@@ -607,48 +659,51 @@ def register():
         return redirect(url_for('login'))
 
     content = """
-    <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
-        <h2 class="text-2xl font-bold text-center text-blue-900 mb-6">สมัครสมาชิกนักศึกษา</h2>
+    <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
+        <div class="text-center mb-8">
+            <h2 class="text-2xl font-black text-slate-900">สมัครสมาชิกนักศึกษา</h2>
+            <p class="text-xs text-slate-500 mt-1">กรอกข้อมูลเพื่อเปิดใช้งานคลังหน่วยกิตส่วนบุคคล</p>
+        </div>
         <form method="POST" class="space-y-4">
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">คำนำหน้า *</label>
-                    <select name="prefix" class="w-full border rounded-lg p-2.5 text-sm">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">คำนำหน้า *</label>
+                    <select name="prefix" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                         <option value="นาย">นาย</option>
                         <option value="นาง">นาง</option>
                         <option value="นางสาว">นางสาว</option>
                     </select>
                 </div>
                 <div class="md:col-span-2">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อ-นามสกุล *</label>
-                    <input type="text" name="fullname" required placeholder="ชื่อ นามสกุล" class="w-full border rounded-lg p-2.5 text-sm">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อ-นามสกุล *</label>
+                    <input type="text" name="fullname" required placeholder="ชื่อ นามสกุล" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">เลขบัตรประชาชน (13 หลัก) *</label>
-                    <input type="text" name="id_card" maxlength="13" required placeholder="เลขบัตรประชาชน" class="w-full border rounded-lg p-2.5 text-sm">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เลขบัตรประชาชน (13 หลัก) *</label>
+                    <input type="text" name="id_card" maxlength="13" required placeholder="เลขบัตรประชาชน" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">วัน/เดือน/ปีเกิด *</label>
-                    <input type="date" name="dob" required class="w-full border rounded-lg p-2.5 text-sm">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">วัน/เดือน/ปีเกิด *</label>
+                    <input type="date" name="dob" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">เบอร์โทรศัพท์ *</label><input type="tel" name="phone" required placeholder="08X-XXX-XXXX" class="w-full border rounded-lg p-2.5 text-sm"></div>
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">อีเมล *</label><input type="email" name="email" required placeholder="student@rmutto.ac.th" class="w-full border rounded-lg p-2.5 text-sm"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์ *</label><input type="tel" name="phone" required placeholder="08X-XXX-XXXX" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมล *</label><input type="email" name="email" required placeholder="student@rmutto.ac.th" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อผู้ใช้งาน (Username) *</label><input type="text" name="username" required placeholder="ตั้งชื่อผู้ใช้งาน" class="w-full border rounded-lg p-2.5 text-sm"></div>
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">รหัสผ่าน (Password) *</label><input type="password" name="password" required placeholder="กำหนดรหัสผ่าน" class="w-full border rounded-lg p-2.5 text-sm"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อผู้ใช้งาน (Username) *</label><input type="text" name="username" required placeholder="ตั้งชื่อผู้ใช้งาน" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">รหัสผ่าน (Password) *</label><input type="password" name="password" required placeholder="กำหนดรหัสผ่าน" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition shadow-sm text-base mt-2">
-                <i class="fa-solid fa-user-plus mr-1"></i> ยืนยันการสมัครสมาชิก
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-4">
+                <i class="fa-solid fa-user-plus mr-1 text-amber-400"></i> ยืนยันการสมัครสมาชิก
             </button>
         </form>
     </div>
@@ -667,25 +722,25 @@ def history():
     rows = ""
     for r in user_requests:
         status = getattr(r, 'status', 'Pending')
-        badge = '<span class="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">รอการพิจารณา</span>' if status == 'Pending' else ('<span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">อนุมัติแล้ว</span>' if status == 'Approved' else '<span class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">ไม่อนุมัติ</span>')
+        badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอการพิจารณา</span>' if status == 'Pending' else ('<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>' if status == 'Approved' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ</span>')
         approved_by = getattr(r, 'approved_by', '-') or '-'
 
         rows += f"""
-        <tr class="border-b text-sm">
-            <td class="py-3 px-4 font-mono font-bold text-gray-500">{getattr(r, 'req_code', 'TR001')}</td>
-            <td class="py-3 px-4 font-medium text-gray-800">{getattr(r, 'course_name', '-')}</td>
-            <td class="py-3 px-4 text-gray-600">{getattr(r, 'institution', '-')}</td>
-            <td class="py-3 px-4 font-bold text-blue-900">{getattr(r, 'credits', 0)}</td>
-            <td class="py-3 px-4 text-xs text-gray-500">{approved_by}</td>
-            <td class="py-3 px-4">{badge}</td>
+        <tr class="border-b border-slate-100 text-sm hover:bg-slate-50 transition">
+            <td class="py-4 px-4 font-mono font-bold text-slate-500">{getattr(r, 'req_code', 'TR001')}</td>
+            <td class="py-4 px-4 font-extrabold text-slate-900">{getattr(r, 'course_name', '-')}</td>
+            <td class="py-4 px-4 text-slate-600 font-medium">{getattr(r, 'institution', '-')}</td>
+            <td class="py-4 px-4 font-black text-blue-900">{getattr(r, 'credits', 0)}</td>
+            <td class="py-4 px-4 text-xs text-slate-500 font-medium">{approved_by}</td>
+            <td class="py-4 px-4">{badge}</td>
         </tr>
         """
     content = f"""
-    <div class="bg-white p-6 rounded-2xl border shadow-sm overflow-x-auto">
-        <h3 class="text-xl font-bold text-gray-800 mb-4">ประวัติคำร้องเทียบโอน</h3>
+    <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
+        <h3 class="text-xl font-black text-slate-900 mb-6">ประวัติคำร้องเทียบโอน</h3>
         <table class="w-full text-left min-w-[700px]">
-            <thead class="bg-gray-50 border-b text-xs text-gray-500 uppercase"><tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">สถาบัน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">เจ้าหน้าที่ผู้ตรวจ</th><th class="py-3 px-4">สถานะ</th></tr></thead>
-            <tbody>{rows if rows else '<tr><td colspan="6" class="py-6 text-center text-gray-400">ไม่มีรายการประวัติคำร้อง</td></tr>'}</tbody>
+            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider"><tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">สถาบัน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">เจ้าหน้าที่ผู้ตรวจ</th><th class="py-3 px-4">สถานะ</th></tr></thead>
+            <tbody>{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีรายการประวัติคำร้อง</td></tr>'}</tbody>
         </table>
     </div>
     """
@@ -706,19 +761,19 @@ def credits():
     for r in approved_requests:
         approved_by = getattr(r, 'approved_by', 'เจ้าหน้าที่') or 'เจ้าหน้าที่'
         rows += f"""
-        <tr class="border-b text-sm">
-            <td class="py-3.5 px-4 font-medium text-gray-800">{getattr(r, 'course_name', '-')}</td>
-            <td class="py-3.5 px-4 text-gray-600">{getattr(r, 'institution', '-')}</td>
-            <td class="py-3.5 px-4 font-bold text-blue-900">{getattr(r, 'credits', 0)} หน่วยกิต</td>
-            <td class="py-3.5 px-4 text-xs text-gray-500">{approved_by}</td>
+        <tr class="border-b border-slate-100 text-sm hover:bg-slate-50 transition">
+            <td class="py-4 px-4 font-extrabold text-slate-900">{getattr(r, 'course_name', '-')}</td>
+            <td class="py-4 px-4 text-slate-600 font-medium">{getattr(r, 'institution', '-')}</td>
+            <td class="py-4 px-4 font-black text-blue-900">{getattr(r, 'credits', 0)} หน่วยกิต</td>
+            <td class="py-4 px-4 text-xs text-slate-500 font-medium">{approved_by}</td>
         </tr>
         """
     content = f"""
-    <div class="mb-6"><h2 class="text-2xl font-bold text-gray-800">💳 หน่วยกิตสะสมของฉัน ({total_approved} หน่วยกิต)</h2></div>
-    <div class="bg-white p-6 rounded-2xl border shadow-sm overflow-x-auto">
+    <div class="mb-6"><h2 class="text-2xl font-black text-slate-900">💳 หน่วยกิตสะสมของฉัน ({total_approved} หน่วยกิต)</h2></div>
+    <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
         <table class="w-full text-left min-w-[600px]">
-            <thead class="bg-gray-50 border-b text-xs text-gray-500 uppercase"><tr><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">สถาบัน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">ผู้อนุมัติ</th></tr></thead>
-            <tbody>{rows if rows else '<tr><td colspan="4" class="py-8 text-center text-gray-400 text-sm">ยังไม่มีรายการหน่วยกิตที่ได้รับการอนุมัติ</td></tr>'}</tbody>
+            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider"><tr><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">สถาบัน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">ผู้อนุมัติ</th></tr></thead>
+            <tbody>{rows if rows else '<tr><td colspan="4" class="py-12 text-center text-slate-400 text-sm">ยังไม่มีรายการหน่วยกิตที่ได้รับการอนุมัติ</td></tr>'}</tbody>
         </table>
     </div>
     """
@@ -766,32 +821,33 @@ def request_edit_profile():
         return redirect(url_for('profile'))
 
     content = f"""
-    <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
-        <h3 class="text-xl font-bold text-gray-800 mb-2">ส่งคำร้องขอแก้ไขข้อมูลส่วนตัว</h3>
+    <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
+        <h3 class="text-2xl font-black text-slate-900 mb-2">ส่งคำร้องขอแก้ไขข้อมูลส่วนตัว</h3>
+        <p class="text-xs text-slate-500 mb-6">กรอกข้อมูลที่ต้องการอัปเดตเพื่อส่งเรื่องให้เจ้าหน้าที่อนุมัติ</p>
         <form method="POST" class="space-y-4">
             <div class="grid grid-cols-3 gap-3">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">คำนำหน้าใหม่</label>
-                    <select name="prefix" class="w-full border rounded-lg p-2.5 text-sm">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">คำนำหน้าใหม่</label>
+                    <select name="prefix" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                         <option value="นาย" {'selected' if user.prefix=='นาย' else ''}>นาย</option>
                         <option value="นาง" {'selected' if user.prefix=='นาง' else ''}>นาง</option>
                         <option value="นางสาว" {'selected' if user.prefix=='นางสาว' else ''}>นางสาว</option>
                     </select>
                 </div>
                 <div class="col-span-2">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อ-นามสกุลใหม่</label>
-                    <input type="text" name="fullname" value="{user.fullname}" required class="w-full border rounded-lg p-2.5 text-sm">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อ-นามสกุลใหม่</label>
+                    <input type="text" name="fullname" value="{user.fullname}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">เบอร์โทรศัพท์ใหม่</label><input type="tel" name="phone" value="{user.phone or ''}" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">อีเมลใหม่</label><input type="email" name="email" value="{user.email or ''}" required class="w-full border rounded-lg p-2.5 text-sm"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์ใหม่</label><input type="tel" name="phone" value="{user.phone or ''}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมลใหม่</label><input type="email" name="email" value="{user.email or ''}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
             </div>
             <div>
-                <label class="block text-xs font-bold text-red-600 mb-1">เหตุผลในการขอแก้ไข *</label>
-                <textarea name="reason" rows="3" required class="w-full border rounded-lg p-2.5 text-sm"></textarea>
+                <label class="block text-xs font-bold text-rose-600 uppercase tracking-wider mb-1.5">เหตุผลในการขอแก้ไข *</label>
+                <textarea name="reason" rows="3" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></textarea>
             </div>
-            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700">ส่งคำร้องให้เจ้าหน้าที่พิจารณา</button>
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-2">ส่งคำร้องให้เจ้าหน้าที่พิจารณา</button>
         </form>
     </div>
     """
@@ -816,7 +872,6 @@ def submit_credit():
         flash('ยื่นคำขอเทียบโอนเรียบร้อยแล้ว', 'success')
         return redirect(url_for('history'))
 
-    # รับค่าจาก Query Parameters จากปุ่ม "เทียบโอนวิชานี้"
     init_course = request.args.get('course', '')
     init_inst = request.args.get('inst', '')
     init_credits = request.args.get('credits', '3')
@@ -825,16 +880,16 @@ def submit_credit():
     init_maj = request.args.get('maj', '')
 
     content = f"""
-    <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
-        <h3 class="text-xl font-bold text-gray-800 mb-6">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
+    <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
+        <h3 class="text-2xl font-black text-slate-900 mb-6">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
         <form method="POST" class="space-y-4">
-            <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อหลักสูตร / รายวิชา *</label><input type="text" name="course_name" value="{init_course}" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-            <div><label class="block text-xs font-semibold text-gray-600 mb-1">สถาบันเดิม / แหล่งเรียนรู้ *</label><input type="text" name="institution" value="{init_inst}" required class="w-full border rounded-lg p-2.5 text-sm"></div>
+            <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อหลักสูตร / รายวิชา *</label><input type="text" name="course_name" value="{init_course}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
+            <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">สถาบันเดิม / แหล่งเรียนรู้ *</label><input type="text" name="institution" value="{init_inst}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
             <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">จำนวนหน่วยกิต *</label><input type="number" name="credits" value="{init_credits}" required class="w-full border rounded-lg p-2.5 text-sm"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">จำนวนหน่วยกิต *</label><input type="number" name="credits" value="{init_credits}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">หมวดหมู่การเรียนรู้</label>
-                    <select name="category" class="w-full border rounded-lg p-2.5 text-sm">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">หมวดหมู่การเรียนรู้</label>
+                    <select name="category" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                         <option value="ในระบบ" {'selected' if init_cat=='ในระบบ' or init_cat=='หมวดวิชาเฉพาะ' or init_cat=='หมวดวิชาศึกษาทั่วไป' else ''}>ในระบบ</option>
                         <option value="นอกระบบ" {'selected' if init_cat=='นอกระบบ' else ''}>นอกระบบ</option>
                         <option value="ตามอัธยาศัย" {'selected' if init_cat=='ตามอัธยาศัย' or init_cat=='หมวดวิชาเลือกเสรี' else ''}>ตามอัธยาศัย</option>
@@ -843,7 +898,7 @@ def submit_credit():
             </div>
             <input type="hidden" name="faculty" value="{init_fac}">
             <input type="hidden" name="major" value="{init_maj}">
-            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700">ส่งคำร้องขอเทียบโอน</button>
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-2">ส่งคำร้องขอเทียบโอน</button>
         </form>
     </div>
     """
@@ -857,15 +912,15 @@ def profile():
     display_title = "เจ้าหน้าที่" if user.role in ['admin', 'superadmin'] else f"{user.prefix or ''} {user.fullname}"
     
     content = f"""
-    <div class="max-w-3xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
-        <h3 class="text-2xl font-bold text-gray-800 mb-2">{display_title}</h3>
-        <p class="text-sm font-semibold text-blue-600 mb-6">รหัสประจำตัว: {user.member_id or '-'}</p>
+    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
+        <h3 class="text-2xl font-black text-slate-900 mb-1">{display_title}</h3>
+        <p class="text-sm font-bold text-blue-900 mb-6">รหัสประจำตัว: {user.member_id or '-'}</p>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl text-sm">
-            <div><span class="text-gray-400 block text-xs">ชื่อ-สกุล</span> <span class="font-semibold text-gray-700">{user.fullname}</span></div>
-            <div><span class="text-gray-400 block text-xs">เลขบัตรประชาชน</span> <span class="font-semibold text-gray-700">{user.id_card or '-'}</span></div>
-            <div><span class="text-gray-400 block text-xs">เบอร์โทรศัพท์</span> <span class="font-semibold text-gray-700">{user.phone or '-'}</span></div>
-            <div><span class="text-gray-400 block text-xs">อีเมล</span> <span class="font-semibold text-gray-700">{user.email or '-'}</span></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 bg-slate-50 p-6 rounded-2xl border border-slate-100 text-sm">
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ชื่อ-สกุล</span> <span class="font-bold text-slate-800">{user.fullname}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เลขบัตรประชาชน</span> <span class="font-bold text-slate-800">{user.id_card or '-'}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เบอร์โทรศัพท์</span> <span class="font-bold text-slate-800">{user.phone or '-'}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">อีเมล</span> <span class="font-bold text-slate-800">{user.email or '-'}</span></div>
         </div>
     </div>
     """
@@ -907,65 +962,65 @@ def manage_admins():
     admin_list = User.query.filter(User.role.in_(['admin', 'superadmin'])).all()
     rows = ""
     for a in admin_list:
-        role_badge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">ผู้ดูแลหลัก</span>' if a.role == 'superadmin' else '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-800">เจ้าหน้าที่ตรวจงาน</span>'
+        role_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-900 border border-blue-200">ผู้ดูแลหลัก</span>' if a.role == 'superadmin' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">เจ้าหน้าที่ตรวจงาน</span>'
         
         rows += f"""
-        <tr class="border-b text-sm hover:bg-gray-50">
-            <td class="py-3.5 px-4 font-mono font-bold text-gray-700">{a.id_card}</td>
-            <td class="py-3.5 px-4 font-semibold text-gray-800">{a.fullname}</td>
-            <td class="py-3.5 px-4 text-xs text-gray-600">{a.email or '-'}<br>{a.phone or '-'}</td>
-            <td class="py-3.5 px-4">{role_badge}</td>
+        <tr class="border-b border-slate-100 text-sm hover:bg-slate-50 transition">
+            <td class="py-4 px-4 font-mono font-bold text-slate-700">{a.id_card}</td>
+            <td class="py-4 px-4 font-extrabold text-slate-900">{a.fullname}</td>
+            <td class="py-4 px-4 text-xs text-slate-600 font-medium">{a.email or '-'}<br>{a.phone or '-'}</td>
+            <td class="py-4 px-4">{role_badge}</td>
         </tr>
         """
 
     content = f"""
     <div class="max-w-4xl mx-auto space-y-8">
-        <div class="bg-white p-6 rounded-2xl border shadow-sm">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center font-bold text-lg"><i class="fa-solid fa-user-plus"></i></div>
+        <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-xl">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center font-bold text-xl shrink-0"><i class="fa-solid fa-user-plus text-amber-500"></i></div>
                 <div>
-                    <h3 class="text-xl font-bold text-gray-800">เพิ่มบัญชีเจ้าหน้าที่ตรวจงาน</h3>
-                    <p class="text-xs text-gray-500">กำหนดเลขบัตรประชาชนและรหัสผ่านส่วนตัวสำหรับเจ้าหน้าที่ในการเข้าสู่ระบบ</p>
+                    <h3 class="text-xl font-black text-slate-900">เพิ่มบัญชีเจ้าหน้าที่ตรวจงาน</h3>
+                    <p class="text-xs text-slate-500">กำหนดเลขบัตรประชาชนและรหัสผ่านส่วนตัวสำหรับเจ้าหน้าที่ในการเข้าสู่ระบบ</p>
                 </div>
             </div>
             
-            <form method="POST" class="space-y-4 border-t pt-4">
+            <form method="POST" class="space-y-4 border-t border-slate-100 pt-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อ-นามสกุล เจ้าหน้าที่ <span class="text-red-500">*</span></label>
-                        <input type="text" name="fullname" placeholder="เช่น นายสมศักดิ์ ตรวจการ" required class="w-full border rounded-lg p-2.5 text-sm">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อ-นามสกุล เจ้าหน้าที่ <span class="text-rose-500">*</span></label>
+                        <input type="text" name="fullname" placeholder="เช่น นายสมศักดิ์ ตรวจการ" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">เลขบัตรประชาชน (13 หลัก) <span class="text-red-500">* (ใช้เป็น Username)</span></label>
-                        <input type="text" name="id_card" maxlength="13" placeholder="เลขบัตรประชาชน 13 หลัก" required class="w-full border rounded-lg p-2.5 text-sm">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เลขบัตรประชาชน (13 หลัก) <span class="text-rose-500">* (Username)</span></label>
+                        <input type="text" name="id_card" maxlength="13" placeholder="เลขบัตรประชาชน 13 หลัก" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">อีเมลเจ้าหน้าที่</label>
-                        <input type="email" name="email" placeholder="official@rmutto.ac.th" class="w-full border rounded-lg p-2.5 text-sm">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมลเจ้าหน้าที่</label>
+                        <input type="email" name="email" placeholder="official@rmutto.ac.th" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">เบอร์โทรศัพท์</label>
-                        <input type="tel" name="phone" placeholder="08X-XXX-XXXX" class="w-full border rounded-lg p-2.5 text-sm">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์</label>
+                        <input type="tel" name="phone" placeholder="08X-XXX-XXXX" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">กำหนดรหัสผ่านส่วนตัว <span class="text-red-500">*</span></label>
-                        <input type="password" name="password" placeholder="รหัสผ่านเข้าใช้งาน" required class="w-full border rounded-lg p-2.5 text-sm">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">กำหนดรหัสผ่าน <span class="text-rose-500">*</span></label>
+                        <input type="password" name="password" placeholder="รหัสผ่านเข้าใช้งาน" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
                     </div>
                 </div>
 
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition shadow-sm">
-                    <i class="fa-solid fa-plus mr-1"></i> บันทึกเพิ่มเจ้าหน้าที่
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-2">
+                    <i class="fa-solid fa-plus mr-1 text-amber-400"></i> บันทึกเพิ่มเจ้าหน้าที่
                 </button>
             </form>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border shadow-sm overflow-x-auto">
-            <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fa-solid fa-users-gear text-blue-600 mr-2"></i>รายชื่อเจ้าหน้าที่ผู้มีสิทธิ์ในระบบ</h3>
+        <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
+            <h3 class="text-xl font-black text-slate-900 mb-6"><i class="fa-solid fa-users-gear text-blue-900 mr-2"></i>รายชื่อเจ้าหน้าที่ผู้มีสิทธิ์ในระบบ</h3>
             <table class="w-full text-left min-w-[600px]">
-                <thead class="bg-gray-50 border-b text-xs text-gray-500 uppercase">
+                <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
                     <tr><th class="py-3 px-4">เลขบัตรประชาชน (Username)</th><th class="py-3 px-4">ชื่อ-สกุล เจ้าหน้าที่</th><th class="py-3 px-4">ข้อมูลติดต่อ</th><th class="py-3 px-4">สิทธิ์ผู้ใช้งาน</th></tr>
                 </thead>
                 <tbody>{rows}</tbody>
@@ -981,29 +1036,29 @@ def admin_requests():
     all_requests = CreditRequest.query.order_by(CreditRequest.id.desc()).all()
     rows = ""
     for r in all_requests:
-        status_badge = '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800">รอพิจารณา</span>' if getattr(r, 'status', 'Pending') == 'Pending' else ('<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">อนุมัติ</span>' if getattr(r, 'status', '') == 'Approved' else '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">ไม่อนุมัติ</span>')
+        status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอพิจารณา</span>' if getattr(r, 'status', 'Pending') == 'Pending' else ('<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติ</span>' if getattr(r, 'status', '') == 'Approved' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ</span>')
         
         rows += f"""
-        <tr class="border-b text-sm hover:bg-gray-50">
-            <td class="py-3 px-4 font-mono font-bold text-blue-900">{getattr(r, 'req_code', 'TR001')}</td>
-            <td class="py-3 px-4 font-medium">{r.user.fullname if r.user else '-'}<br><span class="text-xs text-blue-600">({r.user.member_id if r.user else '-'})</span></td>
-            <td class="py-3 px-4 text-gray-600">{getattr(r, 'course_name', '-')}</td>
-            <td class="py-3 px-4 text-gray-500">{getattr(r, 'date_submitted', '-')}</td>
-            <td class="py-3 px-4">{status_badge}</td>
-            <td class="py-3 px-4">
-                <a href="/admin/review/{r.id}" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-blue-700 inline-block">พิจารณา</a>
+        <tr class="border-b border-slate-100 text-sm hover:bg-slate-50 transition">
+            <td class="py-4 px-4 font-mono font-bold text-blue-900">{getattr(r, 'req_code', 'TR001')}</td>
+            <td class="py-4 px-4 font-bold text-slate-900">{r.user.fullname if r.user else '-'}<br><span class="text-xs text-blue-900 font-semibold">({r.user.member_id if r.user else '-'})</span></td>
+            <td class="py-4 px-4 text-slate-700 font-medium">{getattr(r, 'course_name', '-')}</td>
+            <td class="py-4 px-4 text-slate-500 text-xs font-medium">{getattr(r, 'date_submitted', '-')}</td>
+            <td class="py-4 px-4">{status_badge}</td>
+            <td class="py-4 px-4">
+                <a href="/admin/review/{r.id}" class="bg-gradient-to-r from-blue-900 to-indigo-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-blue-950 hover:to-indigo-900 inline-block shadow-sm">พิจารณา</a>
             </td>
         </tr>
         """
 
     content = f"""
-    <div class="bg-white p-6 rounded-2xl border shadow-sm overflow-x-auto">
-        <h3 class="text-xl font-bold text-gray-800 mb-4">รายการคำร้องเทียบโอนทั้งหมด</h3>
+    <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
+        <h3 class="text-xl font-black text-slate-900 mb-6">รายการคำร้องเทียบโอนทั้งหมด</h3>
         <table class="w-full text-left min-w-[650px]">
-            <thead class="bg-gray-50 border-b text-xs text-gray-500 uppercase">
+            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
                 <tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">ชื่อนักศึกษา</th><th class="py-3 px-4">วิชาที่ขอเทียบโอน</th><th class="py-3 px-4">วันที่ยื่น</th><th class="py-3 px-4">สถานะ</th><th class="py-3 px-4">จัดการ</th></tr>
             </thead>
-            <tbody>{rows if rows else '<tr><td colspan="6" class="py-6 text-center text-gray-400">ไม่มีคำร้องในระบบ</td></tr>'}</tbody>
+            <tbody>{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีคำร้องในระบบ</td></tr>'}</tbody>
         </table>
     </div>
     """
@@ -1016,46 +1071,46 @@ def admin_profile_requests():
     requests_list = ProfileEditRequest.query.order_by(ProfileEditRequest.id.desc()).all()
     rows = ""
     for r in requests_list:
-        status_badge = '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800">รอพิจารณา</span>' if getattr(r, 'status', 'Pending') == 'Pending' else ('<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">อนุมัติแล้ว</span>' if getattr(r, 'status', '') == 'Approved' else '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">ไม่อนุมัติ</span>')
+        status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอพิจารณา</span>' if getattr(r, 'status', 'Pending') == 'Pending' else ('<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>' if getattr(r, 'status', '') == 'Approved' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ</span>')
         
         actions = f"""
         <div class="flex items-center gap-2">
-            <a href="/admin/approve_profile/{r.id}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm inline-flex items-center gap-1">
+            <a href="/admin/approve_profile/{r.id}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-sm inline-flex items-center gap-1">
                 <i class="fa-solid fa-check"></i> อนุมัติ
             </a>
-            <a href="/admin/reject_profile/{r.id}" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm inline-flex items-center gap-1">
+            <a href="/admin/reject_profile/{r.id}" class="bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-sm inline-flex items-center gap-1">
                 <i class="fa-solid fa-xmark"></i> ไม่อนุมัติ
             </a>
         </div>
-        """ if getattr(r, 'status', 'Pending') == 'Pending' else f'<div class="text-xs text-gray-500 font-medium">ผู้อนุมัติ:<br><span class="text-blue-700 font-bold">{getattr(r, "approved_by", "เจ้าหน้าที่") or "เจ้าหน้าที่"}</span></div>'
+        """ if getattr(r, 'status', 'Pending') == 'Pending' else f'<div class="text-xs text-slate-500 font-medium">ผู้อนุมัติ:<br><span class="text-blue-900 font-bold">{getattr(r, "approved_by", "เจ้าหน้าที่") or "เจ้าหน้าที่"}</span></div>'
 
         rows += f"""
-        <tr class="border-b text-sm hover:bg-gray-50 transition">
-            <td class="py-4 px-4 font-medium text-gray-800">
+        <tr class="border-b border-slate-100 text-sm hover:bg-slate-50 transition">
+            <td class="py-4 px-4 font-bold text-slate-900">
                 {r.user.fullname if r.user else '-'}<br>
-                <span class="text-xs text-blue-600 font-semibold">(รหัส: {r.user.member_id if r.user else '-'})</span>
+                <span class="text-xs text-blue-900 font-semibold">(รหัส: {r.user.member_id if r.user else '-'})</span>
             </td>
-            <td class="py-4 px-4 text-xs leading-relaxed">
+            <td class="py-4 px-4 text-xs leading-relaxed font-medium text-slate-700">
                 <b>ชื่อใหม่:</b> {getattr(r, 'new_prefix', '')}{getattr(r, 'new_fullname', '')}<br>
                 <b>โทร:</b> {getattr(r, 'new_phone', '-')}<br>
                 <b>อีเมล:</b> {getattr(r, 'new_email', '-')}<br>
                 <b>ที่อยู่ใหม่:</b> {getattr(r, 'new_address', '-')}
             </td>
-            <td class="py-4 px-4 text-xs text-gray-600 max-w-xs leading-relaxed">{getattr(r, 'reason', '-')}</td>
-            <td class="py-4 px-4 text-xs text-gray-400">{getattr(r, 'created_at', '-')}</td>
+            <td class="py-4 px-4 text-xs text-slate-600 max-w-xs leading-relaxed">{getattr(r, 'reason', '-')}</td>
+            <td class="py-4 px-4 text-xs text-slate-400 font-medium">{getattr(r, 'created_at', '-')}</td>
             <td class="py-4 px-4">{status_badge}</td>
             <td class="py-4 px-4">{actions}</td>
         </tr>
         """
 
     content = f"""
-    <div class="bg-white p-6 rounded-2xl border shadow-sm overflow-x-auto">
-        <h3 class="text-xl font-bold text-gray-800 mb-4">รายการคำร้องขอแก้ไขข้อมูลส่วนตัว</h3>
+    <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
+        <h3 class="text-xl font-black text-slate-900 mb-6">รายการคำร้องขอแก้ไขข้อมูลส่วนตัว</h3>
         <table class="w-full text-left min-w-[750px]">
-            <thead class="bg-gray-50 border-b text-xs text-gray-500 uppercase">
-                <tr><th class="py-3.5 px-4">นักศึกษา</th><th class="py-3.5 px-4">ข้อมูลที่ขอเปลี่ยนแปลง</th><th class="py-3.5 px-4">เหตุผลในการขอแก้ไข</th><th class="py-3.5 px-4">วันที่ยื่น</th><th class="py-3.5 px-4">สถานะ</th><th class="py-3.5 px-4">การจัดการ</th></tr>
+            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <tr><th class="py-3 px-4">นักศึกษา</th><th class="py-3 px-4">ข้อมูลที่ขอเปลี่ยนแปลง</th><th class="py-3 px-4">เหตุผลในการขอแก้ไข</th><th class="py-3 px-4">วันที่ยื่น</th><th class="py-3 px-4">สถานะ</th><th class="py-3 px-4">การจัดการ</th></tr>
             </thead>
-            <tbody class="divide-y divide-gray-100">{rows if rows else '<tr><td colspan="6" class="py-8 text-center text-gray-400">ไม่มีคำร้องขอแก้ไขข้อมูลในระบบ</td></tr>'}</tbody>
+            <tbody class="divide-y divide-slate-100">{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีคำร้องขอแก้ไขข้อมูลในระบบ</td></tr>'}</tbody>
         </table>
     </div>
     """
@@ -1067,18 +1122,18 @@ def admin_review(req_id):
     req = CreditRequest.query.get_or_404(req_id)
 
     content = f"""
-    <div class="max-w-4xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
-        <h3 class="text-xl font-bold text-gray-800 mb-4">พิจารณาคำร้องเทียบโอน #{getattr(req, 'req_code', 'TR001')}</h3>
-        <div class="grid md:grid-cols-2 gap-4 text-sm mb-4">
-            <div><span class="text-gray-400 block text-xs">ผู้ยื่นคำร้อง</span><b>{req.user.fullname if req.user else '-'}</b> (รหัส: {req.user.member_id if req.user else '-'})</div>
-            <div><span class="text-gray-400 block text-xs">หมวดหมู่</span><b>{getattr(req, 'category', 'ในระบบ')}</b></div>
-            <div><span class="text-gray-400 block text-xs">รายวิชา</span><b>{getattr(req, 'course_name', '-')}</b> ({getattr(req, 'credits', 0)} หน่วยกิต)</div>
-            <div><span class="text-gray-400 block text-xs">สถานะปัจจุบัน</span><b>{getattr(req, 'status', 'Pending')}</b></div>
+    <div class="max-w-4xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
+        <h3 class="text-2xl font-black text-slate-900 mb-6">พิจารณาคำร้องเทียบโอน #{getattr(req, 'req_code', 'TR001')}</h3>
+        <div class="grid md:grid-cols-2 gap-5 text-sm mb-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ผู้ยื่นคำร้อง</span><b class="text-slate-800">{req.user.fullname if req.user else '-'}</b> (รหัส: {req.user.member_id if req.user else '-'})</div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">หมวดหมู่</span><b class="text-slate-800">{getattr(req, 'category', 'ในระบบ')}</b></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">รายวิชา</span><b class="text-slate-800">{getattr(req, 'course_name', '-')}</b> ({getattr(req, 'credits', 0)} หน่วยกิต)</div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">สถานะปัจจุบัน</span><b class="text-slate-800">{getattr(req, 'status', 'Pending')}</b></div>
         </div>
 
-        <div class="flex justify-end space-x-3 mt-6 border-t pt-4">
-            <a href="/admin/reject/{req.id}" class="px-5 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700">ไม่อนุมัติ</a>
-            <a href="/admin/approve/{req.id}" class="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700">อนุมัติคำร้อง</a>
+        <div class="flex justify-end space-x-3 mt-6 border-t border-slate-100 pt-6">
+            <a href="/admin/reject/{req.id}" class="px-6 py-3 bg-rose-600 text-white rounded-2xl text-xs font-bold hover:bg-rose-700 transition">ไม่อนุมัติ</a>
+            <a href="/admin/approve/{req.id}" class="px-6 py-3 bg-emerald-600 text-white rounded-2xl text-xs font-bold hover:bg-emerald-700 transition">อนุมัติคำร้อง</a>
         </div>
     </div>
     """
