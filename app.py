@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_secret_key_2026_rmutto_v4_fix_text'
+app.secret_key = 'credit_bank_secret_key_2026_rmutto_v5_sidebar'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -131,7 +131,7 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     return " ".join(parts)
 
 # ==========================================
-# Layout Template
+# Layout Template (พร้อม Sidebar หุบ/ขยายได้)
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -147,125 +147,183 @@ LAYOUT_TEMPLATE = """
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
         .hero-gradient { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1e1b4b 100%); }
+        .sidebar-transition { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .card-hover { transition: all 0.25s ease-in-out; }
         .card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.08); }
+        .sidebar-expanded { width: 260px; }
+        .sidebar-collapsed { width: 80px; }
+        .sidebar-collapsed .nav-text { display: none; }
+        .sidebar-collapsed .logo-text { display: none; }
+        .sidebar-collapsed .section-title { display: none; }
+        .sidebar-collapsed .toggle-icon { transform: rotate(180deg); }
     </style>
 </head>
-<body class="bg-slate-50 flex flex-col min-h-screen text-slate-800 antialiased">
+<body class="bg-slate-50 min-h-screen text-slate-800 antialiased flex flex-col md:flex-row">
 
-    <nav class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-sm transition-all">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-20 items-center">
-                <a href="/" class="flex items-center gap-3 group">
-                    <div class="w-11 h-11 bg-gradient-to-tr from-blue-900 to-indigo-700 text-amber-400 rounded-2xl flex items-center justify-center font-extrabold text-xl shadow-md shadow-blue-900/20 group-hover:scale-105 transition-transform">
-                        CB
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="font-extrabold text-slate-900 text-lg leading-tight tracking-tight group-hover:text-blue-900 transition-colors">Credit Bank</span>
-                        <span class="text-[11px] text-amber-600 font-bold uppercase tracking-wider">มทร.ตะวันออก (RMUTTO)</span>
-                    </div>
-                </a>
-
-                <div class="hidden md:flex items-center space-x-1 lg:space-x-2 text-sm font-semibold">
-                    <a href="/" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">หน้าแรก</a>
-                    {% if session.get('user_id') %}
-                        {% if session.get('role') in ['admin', 'superadmin'] %}
-                            <a href="/admin/requests" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">คำร้องเทียบโอน</a>
-                            <a href="/admin/profile_requests" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">คำร้องแก้ไขข้อมูล</a>
-                            <a href="/admin/manage_admins" class="px-4 py-2.5 rounded-xl text-white bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 transition font-bold shadow-md shadow-blue-900/20 flex items-center gap-2">
-                                <i class="fa-solid fa-user-plus text-amber-400"></i> เพิ่ม/จัดการเจ้าหน้าที่
-                            </a>
-                        {% else %}
-                            <a href="/available_courses" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">รายวิชาเปิดรับเทียบโอน</a>
-                            <a href="/submit_credit" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">ยื่นคำขอเทียบโอน</a>
-                            <a href="/credits" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">หน่วยกิตสะสม</a>
-                            <a href="/history" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition">ประวัติคำขอ</a>
-                        {% endif %}
-                        <a href="/profile" class="px-4 py-2.5 rounded-xl text-slate-700 hover:text-blue-900 hover:bg-slate-100/80 transition flex items-center gap-1.5">
-                            <i class="fa-regular fa-id-badge text-blue-700"></i>
-                            {% if session.get('role') in ['admin', 'superadmin'] %}เจ้าหน้าที่{% else %}โปรไฟล์{% endif %}
-                        </a>
-                        <a href="/logout" class="px-4 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 transition flex items-center gap-1.5 ml-2">
-                            <i class="fa-solid fa-arrow-right-from-bracket"></i> ออกจากระบบ
-                        </a>
-                    {% else %}
-                        <a href="/login" class="px-5 py-2.5 rounded-xl text-blue-900 hover:bg-blue-50 transition font-bold">เข้าสู่ระบบ</a>
-                        <a href="/register" class="px-5 py-2.5 bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white rounded-xl transition font-bold shadow-md shadow-blue-900/20">สมัครสมาชิก</a>
-                    {% endif %}
-                </div>
-
-                <div class="flex items-center md:hidden">
-                    <button id="mobile-menu-btn" type="button" class="p-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none">
-                        <i class="fa-solid fa-bars text-2xl"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="mobile-menu" class="hidden md:hidden border-t border-slate-100 bg-white px-4 pt-3 pb-6 space-y-2 shadow-xl">
-            <a href="/" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">หน้าแรก</a>
-            {% if session.get('user_id') %}
-                {% if session.get('role') in ['admin', 'superadmin'] %}
-                    <a href="/admin/requests" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">คำร้องเทียบโอน</a>
-                    <a href="/admin/profile_requests" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">คำร้องแก้ไขข้อมูล</a>
-                    <a href="/admin/manage_admins" class="block px-4 py-3 rounded-xl text-base font-bold text-white bg-blue-900">เพิ่ม/จัดการเจ้าหน้าที่</a>
-                {% else %}
-                    <a href="/available_courses" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">รายวิชาเปิดรับเทียบโอน</a>
-                    <a href="/submit_credit" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">ยื่นคำขอเทียบโอน</a>
-                    <a href="/credits" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">หน่วยกิตสะสม</a>
-                    <a href="/history" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">ประวัติคำขอ</a>
-                {% endif %}
-                <a href="/profile" class="block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50">โปรไฟล์</a>
-                <a href="/logout" class="block px-4 py-3 rounded-xl text-base font-semibold text-rose-600 hover:bg-rose-50">ออกจากระบบ</a>
-            {% else %}
-                <a href="/login" class="block px-4 py-3 rounded-xl text-base font-bold text-blue-900 hover:bg-blue-50">เข้าสู่ระบบ</a>
-                <a href="/register" class="block px-4 py-3 rounded-xl text-base font-bold text-white bg-blue-900">สมัครสมาชิก</a>
-            {% endif %}
-        </div>
-    </nav>
-
-    <div class="max-w-7xl mx-auto px-4 w-full mt-4">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="p-4 mb-4 text-sm rounded-2xl font-semibold shadow-sm flex items-center justify-between border transition-all {% if category == 'error' or category == 'danger' %}bg-rose-50 text-rose-700 border-rose-200{% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}">
-                        <div class="flex items-center gap-2">
-                            <i class="fa-solid {% if category == 'error' or category == 'danger' %}fa-circle-exclamation text-rose-500{% else %}fa-circle-check text-emerald-500{% endif %} text-lg"></i>
-                            <span>{{ message }}</span>
-                        </div>
-                        <button onclick="this.parentElement.remove()" class="text-xs font-bold px-2 py-1 hover:bg-black/5 rounded-lg">✕</button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+    <!-- Mobile Top Header -->
+    <div class="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-50 border-b border-slate-800">
+        <a href="/" class="flex items-center gap-2.5">
+            <div class="w-9 h-9 bg-blue-800 text-amber-400 rounded-xl flex items-center justify-center font-extrabold text-base">CB</div>
+            <span class="font-bold text-base tracking-tight">Credit Bank RMUTTO</span>
+        </a>
+        <button id="mobile-toggle" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-bars text-xl"></i></button>
     </div>
 
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {{ content | safe }}
-    </main>
+    <!-- Collapsible Left Sidebar -->
+    <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-slate-900 text-slate-300 min-h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-2xl border-r border-slate-800 hidden md:flex shrink-0">
+        
+        <!-- Header Logo -->
+        <div class="p-5 flex items-center justify-between border-b border-slate-800 h-20">
+            <a href="/" class="flex items-center gap-3 overflow-hidden">
+                <div class="w-10 h-10 bg-gradient-to-tr from-blue-700 to-indigo-600 text-amber-400 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 shadow-md shadow-blue-900/40">
+                    CB
+                </div>
+                <div class="flex flex-col logo-text transition-all">
+                    <span class="font-black text-white text-base leading-tight tracking-tight">Credit Bank</span>
+                    <span class="text-[10px] text-amber-400 font-bold tracking-wider uppercase">มทร.ตะวันออก</span>
+                </div>
+            </a>
+            <button id="sidebar-toggle" class="hidden md:flex w-8 h-8 rounded-xl bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700 items-center justify-center transition-all shrink-0">
+                <i class="fa-solid fa-chevron-left text-xs toggle-icon transition-transform duration-300"></i>
+            </button>
+        </div>
 
-    <footer class="bg-slate-900 text-slate-400 mt-auto border-t border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
-            <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-center md:text-left">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-blue-800 text-amber-400 font-bold flex items-center justify-center">CB</div>
-                    <div>
-                        <p class="text-slate-200 font-bold text-sm">มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก (RMUTTO)</p>
-                        <p class="text-slate-500 mt-0.5">Rajamangala University of Technology Tawan-ok</p>
+        <!-- Navigation Links -->
+        <div class="flex-grow p-4 space-y-1.5 overflow-y-auto">
+            <p class="section-title text-[11px] font-extrabold text-slate-500 uppercase tracking-wider px-3 mb-2 pt-2">เมนูหลัก</p>
+            
+            <a href="/" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
+                <i class="fa-solid fa-house text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
+                <span class="nav-text font-semibold">หน้าแรก</span>
+            </a>
+
+            {% if session.get('user_id') %}
+                {% if session.get('role') in ['admin', 'superadmin'] %}
+                    <p class="section-title text-[11px] font-extrabold text-slate-500 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
+                    <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-file-signature text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
+                        <span class="nav-text font-semibold">คำร้องเทียบโอน</span>
+                    </a>
+                    <a href="/admin/profile_requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-user-pen text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
+                        <span class="nav-text font-semibold">คำร้องแก้ไขข้อมูล</span>
+                    </a>
+                    <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-amber-400 bg-blue-900/40 border border-blue-800/50 hover:bg-blue-900/60 transition-all font-medium text-sm group mt-2">
+                        <i class="fa-solid fa-user-plus text-lg w-6 text-center text-amber-400"></i>
+                        <span class="nav-text font-bold">เพิ่ม/จัดการเจ้าหน้าที่</span>
+                    </a>
+                {% else %}
+                    <p class="section-title text-[11px] font-extrabold text-slate-500 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา</p>
+                    <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-book-open text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
+                        <span class="nav-text font-semibold">รายวิชาเปิดเทียบโอน</span>
+                    </a>
+                    <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
+                        <span class="nav-text font-semibold">ยื่นคำขอเทียบโอน</span>
+                    </a>
+                    <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-graduation-cap text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
+                        <span class="nav-text font-semibold">หน่วยกิตสะสม</span>
+                    </a>
+                    <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
+                        <span class="nav-text font-semibold">ประวัติคำขอ</span>
+                    </a>
+                {% endif %}
+            {% else %}
+                <div class="pt-4 space-y-2">
+                    <a href="/login" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-right-to-bracket text-lg w-6 text-center text-slate-400 group-hover:text-amber-400"></i>
+                        <span class="nav-text font-semibold">เข้าสู่ระบบ</span>
+                    </a>
+                    <a href="/register" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-blue-900 to-indigo-800 text-white font-bold transition-all text-sm group shadow-md shadow-blue-900/30">
+                        <i class="fa-solid fa-user-plus text-lg w-6 text-center text-amber-400"></i>
+                        <span class="nav-text">สมัครสมาชิก</span>
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Footer Profile Link -->
+        {% if session.get('user_id') %}
+            <div class="p-4 border-t border-slate-800 bg-slate-900/80">
+                <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-800 transition-all group">
+                    <div class="w-9 h-9 rounded-xl bg-blue-800 text-amber-400 font-bold flex items-center justify-center shrink-0">
+                        <i class="fa-regular fa-user"></i>
+                    </div>
+                    <div class="flex flex-col min-w-0 nav-text">
+                        <span class="text-xs font-bold text-white truncate">{{ session.get('fullname', 'ผู้ใช้งาน') }}</span>
+                        <span class="text-[10px] text-slate-400 capitalize">{% if session.get('role') in ['admin', 'superadmin'] %}เจ้าหน้าที่{% else %}นักศึกษา{% endif %}</span>
+                    </div>
+                </a>
+                <a href="/logout" class="mt-2 flex items-center gap-3 px-3 py-2 text-xs font-bold text-rose-400 hover:bg-rose-950/30 rounded-xl transition-all">
+                    <i class="fa-solid fa-arrow-right-from-bracket text-sm w-6 text-center"></i>
+                    <span class="nav-text">ออกจากระบบ</span>
+                </a>
+            </div>
+        {% endif %}
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-grow flex flex-col min-h-screen min-w-0">
+        
+        <!-- Flash Alert Messages -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full mt-6">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="p-4 mb-4 text-sm rounded-2xl font-semibold shadow-sm flex items-center justify-between border transition-all {% if category == 'error' or category == 'danger' %}bg-rose-50 text-rose-700 border-rose-200{% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid {% if category == 'error' or category == 'danger' %}fa-circle-exclamation text-rose-500{% else %}fa-circle-check text-emerald-500{% endif %} text-lg"></i>
+                                <span>{{ message }}</span>
+                            </div>
+                            <button onclick="this.parentElement.remove()" class="text-xs font-bold px-2 py-1 hover:bg-black/5 rounded-lg">✕</button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {{ content | safe }}
+        </main>
+
+        <footer class="bg-slate-900 text-slate-400 mt-auto border-t border-slate-800">
+            <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-center md:text-left">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-blue-800 text-amber-400 font-bold flex items-center justify-center">CB</div>
+                        <div>
+                            <p class="text-slate-200 font-bold text-sm">มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก (RMUTTO)</p>
+                            <p class="text-slate-500 mt-0.5">Rajamangala University of Technology Tawan-ok</p>
+                        </div>
+                    </div>
+                    <div class="text-slate-400 leading-relaxed">
+                        © 2026 Credit Bank System. ระบบธนาคารหน่วยกิตเพื่อการเรียนรู้ตลอดชีวิต
                     </div>
                 </div>
-                <div class="text-slate-400 leading-relaxed">
-                    © 2026 Credit Bank System. ระบบธนาคารหน่วยกิตเพื่อการเรียนรู้ตลอดชีวิต
-                </div>
             </div>
-        </div>
-    </footer>
+        </footer>
+    </div>
 
+    <!-- JavaScript for Collapsible Sidebar -->
     <script>
-        const menuBtn = document.getElementById('mobile-menu-btn');
-        const mobileMenu = document.getElementById('mobile-menu');
-        if (menuBtn && mobileMenu) {
-            menuBtn.addEventListener('click', () => { mobileMenu.classList.toggle('hidden'); });
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const mobileToggle = document.getElementById('mobile-toggle');
+
+        if (sidebarToggle && sidebar) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('sidebar-expanded');
+                sidebar.classList.toggle('sidebar-collapsed');
+            });
+        }
+
+        if (mobileToggle && sidebar) {
+            mobileToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('hidden');
+            });
         }
     </script>
 </body>
@@ -279,16 +337,25 @@ LAYOUT_TEMPLATE = """
 def home():
     if not session.get('user_id'):
         content = """
-        <div class="max-w-5xl mx-auto py-12 md:py-16 grid md:grid-cols-2 gap-12 items-center">
+        <div class="max-w-5xl mx-auto py-10 md:py-16 grid md:grid-cols-2 gap-10 items-center">
             <div>
-                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 mb-4 border border-amber-200">
+                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 mb-5 border border-amber-200">
                     <i class="fa-solid fa-sparkles text-amber-600"></i> ธนาคารหน่วยกิต มทร.ตะวันออก
                 </span>
-                <h1 class="text-4xl sm:text-5xl font-black text-slate-900 leading-normal tracking-normal mb-6">
-                    สะสมหน่วยกิต<br>
-                    <span class="text-blue-900">เชื่อมต่อทุกโอกาส</span><br>
-                    <span class="text-amber-600">การเรียนรู้</span>
-                </h1>
+                
+                <!-- Fixed Thai Text Spacing Issue -->
+                <div class="space-y-3 mb-6">
+                    <h1 class="text-4xl sm:text-5xl font-black text-slate-900 leading-relaxed tracking-normal">
+                        สะสมหน่วยกิต
+                    </h1>
+                    <p class="text-3xl sm:text-4xl font-extrabold text-blue-900 leading-relaxed">
+                        เชื่อมต่อทุกโอกาส
+                    </p>
+                    <p class="text-3xl sm:text-4xl font-extrabold text-amber-600 leading-relaxed">
+                        การเรียนรู้
+                    </p>
+                </div>
+
                 <p class="text-slate-600 mb-8 leading-relaxed text-base font-normal">
                     เทียบโอนหน่วยกิตจากการเรียนรู้ในระบบ นอกระบบ และตามอัธยาศัย เข้าสู่หลักสูตรปริญญาตรี มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก ครอบคลุมทั้ง 4 วิทยาเขต/เขตพื้นที่
                 </p>
@@ -301,6 +368,7 @@ def home():
                     </a>
                 </div>
             </div>
+
             <div class="hero-gradient p-10 rounded-3xl text-center shadow-2xl relative overflow-hidden border border-slate-700/50">
                 <div class="w-24 h-24 bg-white/10 text-amber-400 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-6 backdrop-blur border border-white/10">
                     <i class="fa-solid fa-graduation-cap"></i>
@@ -450,7 +518,7 @@ def home():
         </div>
     </div>
 
-    <!-- Actions -->
+    <!-- Quick Access Actions -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <a href="/available_courses" class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm card-hover block group">
             <div class="w-12 h-12 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
@@ -581,7 +649,6 @@ def register():
             <p class="text-xs text-slate-500 mt-1">กรอกข้อมูลส่วนตัวและที่อยู่เพื่อสร้างคลังหน่วยกิต</p>
         </div>
         <form method="POST" class="space-y-5">
-            
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">คำนำหน้า *</label>
