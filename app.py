@@ -72,13 +72,36 @@ class ProfileEditRequest(db.Model):
 with app.app_context():
     try:
         with db.engine.connect() as conn:
-            conn.execute(text("ALTER TABLE \"user\" ADD COLUMN member_id VARCHAR(20)"))
-            conn.execute(text("ALTER TABLE \"user\" ADD COLUMN prefix VARCHAR(20) DEFAULT 'นาย'"))
-            conn.execute(text("ALTER TABLE credit_request ADD COLUMN approved_by VARCHAR(100)"))
-            conn.execute(text("ALTER TABLE profile_edit_request ADD COLUMN approved_by VARCHAR(100)"))
+            # เพิ่มคอลัมน์สำหรับ User
+            try:
+                conn.execute(text("ALTER TABLE \"user\" ADD COLUMN member_id VARCHAR(20)"))
+            except Exception: pass
+            try:
+                conn.execute(text("ALTER TABLE \"user\" ADD COLUMN prefix VARCHAR(20) DEFAULT 'นาย'"))
+            except Exception: pass
+
+            # เพิ่มคอลัมน์สำหรับ CreditRequest
+            try:
+                conn.execute(text("ALTER TABLE credit_request ADD COLUMN faculty VARCHAR(100) DEFAULT 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ'"))
+            except Exception: pass
+            try:
+                conn.execute(text("ALTER TABLE credit_request ADD COLUMN major VARCHAR(100) DEFAULT 'สาขาการจัดการ'"))
+            except Exception: pass
+            try:
+                conn.execute(text("ALTER TABLE credit_request ADD COLUMN req_code VARCHAR(20) DEFAULT 'TR2569001'"))
+            except Exception: pass
+            try:
+                conn.execute(text("ALTER TABLE credit_request ADD COLUMN approved_by VARCHAR(100)"))
+            except Exception: pass
+
+            # เพิ่มคอลัมน์สำหรับ ProfileEditRequest
+            try:
+                conn.execute(text("ALTER TABLE profile_edit_request ADD COLUMN approved_by VARCHAR(100)"))
+            except Exception: pass
+
             conn.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Migration error: {e}")
 
     db.create_all()
 
