@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_secret_key_2026_rmutto_v3'
+app.secret_key = 'credit_bank_secret_key_2026_rmutto_v4_fix_text'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -82,7 +82,6 @@ with app.app_context():
 
     db.create_all()
 
-    # สร้าง/อัปเดตบัญชี Super Admin
     try:
         main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
         if not main_admin:
@@ -132,7 +131,7 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     return " ".join(parts)
 
 # ==========================================
-# Layout Template (พร้อม Chart.js)
+# Layout Template
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -285,8 +284,10 @@ def home():
                 <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 mb-4 border border-amber-200">
                     <i class="fa-solid fa-sparkles text-amber-600"></i> ธนาคารหน่วยกิต มทร.ตะวันออก
                 </span>
-                <h1 class="text-4xl sm:text-5xl font-black text-slate-900 leading-tight tracking-tight mb-6">
-                    สะสมหน่วยกิต<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-900 via-indigo-800 to-amber-600">เชื่อมต่อทุกโอกาสการเรียนรู้</span>
+                <h1 class="text-4xl sm:text-5xl font-black text-slate-900 leading-normal tracking-normal mb-6">
+                    สะสมหน่วยกิต<br>
+                    <span class="text-blue-900">เชื่อมต่อทุกโอกาส</span><br>
+                    <span class="text-amber-600">การเรียนรู้</span>
                 </h1>
                 <p class="text-slate-600 mb-8 leading-relaxed text-base font-normal">
                     เทียบโอนหน่วยกิตจากการเรียนรู้ในระบบ นอกระบบ และตามอัธยาศัย เข้าสู่หลักสูตรปริญญาตรี มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก ครอบคลุมทั้ง 4 วิทยาเขต/เขตพื้นที่
@@ -428,7 +429,7 @@ def home():
         </div>
     </div>
 
-    <!-- Graphical Dashboard Charts -->
+    <!-- Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
             <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -449,7 +450,7 @@ def home():
         </div>
     </div>
 
-    <!-- Quick Access Actions -->
+    <!-- Actions -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <a href="/available_courses" class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm card-hover block group">
             <div class="w-12 h-12 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
@@ -475,7 +476,6 @@ def home():
     </div>
 
     <script>
-        // Doughnut Chart
         const ctxDoughnut = document.getElementById('creditDoughnutChart').getContext('2d');
         new Chart(ctxDoughnut, {{
             type: 'doughnut',
@@ -496,7 +496,6 @@ def home():
             }}
         }});
 
-        // Bar Chart
         const ctxBar = document.getElementById('creditBarChart').getContext('2d');
         new Chart(ctxBar, {{
             type: 'bar',
@@ -614,7 +613,6 @@ def register():
                 <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมล *</label><input type="email" name="email" required placeholder="student@rmutto.ac.th" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
             </div>
 
-            <!-- ส่วนข้อมูลที่อยู่ตามทะเบียนบ้าน/ปัจจุบัน -->
             <div class="border-t border-slate-100 pt-4">
                 <label class="block text-xs font-bold text-blue-900 uppercase tracking-wider mb-3"><i class="fa-solid fa-house-user mr-1 text-amber-500"></i> ข้อมูลที่อยู่ตามทะเบียนบ้าน / ที่อยู่ปัจจุบัน</label>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
