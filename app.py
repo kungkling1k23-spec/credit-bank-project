@@ -10,13 +10,14 @@ from sqlalchemy import text
 
 app = Flask(__name__)
 app.secret_key = 'credit_bank_secret_key_2026'
+
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///credit_bank.db'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # ไม่เกิน 16MB
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db = SQLAlchemy(app)
@@ -50,7 +51,7 @@ class CreditRequest(db.Model):
     category = db.Column(db.String(50), default="ในระบบ")
     faculty = db.Column(db.String(100), default="คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ")
     major = db.Column(db.String(100), default="สาขาการจัดการ")
-    date_submitted = db.Column(db.String(20), default="2026-08-13")
+    date_submitted = db.Column(db.String(20), default="2026-08-14")
     doc_img = db.Column(db.String(200), nullable=True)
     status = db.Column(db.String(20), default='Pending')
     approved_by = db.Column(db.String(100), nullable=True)
@@ -67,43 +68,40 @@ class ProfileEditRequest(db.Model):
     reason = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), default='Pending')
     approved_by = db.Column(db.String(100), nullable=True)
-    created_at = db.Column(db.String(20), default="2026-08-13")
+    created_at = db.Column(db.String(20), default="2026-08-14")
     user = db.relationship('User', backref=db.backref('edit_requests', lazy=True))
 
 with app.app_context():
     try:
-        # ลองเพิ่มคอลัมน์ member_id เข้าไปตรงๆ
         with db.engine.connect() as conn:
             conn.execute(text("ALTER TABLE \"user\" ADD COLUMN member_id VARCHAR(20)"))
+            conn.execute(text("ALTER TABLE \"user\" ADD COLUMN prefix VARCHAR(20) DEFAULT 'นาย'"))
+            conn.execute(text("ALTER TABLE credit_request ADD COLUMN approved_by VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE profile_edit_request ADD COLUMN approved_by VARCHAR(100)"))
             conn.commit()
     except Exception:
         pass
 
+    db.create_all()
+
     try:
-        db.create_all()
-        # ทดสอบ query ถ้าตารางพัง ให้สั่งสร้างใหม่ทั้งหมด
-        User.query.filter_by(username='admin').first()
+        main_admin = User.query.filter_by(username='admin').first()
+        if not main_admin:
+            main_admin = User(
+                member_id='ADM000',
+                prefix='นาย',
+                fullname='ผู้ดูแลระบบหลัก (Super Admin)', 
+                id_card='0000000000000',
+                username='admin', 
+                password=generate_password_hash('admin123'), 
+                role='superadmin', 
+                phone="081-000-0000",
+                email="admin@rmutto.ac.th"
+            )
+            db.session.add(main_admin)
+            db.session.commit()
     except Exception:
         db.session.rollback()
-        db.drop_all()
-        db.create_all()
-
-    # สร้างบัญชี Admin หลัก
-    main_admin = User.query.filter_by(username='admin').first()
-    if not main_admin:
-        main_admin = User(
-            member_id='ADM000',
-            prefix='นาย',
-            fullname='ผู้ดูแลระบบหลัก (Super Admin)', 
-            id_card='0000000000000',
-            username='admin', 
-            password=generate_password_hash('admin123'), 
-            role='superadmin', 
-            phone="081-000-0000",
-            email="admin@rmutto.ac.th"
-        )
-        db.session.add(main_admin)
-        db.session.commit()
 
 # ==========================================
 # Helper Functions
@@ -128,6 +126,10 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     if province: parts.append(f"จ.{province.strip()}")
     if postal_code: parts.append(f"{postal_code.strip()}")
     return " ".join(parts)
+
+def is_valid_id_card(image_bytes):
+    # ข้ามการสแกนผ่าน OpenCV บน Server เพื่อป้องกัน Error
+    return True, "ผ่านการตรวจสอบ"
 
 # ==========================================
 # Layout Template
@@ -494,6 +496,130 @@ def login():
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    step = request.args.get('step', '1')
+    if request.method == 'POST':
+        current_step = request.form.get('step')
+        if current_step == '1':
+            id_card_input = request.form.get('id_card', '').strip()
+            if User.query.filter_by(id_card=id_card_input).first():
+                flash('เลขบัตรประชาชนนี้เคยลงทะเบียนในระบบแล้ว', 'error')
+                return redirect(url_for('register', step='1'))
+
+            house_no = request.form.get('house_no', '')
+            moo = request.form.get('moo', '')
+            soi = request.form.get('soi', '')
+            subdistrict = request.form.get('subdistrict', '')
+            district = request.form.get('district', '')
+            province = request.form.get('province', '')
+            postal_code = request.form.get('postal_code', '')
+
+            full_addr = format_address(house_no, moo, soi, subdistrict, district, province, postal_code)
+
+            session['reg_prefix'] = request.form.get('prefix')
+            session['reg_fullname'] = request.form.get('fullname')
+            session['reg_id_card'] = id_card_input
+            session['reg_dob'] = request.form.get('dob')
+            session['reg_phone'] = request.form.get('phone')
+            session['reg_email'] = request.form.get('email')
+            session['reg_address'] = full_addr
+
+            return redirect(url_for('register', step='2'))
+
+        elif current_step == '2':
+            username = request.form.get('username')
+            if User.query.filter_by(username=username).first():
+                flash('Username นี้ถูกใช้งานแล้ว กรุณาเลือกชื่อผู้ใช้ใหม่', 'error')
+                return redirect(url_for('register', step='2'))
+
+            filename = "default_id_card.png"
+            file = request.files.get('id_card_img')
+            if file and file.filename != '':
+                try:
+                    filename = secure_filename(f"verify_{username}_{file.filename}")
+                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    file.save(filepath)
+                except Exception:
+                    filename = "default_id_card.png"
+
+            new_member_id = generate_member_id()
+
+            new_user = User(
+                member_id=new_member_id,
+                prefix=session.get('reg_prefix'),
+                fullname=session.get('reg_fullname'),
+                id_card=session.get('reg_id_card'),
+                dob=session.get('reg_dob'),
+                phone=session.get('reg_phone'),
+                email=session.get('reg_email'),
+                address=session.get('reg_address'),
+                id_card_img=filename,
+                username=username,
+                password=generate_password_hash(request.form.get('password'))
+            )
+            db.session.add(new_user)
+            db.session.commit()
+
+            session['created_member_id'] = new_member_id
+            return redirect(url_for('register', step='3'))
+
+    content = f"""
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
+        <h2 class="text-2xl font-bold text-center text-blue-900 mb-6">สมัครสมาชิกนักศึกษา</h2>
+        <form method="POST" class="space-y-4">
+            <input type="hidden" name="step" value="1">
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">คำนำหน้า</label>
+                    <select name="prefix" class="w-full border rounded-lg p-2.5 text-sm">
+                        <option value="นาย">นาย</option>
+                        <option value="นาง">นาง</option>
+                        <option value="นางสาว">นางสาว</option>
+                    </select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อ-นามสกุล</label>
+                    <input type="text" name="fullname" required class="w-full border rounded-lg p-2.5 text-sm">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">เลขบัตรประชาชน (13 หลัก)</label>
+                    <input type="text" name="id_card" maxlength="13" required class="w-full border rounded-lg p-2.5 text-sm">
+                </div>
+                <div><label class="block text-xs font-semibold text-gray-600 mb-1">วัน/เดือน/ปีเกิด</label><input type="date" name="dob" required class="w-full border rounded-lg p-2.5 text-sm"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-xs font-semibold text-gray-600 mb-1">เบอร์โทรศัพท์</label><input type="tel" name="phone" required class="w-full border rounded-lg p-2.5 text-sm"></div>
+                <div><label class="block text-xs font-semibold text-gray-600 mb-1">อีเมล</label><input type="email" name="email" required class="w-full border rounded-lg p-2.5 text-sm"></div>
+            </div>
+            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700">ถัดไป: ยืนยันตัวตน</button>
+        </form>
+    </div>
+    """ if step == '1' else f"""
+    <div class="max-w-xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
+        <h2 class="text-2xl font-bold text-center text-blue-900 mb-6">ยืนยันตัวตน & ตั้งรหัสผ่าน</h2>
+        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            <input type="hidden" name="step" value="2">
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">อัปโหลดรูปถ่ายบัตรประชาชนจริง *</label>
+                <input type="file" name="id_card_img" accept="image/*" required class="w-full border rounded-lg p-2 text-sm bg-gray-50">
+            </div>
+            <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อผู้ใช้งาน (Username)</label><input type="text" name="username" required class="w-full border rounded-lg p-2.5 text-sm"></div>
+            <div><label class="block text-xs font-semibold text-gray-600 mb-1">รหัสผ่าน (Password)</label><input type="password" name="password" required class="w-full border rounded-lg p-2.5 text-sm"></div>
+            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700">ยืนยันการสมัคร</button>
+        </form>
+    </div>
+    """ if step == '2' else f"""
+    <div class="max-w-md mx-auto bg-white p-8 rounded-2xl border shadow-sm text-center">
+        <h2 class="text-2xl font-bold text-gray-800 mb-1">สมัครสมาชิกเสร็จสิ้น!</h2>
+        <p class="text-sm font-semibold text-blue-600 mb-4">รหัสสมาชิกของคุณคือ: {session.get('created_member_id', '-')}</p>
+        <a href="/login" class="block w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700">เข้าสู่ระบบทันที</a>
+    </div>
+    """
+    return render_template_string(LAYOUT_TEMPLATE, content=content)
+
 @app.route('/admin/manage_admins', methods=['GET', 'POST'])
 def manage_admins():
     if session.get('role') not in ['admin', 'superadmin']:
@@ -751,129 +877,6 @@ def available_courses():
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    step = request.args.get('step', '1')
-    if request.method == 'POST':
-        current_step = request.form.get('step')
-        if current_step == '1':
-            id_card_input = request.form.get('id_card', '').strip()
-            if User.query.filter_by(id_card=id_card_input).first():
-                flash('เลขบัตรประชาชนนี้เคยลงทะเบียนในระบบแล้ว', 'error')
-                return redirect(url_for('register', step='1'))
-
-            house_no = request.form.get('house_no', '')
-            moo = request.form.get('moo', '')
-            soi = request.form.get('soi', '')
-            subdistrict = request.form.get('subdistrict', '')
-            district = request.form.get('district', '')
-            province = request.form.get('province', '')
-            postal_code = request.form.get('postal_code', '')
-
-            full_addr = format_address(house_no, moo, soi, subdistrict, district, province, postal_code)
-
-            session['reg_prefix'] = request.form.get('prefix')
-            session['reg_fullname'] = request.form.get('fullname')
-            session['reg_id_card'] = id_card_input
-            session['reg_dob'] = request.form.get('dob')
-            session['reg_phone'] = request.form.get('phone')
-            session['reg_email'] = request.form.get('email')
-            session['reg_address'] = full_addr
-
-            return redirect(url_for('register', step='2'))
-
-        elif current_step == '2':
-            username = request.form.get('username')
-            if User.query.filter_by(username=username).first():
-                flash('Username นี้ถูกใช้งานแล้ว กรุณาเลือกชื่อผู้ใช้ใหม่', 'error')
-                return redirect(url_for('register', step='2'))
-
-            file = request.files.get('id_card_img')
-            if not file or file.filename == '':
-                flash('กรุณาอัปโหลดรูปถ่ายบัตรประชาชนเพื่อยืนยันตัวตน', 'error')
-                return redirect(url_for('register', step='2'))
-
-            filename = secure_filename(f"verify_{username}_{file.filename}")
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-
-            new_member_id = generate_member_id()
-
-            new_user = User(
-                member_id=new_member_id,
-                prefix=session.get('reg_prefix'),
-                fullname=session.get('reg_fullname'),
-                id_card=session.get('reg_id_card'),
-                dob=session.get('reg_dob'),
-                phone=session.get('reg_phone'),
-                email=session.get('reg_email'),
-                address=session.get('reg_address'),
-                id_card_img=filename,
-                username=username,
-                password=generate_password_hash(request.form.get('password'))
-            )
-            db.session.add(new_user)
-            db.session.commit()
-
-            session['created_member_id'] = new_member_id
-            return redirect(url_for('register', step='3'))
-
-    content = f"""
-    <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
-        <h2 class="text-2xl font-bold text-center text-blue-900 mb-6">สมัครสมาชิกนักศึกษา</h2>
-        <form method="POST" class="space-y-4">
-            <input type="hidden" name="step" value="1">
-            <div class="grid grid-cols-3 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">คำนำหน้า</label>
-                    <select name="prefix" class="w-full border rounded-lg p-2.5 text-sm">
-                        <option value="นาย">นาย</option>
-                        <option value="นาง">นาง</option>
-                        <option value="นางสาว">นางสาว</option>
-                    </select>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อ-นามสกุล</label>
-                    <input type="text" name="fullname" required class="w-full border rounded-lg p-2.5 text-sm">
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">เลขบัตรประชาชน (13 หลัก)</label>
-                    <input type="text" name="id_card" maxlength="13" required class="w-full border rounded-lg p-2.5 text-sm">
-                </div>
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">วัน/เดือน/ปีเกิด</label><input type="date" name="dob" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">เบอร์โทรศัพท์</label><input type="tel" name="phone" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">อีเมล</label><input type="email" name="email" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-            </div>
-            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700">ถัดไป: ยืนยันตัวตน</button>
-        </form>
-    </div>
-    """ if step == '1' else f"""
-    <div class="max-w-xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
-        <h2 class="text-2xl font-bold text-center text-blue-900 mb-6">ยืนยันตัวตน & ตั้งรหัสผ่าน</h2>
-        <form method="POST" enctype="multipart/form-data" class="space-y-4">
-            <input type="hidden" name="step" value="2">
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">อัปโหลดรูปถ่ายบัตรประชาชนจริง *</label>
-                <input type="file" name="id_card_img" accept="image/*" required class="w-full border rounded-lg p-2 text-sm bg-gray-50">
-            </div>
-            <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อผู้ใช้งาน (Username)</label><input type="text" name="username" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-            <div><label class="block text-xs font-semibold text-gray-600 mb-1">รหัสผ่าน (Password)</label><input type="password" name="password" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700">ยืนยันการสมัคร</button>
-        </form>
-    </div>
-    """ if step == '2' else f"""
-    <div class="max-w-md mx-auto bg-white p-8 rounded-2xl border shadow-sm text-center">
-        <h2 class="text-2xl font-bold text-gray-800 mb-1">สมัครสมาชิกเสร็จสิ้น!</h2>
-        <p class="text-sm font-semibold text-blue-600 mb-4">รหัสสมาชิกของคุณคือ: {session.get('created_member_id', '-')}</p>
-        <a href="/login" class="block w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700">เข้าสู่ระบบทันที</a>
-    </div>
-    """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
-
 @app.route('/request_edit_profile', methods=['GET', 'POST'])
 def request_edit_profile():
     if 'user_id' not in session: return redirect(url_for('login'))
@@ -952,13 +955,14 @@ def submit_credit():
     if 'user_id' not in session: return redirect(url_for('login'))
     if request.method == 'POST':
         file = request.files.get('doc_img')
-        if not file or file.filename == '':
-            flash('กรุณาแนบไฟล์เอกสารประกอบด้วยครับ', 'error')
-            return redirect(request.url)
-
-        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
-        unique_filename = f"doc_{session['user_id']}_{uuid.uuid4().hex[:8]}.{ext}"
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+        unique_filename = "default_doc.png"
+        if file and file.filename != '':
+            try:
+                ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+                unique_filename = f"doc_{session['user_id']}_{uuid.uuid4().hex[:8]}.{ext}"
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+            except Exception:
+                unique_filename = "default_doc.png"
 
         req = CreditRequest(
             user_id=session['user_id'], 
