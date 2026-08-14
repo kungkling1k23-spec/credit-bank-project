@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_secret_key_2026_safe_query'
+app.secret_key = 'credit_bank_secret_key_2026_rmutto_all_campuses'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -260,7 +260,7 @@ def home():
                     ระบบธนาคารหน่วยกิต<br><span class="text-blue-600">มทร.ตะวันออก</span>
                 </h1>
                 <p class="text-gray-600 mb-8 leading-relaxed">
-                    สะสมหน่วยกิตจากการเรียนรู้ในระบบ นอกระบบ และตามอัธยาศัย เพื่อใช้เทียบโอนและต่อยอดคุณวุฒิการศึกษาตามคณะและสาขาวิชา
+                    สะสมหน่วยกิตจากการเรียนรู้ในระบบ นอกระบบ และตามอัธยาศัย เพื่อใช้เทียบโอนและต่อยอดคุณวุฒิการศึกษาตามคณะและสาขาวิชา ทั้ง 4 วิทยาเขต/เขตพื้นที่
                 </p>
                 <div class="space-x-4">
                     <a href="/register" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 inline-block">สมัครสมาชิก</a>
@@ -389,7 +389,7 @@ def home():
         <a href="/available_courses" class="bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md hover:border-blue-300 transition block">
             <i class="fa-solid fa-book-open text-3xl text-blue-600 mb-3"></i>
             <h3 class="font-bold text-gray-800 mb-1">ค้นหารายวิชาเปิดเทียบโอน</h3>
-            <p class="text-xs text-gray-500">เลือกดูรายวิชาที่เปิดรับเทียบโอนแยกตามคณะและสาขาวิชา</p>
+            <p class="text-xs text-gray-500">เลือกดูรายวิชาที่เปิดรับเทียบโอนแยกตามคณะ/สาขาวิชา และวิทยาเขต</p>
         </a>
         <a href="/submit_credit" class="bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md hover:border-blue-300 transition block">
             <i class="fa-solid fa-file-pen text-3xl text-amber-600 mb-3"></i>
@@ -401,6 +401,127 @@ def home():
             <h3 class="font-bold text-gray-800 mb-1">ส่งคำร้องขอแก้ไขข้อมูลส่วนตัว</h3>
             <p class="text-xs text-gray-500">แจ้งเรื่องขอเปลี่ยนชื่อ-สกุล อีเมล หรือเบอร์โทรศัพท์ถึงเจ้าหน้าที่</p>
         </a>
+    </div>
+    """
+    return render_template_string(LAYOUT_TEMPLATE, content=content)
+
+@app.route('/available_courses')
+def available_courses():
+    if 'user_id' not in session: return redirect(url_for('login'))
+    
+    # รวมรายวิชาเทียบโอน มทร.ตะวันออก จากไฟล์ฉบับสำรวจทุกวิทยาเขต
+    all_courses = [
+        # รายวิชาเทียบโอนจริงที่พบหลักฐาน (จักรพงษภูวนารถ - คณะบริหารธุรกิจฯ)
+        {"code": "04-00-101", "name": "หลักการตลาด", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "03-211-101 / 3200-1005", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการ 2568 (วิชาเดิม: หลักการตลาด / การขายเบื้องต้น)"},
+        {"code": "04-00-102", "name": "หลักเศรษฐศาสตร์", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "3200-1001 / 05-000-101", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการ 2568 (วิชาเดิม: หลักเศรษฐศาสตร์)"},
+        {"code": "04-00-104", "name": "กฎหมายธุรกิจและการภาษีอากร", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ / การตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30001-1055 / 20215-2004", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการและแบบเทียบโอนสาขาการตลาด 2568"},
+        {"code": "04-00-106", "name": "ภาษาอังกฤษเพื่อการสื่อสารธุรกิจ", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ / การตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "05-081-122 / 05-031-105", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการและสาขาการตลาด 2568"},
+        {"code": "04-00-107", "name": "การบัญชีเบื้องต้น", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ / การตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวช./ปวส. การบัญชี", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการและสาขาการตลาด"},
+        {"code": "04-00-105", "name": "สถิติเพื่อการวิจัยธุรกิจ", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส./รายวิชาเทียบเท่า", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามแบบเทียบโอนสาขาการตลาด 2568"},
+        {"code": "04-00-108", "name": "การเงินธุรกิจ", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส./รายวิชาเทียบเท่า", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามแบบเทียบโอนสาขาการตลาด 2568"},
+        {"code": "04-00-109", "name": "การจัดการโลจิสติกส์", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส./รายวิชาเทียบเท่า", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามแบบเทียบโอนสาขาการตลาด 2568"},
+        {"code": "04-00-110", "name": "ทักษะความเข้าใจธุรกิจ", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส./รายวิชาเทียบเท่า", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามแบบเทียบโอนสาขาการตลาด 2568"},
+        {"code": "00-31-001", "name": "เทคโนโลยีสารสนเทศในยุคดิจิทัล", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "3001-2100 / 30204-2103", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568 (วิชาเดิม: เทคโนโลยีสารสนเทศเพื่องานอาชีพ)"},
+        {"code": "00-31-002", "name": "คณิตศาสตร์และสถิติในชีวิตประจำวัน", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "05-000-105 / 30000-1401", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568 (วิชาเดิม: สถิติธุรกิจ / คณิตศาสตร์เพื่องานอาชีพ)"},
+        {"code": "TR-IT01", "name": "การประกอบเครื่องและการติดตั้งซอฟต์แวร์", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30204-2201 / 5051106", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568"},
+        {"code": "TR-IT02", "name": "การใช้โปรแกรมสำนักงานชั้นสูง", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30204-2202 / 5051107", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568"},
+        {"code": "TR-IT03", "name": "โปรแกรมกราฟิกสำหรับการออกแบบเว็บไซต์", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30204-2403", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568"},
+        {"code": "TR-IT04", "name": "การผลิตสื่อมัลติมีเดียสำหรับธุรกิจดิจิทัล", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30204-2204", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568"},
+        {"code": "TR-IT05", "name": "การออกแบบและพัฒนาเว็บไซต์", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30901-1002", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568"},
+
+        # วิทยาเขตบางพระ (ชลบุรี)
+        {"code": "00-11-001", "name": "ภาษาไทยเพื่อการสื่อสาร", "campus": "เขตพื้นที่บางพระ", "faculty": "คณะมนุษยศาสตร์และสังคมศาสตร์", "major": "หมวดวิชาศึกษาทั่วไป", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "ปวส. / มหาวิทยาลัยอื่น", "status": "มทร.ตะวันออก", "desc": "ทักษะการฟัง การพูด การอ่าน และการเขียนภาษาไทยเพื่อการสื่อสารในงานอาชีพ"},
+        {"code": "00-12-002", "name": "ภาษาอังกฤษเพื่อการสื่อสารสากล", "campus": "เขตพื้นที่บางพระ", "faculty": "คณะมนุษยศาสตร์และสังคมศาสตร์", "major": "หมวดวิชาศึกษาทั่วไป", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "ปวส. / มหาวิทยาลัยอื่น", "status": "มทร.ตะวันออก", "desc": "การสื่อสารภาษาอังกฤษเบื้องต้น การนำเสนอผลงาน และไวยากรณ์ประยุกต์"},
+        {"code": "01-10-101", "name": "หลักสัตวศาสตร์เบื้องต้น", "campus": "เขตพื้นที่บางพระ", "faculty": "คณะเกษตรศาสตร์และทรัพยากรธรรมชาติ", "major": "สาขาวิชาสัตวศาสตร์", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.เกษตรศาสตร์", "status": "มทร.ตะวันออก", "desc": "การเลี้ยงดูและการจัดการสัตว์เศรษฐกิจ การสุขาภิบาล และโภชนาการสัตว์"},
+        {"code": "02-20-102", "name": "วิทยาศาสตร์และเทคโนโลยีเพื่อชีวิต", "campus": "เขตพื้นที่บางพระ", "faculty": "คณะวิทยาศาสตร์และเทคโนโลยี", "major": "ทุกสาขาวิชา", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "ปวส. / สถาบันเดิม", "status": "มทร.ตะวันออก", "desc": "กระบวนการทางวิทยาศาสตร์ นวัตกรรมเทคโนโลยีสมัยใหม่ และการประยุกต์ในชีวิตประจำวัน"},
+        {"code": "06-10-101", "name": "การจัดการการบินเบื้องต้น", "campus": "เขตพื้นที่บางพระ", "faculty": "สถาบันเทคโนโลยีการบินและอวกาศ", "major": "สาขาวิชาการจัดการการบิน", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส. / สถานศึกษาเดิม", "status": "มทร.ตะวันออก", "desc": "ระบบการขนส่งทางอากาศ โครงสร้างอุตสาหกรรมการบิน และกฎหมายการบินเบื้องต้น"},
+
+        # วิทยาเขตอุเทนถวาย (กรุงเทพฯ)
+        {"code": "08-11-101", "name": "เขียนแบบวิศวกรรม (Engineering Drawing)", "campus": "เขตพื้นที่อุเทนถวาย", "faculty": "คณะวิศวกรรมศาสตร์และสถาปัตยกรรมศาสตร์", "major": "สาขาวิชาวิศวกรรมโยธา", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.ช่างก่อสร้าง/ช่างโยธา", "status": "มทร.ตะวันออก", "desc": "ทักษะการเขียนแบบวิศวกรรม สัญลักษณ์ทางช่าง การเขียนแบบด้วยคอมพิวเตอร์ CAD"},
+        {"code": "08-12-102", "name": "การสำรวจทางวิศวกรรม (Engineering Surveying)", "campus": "เขตพื้นที่อุเทนถวาย", "faculty": "คณะวิศวกรรมศาสตร์และสถาปัตยกรรมศาสตร์", "major": "สาขาวิชาวิศวกรรมสำรวจ/โยธา", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.ช่างสำรวจ/โยธา", "status": "มทร.ตะวันออก", "desc": "การใช้กล้องรังวัด การทำแผนที่ภูมิประเทศ การหาค่าระดับ และงานสำรวจเพื่อการก่อสร้าง"},
+        {"code": "08-20-103", "name": "การออกแบบสถาปัตยกรรมเบื้องต้น", "campus": "เขตพื้นที่อุเทนถวาย", "faculty": "คณะวิศวกรรมศาสตร์และสถาปัตยกรรมศาสตร์", "major": "สาขาวิชาสถาปัตยกรรมภายใน", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.สถาปัตยกรรม", "status": "มทร.ตะวันออก", "desc": "องค์ประกอบศิลป์ การจัดพื้นที่ใช้สอย การเขียนแบบสถาปัตยกรรม และแนวคิดการออกแบบ"},
+
+        # วิทยาเขตจันทบุรี
+        {"code": "10-11-101", "name": "การจัดการเพื่อผู้ประกอบการยุคดิจิทัล", "campus": "เขตพื้นที่จันทบุรี", "faculty": "คณะเทคโนโลยีสังคม", "major": "สาขาวิชาการจัดการเพื่อผู้ประกอบการ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.การจัดการ/การตลาด", "status": "มทร.ตะวันออก", "desc": "การเริ่มธุรกิจใหม่ การวางแผนการเงิน การตลาดดิจิทัล และนวัตกรรมสำหรับผู้ประกอบการ"},
+        {"code": "10-12-102", "name": "นวัตกรรมการบริการและการท่องเที่ยว", "campus": "เขตพื้นที่จันทบุรี", "faculty": "คณะเทคโนโลยีสังคม", "major": "สาขาวิชานวัตกรรมการท่องเที่ยวและการโรงแรม", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.การท่องเที่ยวและโรงแรม", "status": "มทร.ตะวันออก", "desc": "อุตสาหกรรมการท่องเที่ยว พฤติกรรมนักท่องเที่ยว การจัดการโรงแรมและการบริการลูกค้า"},
+        {"code": "10-21-103", "name": "เทคโนโลยียานยนต์ไฟฟ้า (EV Technology)", "campus": "เขตพื้นที่จันทบุรี", "faculty": "คณะวิศวกรรมศาสตร์", "major": "สาขาวิชาวิศวกรรมยานยนต์ไฟฟ้า", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.ช่างยนต์/ไฟฟ้า", "status": "มทร.ตะวันออก", "desc": "ระบบขับเคลื่อนไฟฟ้า แบตเตอรี่และการประจุพลังงาน ความปลอดภัยในยานยนต์ไฟฟ้า"},
+
+        # MOOC / เรียนรู้นอกระบบ
+        {"code": "MOOC-0008", "name": "การเงินส่วนบุคคล (Personal Finance Online)", "campus": "ทุกวิทยาเขต", "faculty": "ทุกคณะ", "major": "ทุกสาขาวิชา", "main_category": "หมวดวิชาเลือกเสรี", "credits": 3, "source": "ThaiMOOC", "status": "ต้องตรวจสอบกับประกาศ", "desc": "การวางแผนการเงิน การออม การลงทุน สินเชื่อ และภาษีบุคคลธรรมดาผ่านระบบออนไลน์"}
+    ]
+
+    search_query = request.args.get('search', '').strip().lower()
+    selected_campus = request.args.get('campus', '').strip()
+
+    filtered_courses = all_courses
+
+    if selected_campus and selected_campus != "ทั้งหมด":
+        filtered_courses = [c for c in filtered_courses if selected_campus in c['campus']]
+
+    if search_query:
+        filtered_courses = [c for c in filtered_courses if search_query in c['name'].lower() or search_query in c['code'].lower() or search_query in c['faculty'].lower() or search_query in c['major'].lower()]
+
+    cards = ""
+    for c in filtered_courses:
+        cards += f"""
+        <div class="bg-white p-6 rounded-2xl border shadow-sm flex flex-col justify-between hover:shadow-md transition">
+            <div>
+                <div class="flex justify-between items-start mb-2">
+                    <span class="font-mono text-xs text-gray-500 font-bold bg-gray-100 px-2 py-0.5 rounded">{c['code']}</span>
+                    <span class="bg-blue-100 text-blue-800 text-xs px-2.5 py-1 rounded-full font-semibold">{c['main_category']}</span>
+                </div>
+                <h3 class="text-base font-bold text-gray-800 mb-2 leading-snug">{c['name']}</h3>
+                <p class="text-xs text-blue-700 font-semibold mb-1"><i class="fa-solid fa-location-dot mr-1"></i> {c['campus']}</p>
+                <p class="text-xs text-gray-600 font-medium mb-1"><i class="fa-solid fa-building-columns mr-1"></i> {c['faculty']}</p>
+                <p class="text-xs text-emerald-700 font-medium mb-2"><i class="fa-solid fa-graduation-cap mr-1"></i> {c['major']}</p>
+                <p class="text-xs text-gray-500 mb-4 leading-relaxed bg-gray-50 p-2.5 rounded-lg border">{c['desc']}</p>
+            </div>
+            <div class="border-t pt-4 mt-2">
+                <div class="flex justify-between items-center text-xs text-gray-600 mb-4">
+                    <span><i class="fa-solid fa-school mr-1 text-gray-400"></i> วิชาเดิม: {c['source']}</span>
+                    <span class="font-bold text-blue-900 text-sm">{c['credits']} หน่วยกิต</span>
+                </div>
+                {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['source'] + '&credits=' + str(c['credits']) + '&cat=' + c['main_category'] + '&fac=' + c['faculty'] + '&maj=' + c['major'] + '" class="block text-center w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg text-sm transition">เทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
+            </div>
+        </div>
+        """
+
+    content = f"""
+    <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-800 text-white p-6 rounded-2xl shadow-sm mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div>
+            <h2 class="text-2xl font-bold">📚 รายวิชาเปิดรับเทียบโอน (มทร.ตะวันออก)</h2>
+            <p class="text-blue-100 text-xs mt-1">ฐานข้อมูลรายวิชาเปิดรับเทียบโอนฉบับสำรวจ รวบรวมทุกวิทยาเขต/เขตพื้นที่ คณะ และสาขาวิชา</p>
+        </div>
+        <div class="bg-white/10 backdrop-blur px-5 py-3 rounded-xl border border-white/20 text-center min-w-[180px]">
+            <span class="text-xs text-blue-200 block">จำนวนรายวิชาที่พบ</span>
+            <span class="text-2xl font-extrabold text-white">{len(filtered_courses)}</span> <span class="text-xs text-blue-200">/ {len(all_courses)} วิชา</span>
+        </div>
+    </div>
+
+    <form method="GET" action="/available_courses" class="bg-white p-5 rounded-2xl border shadow-sm mb-6 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1"><i class="fa-solid fa-location-dot mr-1"></i> เลือกวิทยาเขต / เขตพื้นที่</label>
+                <select name="campus" onchange="this.form.submit()" class="w-full border rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="ทั้งหมด" {'selected' if selected_campus=='ทั้งหมด' or not selected_campus else ''}>ทุกวิทยาเขต/เขตพื้นที่</option>
+                    <option value="จักรพงษภูวนารถ" {'selected' if selected_campus=='จักรพงษภูวนารถ' else ''}>เขตพื้นที่จักรพงษภูวนารถ (กรุงเทพฯ)</option>
+                    <option value="บางพระ" {'selected' if selected_campus=='บางพระ' else ''}>เขตพื้นที่บางพระ (ชลบุรี)</option>
+                    <option value="อุเทนถวาย" {'selected' if selected_campus=='อุเทนถวาย' else ''}>เขตพื้นที่อุเทนถวาย (กรุงเทพฯ)</option>
+                    <option value="จันทบุรี" {'selected' if selected_campus=='จันทบุรี' else ''}>เขตพื้นที่จันทบุรี</option>
+                </select>
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-gray-600 mb-1"><i class="fa-solid fa-magnifying-glass mr-1"></i> ค้นหาด้วยรหัสวิชา / ชื่อวิชา / คณะ / สาขา</label>
+                <div class="flex gap-2">
+                    <input type="text" name="search" value="{search_query}" placeholder="พิมพ์คำที่ต้องการค้นหา..." class="w-full px-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-xl text-sm transition shrink-0">ค้นหา</button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {cards if cards else '<div class="col-span-3 text-center py-12 text-gray-400 bg-white rounded-2xl border">ไม่พบรายวิชาที่ตรงกับเงื่อนไขการค้นหา</div>'}
     </div>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
@@ -603,75 +724,6 @@ def credits():
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
 
-@app.route('/available_courses')
-def available_courses():
-    if 'user_id' not in session: return redirect(url_for('login'))
-    
-    all_courses = [
-        {"code": "00-11-001", "name": "ภาษาไทยเพื่อการสื่อสาร", "campus": "เขตพื้นที่บางพระ (ชลบุรี)", "faculty": "คณะมนุษยศาสตร์และสังคมศาสตร์", "major": "หมวดวิชาศึกษาทั่วไป", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "มทร.ตะวันออก / ปวส.", "status": "มทร.ตะวันออก", "desc": "ทักษะการฟัง การพูด การอ่าน และการเขียนภาษาไทยเพื่อการสื่อสารในงานอาชีพ"},
-        {"code": "00-12-002", "name": "ภาษาอังกฤษเพื่อการสื่อสารสากล", "campus": "เขตพื้นที่บางพระ (ชลบุรี)", "faculty": "คณะมนุษยศาสตร์และสังคมศาสตร์", "major": "หมวดวิชาศึกษาทั่วไป", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "มทร.ตะวันออก / ปวส.", "status": "มทร.ตะวันออก", "desc": "การสื่อสารภาษาอังกฤษเบื้องต้น การนำเสนอผลงาน และไวยากรณ์ประยุกต์"},
-        {"code": "15-03-006", "name": "การจัดการเศรษฐกิจชีวภาพ เศรษฐกิจหมุนเวียน และเศรษฐกิจสีเขียว", "campus": "เขตพื้นที่จักรพงษภูวนารถ (กรุงเทพฯ)", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.กรมอาชีวศึกษา", "status": "มทร.ตะวันออก", "desc": "โมเดลธุรกิจ BCG การอนุรักษ์พลังงาน และแนวคิดความยั่งยืนในองค์กร"},
-        {"code": "15-03-007", "name": "เทคโนโลยีสารสนเทศในยุคดิจิทัล", "campus": "เขตพื้นที่จักรพงษภูวนารถ (กรุงเทพฯ)", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.", "status": "มทร.ตะวันออก", "desc": "การประยุกต์ใช้ซอฟต์แวร์สำนักงาน ก้อนเมฆ และเครื่องมือดิจิทัลเพื่องานบริหาร"},
-        {"code": "MOOC-0008", "name": "การเงินส่วนบุคคล (Personal Finance Online)", "campus": "เขตพื้นที่จักรพงษภูวนารถ (กรุงเทพฯ)", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ", "main_category": "หมวดวิชาเลือกเสรี", "credits": 3, "source": "ThaiMOOC", "status": "ต้องตรวจสอบกับประกาศ", "desc": "การวางแผนการเงิน การออม การลงทุน สินเชื่อ และภาษีบุคคลธรรมดาผ่านระบบออนไลน์"}
-    ]
-
-    search_query = request.args.get('search', '').strip()
-    filtered_courses = [c for c in all_courses if search_query.lower() in c['name'].lower() or search_query.lower() in c['code'].lower()] if search_query else all_courses
-
-    cards = ""
-    for c in filtered_courses:
-        cards += f"""
-        <div class="bg-white p-6 rounded-2xl border shadow-sm flex flex-col justify-between hover:shadow-md transition">
-            <div>
-                <div class="flex justify-between items-start mb-2">
-                    <span class="font-mono text-xs text-gray-500 font-bold bg-gray-100 px-2 py-0.5 rounded">{c['code']}</span>
-                    <span class="bg-blue-100 text-blue-800 text-xs px-2.5 py-1 rounded-full font-semibold">{c['main_category']}</span>
-                </div>
-                <h3 class="text-base font-bold text-gray-800 mb-2 leading-snug">{c['name']}</h3>
-                <p class="text-xs text-blue-700 font-medium mb-1"><i class="fa-solid fa-location-dot mr-1"></i> {c['campus']}</p>
-                <p class="text-xs text-gray-600 font-medium mb-1"><i class="fa-solid fa-building-columns mr-1"></i> {c['faculty']}</p>
-                <p class="text-xs text-gray-500 mb-4 leading-relaxed">{c['desc']}</p>
-            </div>
-            <div class="border-t pt-4 mt-2">
-                <div class="flex justify-between items-center text-xs text-gray-600 mb-4">
-                    <span><i class="fa-solid fa-school mr-1 text-gray-400"></i> {c['source']}</span>
-                    <span class="font-bold text-blue-900 text-sm">{c['credits']} หน่วยกิต</span>
-                </div>
-                {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['source'] + '&credits=' + str(c['credits']) + '&cat=' + c['main_category'] + '&fac=' + c['faculty'] + '&maj=' + c['major'] + '" class="block text-center w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg text-sm transition">เทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
-            </div>
-        </div>
-        """
-
-    content = f"""
-    <div class="bg-gradient-to-r from-blue-900 to-indigo-800 text-white p-6 rounded-2xl shadow-sm mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-            <h2 class="text-2xl font-bold">📚 รายวิชาเปิดรับเทียบโอน</h2>
-            <p class="text-blue-100 text-xs mt-1">คู่มือและฐานข้อมูลรายวิชาแยกตามคณะ/สาขาวิชา และหมวดหมู่การเทียบโอน มทร.ตะวันออก</p>
-        </div>
-        <div class="bg-white/10 backdrop-blur px-5 py-3 rounded-xl border border-white/20 text-center min-w-[180px]">
-            <span class="text-xs text-blue-200 block">ยอดเปิดรับทั้งหมด</span>
-            <span class="text-2xl font-extrabold text-white">{len(all_courses)}</span> <span class="text-xs text-blue-200">วิชา</span>
-        </div>
-    </div>
-
-    <form method="GET" action="/available_courses" class="bg-white p-5 rounded-2xl border shadow-sm mb-6 space-y-4">
-        <div class="flex flex-col md:flex-row gap-3">
-            <div class="flex-1 relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-gray-400 text-sm"></i>
-                <input type="text" name="search" value="{search_query}" placeholder="พิมพ์รหัสวิชา หรือ ชื่อวิชาที่ต้องการค้นหา..." class="w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-            </div>
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition flex items-center justify-center gap-2">
-                <i class="fa-solid fa-search"></i> ค้นหารายวิชา
-            </button>
-        </div>
-    </form>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {cards if cards else '<div class="col-span-3 text-center py-12 text-gray-400 bg-white rounded-2xl border">ไม่พบรายวิชาที่ตรงกับคำค้นหา</div>'}
-    </div>
-    """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
-
 @app.route('/request_edit_profile', methods=['GET', 'POST'])
 def request_edit_profile():
     if 'user_id' not in session: return redirect(url_for('login'))
@@ -764,23 +816,33 @@ def submit_credit():
         flash('ยื่นคำขอเทียบโอนเรียบร้อยแล้ว', 'success')
         return redirect(url_for('history'))
 
-    content = """
+    # รับค่าจาก Query Parameters จากปุ่ม "เทียบโอนวิชานี้"
+    init_course = request.args.get('course', '')
+    init_inst = request.args.get('inst', '')
+    init_credits = request.args.get('credits', '3')
+    init_cat = request.args.get('cat', 'ในระบบ')
+    init_fac = request.args.get('fac', '')
+    init_maj = request.args.get('maj', '')
+
+    content = f"""
     <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
         <h3 class="text-xl font-bold text-gray-800 mb-6">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
         <form method="POST" class="space-y-4">
-            <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อหลักสูตร / รายวิชา</label><input type="text" name="course_name" required class="w-full border rounded-lg p-2.5 text-sm"></div>
-            <div><label class="block text-xs font-semibold text-gray-600 mb-1">สถาบัน / แหล่งเรียนรู้</label><input type="text" name="institution" required class="w-full border rounded-lg p-2.5 text-sm"></div>
+            <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อหลักสูตร / รายวิชา *</label><input type="text" name="course_name" value="{init_course}" required class="w-full border rounded-lg p-2.5 text-sm"></div>
+            <div><label class="block text-xs font-semibold text-gray-600 mb-1">สถาบันเดิม / แหล่งเรียนรู้ *</label><input type="text" name="institution" value="{init_inst}" required class="w-full border rounded-lg p-2.5 text-sm"></div>
             <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-xs font-semibold text-gray-600 mb-1">จำนวนหน่วยกิต</label><input type="number" name="credits" required class="w-full border rounded-lg p-2.5 text-sm"></div>
+                <div><label class="block text-xs font-semibold text-gray-600 mb-1">จำนวนหน่วยกิต *</label><input type="number" name="credits" value="{init_credits}" required class="w-full border rounded-lg p-2.5 text-sm"></div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">หมวดหมู่การเรียนรู้</label>
                     <select name="category" class="w-full border rounded-lg p-2.5 text-sm">
-                        <option value="ในระบบ">ในระบบ</option>
-                        <option value="นอกระบบ">นอกระบบ</option>
-                        <option value="ตามอัธยาศัย">ตามอัธยาศัย</option>
+                        <option value="ในระบบ" {'selected' if init_cat=='ในระบบ' or init_cat=='หมวดวิชาเฉพาะ' or init_cat=='หมวดวิชาศึกษาทั่วไป' else ''}>ในระบบ</option>
+                        <option value="นอกระบบ" {'selected' if init_cat=='นอกระบบ' else ''}>นอกระบบ</option>
+                        <option value="ตามอัธยาศัย" {'selected' if init_cat=='ตามอัธยาศัย' or init_cat=='หมวดวิชาเลือกเสรี' else ''}>ตามอัธยาศัย</option>
                     </select>
                 </div>
             </div>
+            <input type="hidden" name="faculty" value="{init_fac}">
+            <input type="hidden" name="major" value="{init_maj}">
             <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700">ส่งคำร้องขอเทียบโอน</button>
         </form>
     </div>
