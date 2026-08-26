@@ -5,9 +5,10 @@ from flask import Flask, render_template_string, request, redirect, url_for, ses
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_is_rmutto_secret_key_2026_v3'
+app.secret_key = 'credit_bank_is_rmutto_secret_key_2026_v4'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -77,6 +78,13 @@ class ProfileEditRequest(db.Model):
 
 with app.app_context():
     db.create_all()
+
+    # Auto Migration: เพิ่มคอลัมน์ reject_reason เข้าตารางเดิมหากยังไม่มี
+    try:
+        db.session.execute(text("ALTER TABLE credit_request ADD COLUMN reject_reason TEXT;"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
     try:
         main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
