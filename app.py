@@ -138,7 +138,7 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     return " ".join(parts)
 
 # ==========================================
-# Layout Template (Sidebar ฟ้าอ่อน & No White Background Logo)
+# Layout Template (Footer อัปเดตชื่อเต็มมหาลัยและชื่อสาขา)
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -146,7 +146,7 @@ LAYOUT_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ธนาคารหน่วยกิต IS RMUTTO - มทร.ตะวันออก</title>
+    <title>ธนาคารหน่วยกิต IS RMUTTO - มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -176,10 +176,10 @@ LAYOUT_TEMPLATE = """
         <button id="mobile-toggle" class="p-2 text-sky-700 hover:text-sky-900"><i class="fa-solid fa-bars text-xl"></i></button>
     </div>
 
-    <!-- Collapsible Left Sidebar (ปรับเป็นสีฟ้าอ่อน + ถอดพื้นหลังขาวโลโก้) -->
+    <!-- Collapsible Left Sidebar -->
     <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100/70 text-slate-700 min-h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-lg shadow-sky-200/40 border-r border-sky-200/80 hidden md:flex shrink-0">
         
-        <!-- Header Logo Zone (ไม่มีกรอบสีขาว โลโก้โปร่งแสงบนพื้นหลังฟ้าอ่อน) -->
+        <!-- Header Logo Zone -->
         <div class="p-4 flex flex-col border-b border-sky-200/60 bg-sky-200/20">
             <a href="/" class="flex items-center justify-center overflow-hidden py-2 px-2 group">
                 <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="w-full max-h-20 object-contain logo-img-full transition-transform group-hover:scale-105" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO+Credit+Bank';">
@@ -302,18 +302,18 @@ LAYOUT_TEMPLATE = """
             {{ content | safe }}
         </main>
 
-        <!-- Footer ด้านล่างปรับเป็นสีฟ้าอ่อน -->
+        <!-- Footer ด้านล่างแสดงชื่อสาขาและชื่อเต็มมหาวิทยาลัย -->
         <footer class="bg-sky-100/80 text-slate-600 mt-auto border-t border-sky-200/80">
             <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-center md:text-left">
                     <div class="flex items-center gap-3">
-                        <img src="/static/images/logo.png" alt="IS RMUTTO Logo" class="h-9 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50?text=IS+RMUTTO';">
+                        <img src="/static/images/logo.png" alt="IS RMUTTO Logo" class="h-10 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50?text=IS+RMUTTO';">
                         <div>
-                            <p class="text-sky-900 font-bold text-sm">สาขาวิชาระบบสารสนเทศ - มทร.ตะวันออก</p>
-                            <p class="text-slate-500 mt-0.5">คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ</p>
+                            <p class="text-sky-900 font-bold text-sm">สาขาวิชาระบบสารสนเทศ (Information Systems)</p>
+                            <p class="text-slate-600 mt-0.5">คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก</p>
                         </div>
                     </div>
-                    <div class="text-slate-500 leading-relaxed">
+                    <div class="text-slate-500 leading-relaxed font-semibold">
                         © 2026 Credit Bank System (Information Systems Major).
                     </div>
                 </div>
@@ -419,7 +419,7 @@ def home():
                 </div>
 
                 <p class="text-slate-600 mb-8 leading-relaxed text-base font-normal">
-                    ระบบสะสมและเทียบโอนหน่วยกิตดิจิทัล สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ มทร.ตะวันออก เพื่อการเรียนรู้ผ่านระบบ ThaiMOOC และ ChulaMOOC
+                    ระบบสะสมและเทียบโอนหน่วยกิตดิจิทัล สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก เพื่อการเรียนรู้ผ่านระบบ ThaiMOOC และ ChulaMOOC
                 </p>
                 <div class="flex flex-wrap gap-4">
                     <a href="/register" class="px-7 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-sky-400/30 hover:shadow-xl transition-all inline-flex items-center gap-2">
@@ -431,7 +431,7 @@ def home():
                 </div>
             </div>
 
-            <!-- Hero Zone เอาการ์ดขาวครอบโลโก้ออก -->
+            <!-- Hero Zone -->
             <div class="hero-sky p-8 rounded-3xl text-center shadow-lg relative overflow-hidden border border-sky-200 flex flex-col items-center justify-center">
                 <div class="mb-4 w-full max-w-xs flex justify-center py-2">
                     <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank Logo" class="w-full max-h-28 object-contain drop-shadow" onerror="this.onerror=null; this.src='https://via.placeholder.com/300x150?text=IS+RMUTTO+Credit+Bank';">
