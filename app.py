@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_secret_key_2026_rmutto_v7_students_list'
+app.secret_key = 'credit_bank_is_rmutto_secret_key_2026'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -41,15 +41,15 @@ class User(db.Model):
 
 class CreditRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    req_code = db.Column(db.String(20), default="TR2567001")
+    req_code = db.Column(db.String(20), default="TR2569001")
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     course_name = db.Column(db.String(150), nullable=False)
     credits = db.Column(db.Integer, nullable=False)
     institution = db.Column(db.String(100), nullable=False)
-    category = db.Column(db.String(50), default="ในระบบ")
+    category = db.Column(db.String(50), default="ThaiMOOC / Online")
     faculty = db.Column(db.String(100), default="คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ")
-    major = db.Column(db.String(100), default="สาขาการจัดการ")
-    date_submitted = db.Column(db.String(20), default="2026-08-14")
+    major = db.Column(db.String(100), default="สาขาวิชาระบบสารสนเทศ")
+    date_submitted = db.Column(db.String(20), default="2026-08-26")
     doc_img = db.Column(db.String(200), nullable=True)
     status = db.Column(db.String(20), default='Pending')
     approved_by = db.Column(db.String(100), nullable=True)
@@ -66,7 +66,7 @@ class ProfileEditRequest(db.Model):
     reason = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), default='Pending')
     approved_by = db.Column(db.String(100), nullable=True)
-    created_at = db.Column(db.String(20), default="2026-08-14")
+    created_at = db.Column(db.String(20), default="2026-08-26")
     user = db.relationship('User', backref=db.backref('edit_requests', lazy=True))
 
 with app.app_context():
@@ -88,11 +88,6 @@ with app.app_context():
             )
             db.session.add(main_admin)
             db.session.commit()
-        else:
-            main_admin.username = 'Admin_rmutto'
-            main_admin.password = generate_password_hash('rmutto2026')
-            main_admin.role = 'superadmin'
-            db.session.commit()
     except Exception:
         db.session.rollback()
 
@@ -101,13 +96,13 @@ with app.app_context():
 # ==========================================
 def generate_member_id():
     try:
-        last_user = User.query.filter(User.member_id.like('MB%')).order_by(User.id.desc()).first()
+        last_user = User.query.filter(User.member_id.like('IS%')).order_by(User.id.desc()).first()
         if not last_user or not last_user.member_id:
-            return "MB00001"
-        last_num = int(last_user.member_id.replace("MB", ""))
-        return f"MB{last_num + 1:05d}"
+            return "IS00001"
+        last_num = int(last_user.member_id.replace("IS", ""))
+        return f"IS{last_num + 1:05d}"
     except Exception:
-        return f"MB{uuid.uuid4().hex[:5].upper()}"
+        return f"IS{uuid.uuid4().hex[:5].upper()}"
 
 def format_address(house_no, moo, soi, subdistrict, district, province, postal_code):
     parts = []
@@ -129,7 +124,7 @@ LAYOUT_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ธนาคารหน่วยกิต - มทร.ตะวันออก</title>
+    <title>ธนาคารหน่วยกิต สาขาวิชาระบบสารสนเทศ - มทร.ตะวันออก</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -153,8 +148,8 @@ LAYOUT_TEMPLATE = """
     <!-- Mobile Top Header -->
     <div class="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-50 border-b border-slate-800">
         <a href="/" class="flex items-center gap-2.5">
-            <div class="w-9 h-9 bg-blue-800 text-amber-400 rounded-xl flex items-center justify-center font-extrabold text-base">CB</div>
-            <span class="font-bold text-base tracking-tight">Credit Bank RMUTTO</span>
+            <div class="w-9 h-9 bg-blue-800 text-amber-400 rounded-xl flex items-center justify-center font-extrabold text-base">IS</div>
+            <span class="font-bold text-base tracking-tight">Credit Bank - สาขาวิชาระบบสารสนเทศ</span>
         </a>
         <button id="mobile-toggle" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-bars text-xl"></i></button>
     </div>
@@ -166,11 +161,11 @@ LAYOUT_TEMPLATE = """
         <div class="p-5 flex flex-col border-b border-slate-800/80">
             <a href="/" class="flex items-center gap-3 overflow-hidden justify-center md:justify-start">
                 <div class="w-10 h-10 bg-gradient-to-tr from-blue-700 to-indigo-600 text-amber-400 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 shadow-md shadow-blue-900/40">
-                    CB
+                    IS
                 </div>
                 <div class="flex flex-col logo-text transition-all">
                     <span class="font-black text-white text-base leading-tight tracking-tight">Credit Bank</span>
-                    <span class="text-[10px] text-amber-400 font-bold tracking-wider uppercase">มทร.ตะวันออก</span>
+                    <span class="text-[10px] text-amber-400 font-bold tracking-wider uppercase">ระบบสารสนเทศ มทร.ตะวันออก</span>
                 </div>
             </a>
 
@@ -212,10 +207,10 @@ LAYOUT_TEMPLATE = """
                         <span class="nav-text font-bold">เพิ่ม/จัดการเจ้าหน้าที่</span>
                     </a>
                 {% else %}
-                    <p class="section-title text-[11px] font-extrabold text-slate-500 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา</p>
+                    <p class="section-title text-[11px] font-extrabold text-slate-500 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา IS</p>
                     <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-book-open text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
-                        <span class="nav-text font-semibold">รายวิชาเปิดเทียบโอน</span>
+                        <i class="fa-solid fa-laptop-code text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
+                        <span class="nav-text font-semibold">วิชาเทียบโอน ThaiMOOC</span>
                     </a>
                     <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
                         <i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
@@ -238,7 +233,7 @@ LAYOUT_TEMPLATE = """
                     </a>
                     <a href="/register" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-blue-900 to-indigo-800 text-white font-bold transition-all text-sm group shadow-md shadow-blue-900/30">
                         <i class="fa-solid fa-user-plus text-lg w-6 text-center text-amber-400"></i>
-                        <span class="nav-text">สมัครสมาชิก</span>
+                        <span class="nav-text">ลงทะเบียนนักศึกษา</span>
                     </a>
                 </div>
             {% endif %}
@@ -253,7 +248,7 @@ LAYOUT_TEMPLATE = """
                     </div>
                     <div class="flex flex-col min-w-0 nav-text">
                         <span class="text-xs font-bold text-white truncate">{{ session.get('fullname', 'ผู้ใช้งาน') }}</span>
-                        <span class="text-[10px] text-slate-400 capitalize">{% if session.get('role') in ['admin', 'superadmin'] %}เจ้าหน้าที่{% else %}นักศึกษา{% endif %}</span>
+                        <span class="text-[10px] text-slate-400 capitalize">{% if session.get('role') in ['admin', 'superadmin'] %}เจ้าหน้าที่{% else %}นักศึกษาสาขา IS{% endif %}</span>
                     </div>
                 </a>
                 <a href="/logout" class="mt-2 flex items-center gap-3 px-3 py-2 text-xs font-bold text-rose-400 hover:bg-rose-950/30 rounded-xl transition-all">
@@ -292,14 +287,14 @@ LAYOUT_TEMPLATE = """
             <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-center md:text-left">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-blue-800 text-amber-400 font-bold flex items-center justify-center">CB</div>
+                        <div class="w-8 h-8 rounded-lg bg-blue-800 text-amber-400 font-bold flex items-center justify-center">IS</div>
                         <div>
-                            <p class="text-slate-200 font-bold text-sm">มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก (RMUTTO)</p>
-                            <p class="text-slate-500 mt-0.5">Rajamangala University of Technology Tawan-ok</p>
+                            <p class="text-slate-200 font-bold text-sm">สาขาวิชาระบบสารสนเทศ - มทร.ตะวันออก</p>
+                            <p class="text-slate-500 mt-0.5">คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ</p>
                         </div>
                     </div>
                     <div class="text-slate-400 leading-relaxed">
-                        © 2026 Credit Bank System. ระบบธนาคารหน่วยกิตเพื่อการเรียนรู้ตลอดชีวิต
+                        © 2026 Credit Bank System (Information Systems Major).
                     </div>
                 </div>
             </div>
@@ -330,6 +325,56 @@ LAYOUT_TEMPLATE = """
 """
 
 # ==========================================
+# THAIMOOC IS DATABASE (39 Subjects / 63 Online Courses)
+# ==========================================
+IS_THAIMOOC_COURSES = [
+    # กลุ่มศึกษาทั่วไป
+    {"code": "15-02-002", "name": "คุณภาพการใช้ชีวิต", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "1. ชีวิตและการสร้างคุณค่า (2 ชม.) / 2. การคิดสร้างสรรค์เพื่อการพัฒนาตนเอง (5 ชม.)", "hours": "7 ชม.", "credits": 3},
+    {"code": "15-02-003", "name": "การคิดอย่างมีวิจารณญาณและการแก้ปัญหา", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "1. การคิดเชิงวิพากษ์และการจัดการปัญหา (5 ชม.) / 2. การคิดแก้ปัญหาเชิงสร้างสรรค์ (6 ชม.)", "hours": "11 ชม.", "credits": 3},
+    {"code": "15-02-004", "name": "คุณธรรมจริยธรรมในโลกเทคโนโลยีสารสนเทศ", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "จริยธรรมสารสนเทศสำหรับพลเมืองดิจิทัล", "hours": "7 ชม.", "credits": 3},
+    {"code": "15-03-005", "name": "ผู้ประกอบการนวัตกรรม", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "การเป็นผู้ประกอบการในศตวรรษที่ 21", "hours": "30 ชม.", "credits": 3},
+    {"code": "15-03-006", "name": "การจัดการเศรษฐกิจชีวภาพ เศรษฐกิจหมุนเวียน และเศรษฐกิจสีเขียว", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "1. ชุมชนแห่งความยั่งยืน (2 ชม.) / 2. หลักเศรษฐศาสตร์เกษตร (6 ชม.)", "hours": "8 ชม.", "credits": 3},
+    {"code": "15-03-007", "name": "เทคโนโลยีสารสนเทศในยุคดิจิทัล", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "เทคโนโลยีสารสนเทศในยุคดิจิทัล", "hours": "10 ชม.", "credits": 3},
+    {"code": "15-03-008", "name": "คณิตศาสตร์และสถิติเพื่อการประกอบอาชีพ", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "สถิติธุรกิจ (สถิติเรื่องใกล้ตัว…ไม่น่ากลัวอย่างที่คิด)", "hours": "10 ชม.", "credits": 3},
+    {"code": "15-03-009", "name": "ภูมิปัญญาเพื่อการประกอบอาชีพ", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "ภูมิปัญญาไทย กับการพัฒนาการเกษตรอย่างยั่งยืน", "hours": "10 ชม.", "credits": 3},
+    {"code": "15-03-010", "name": "การวิเคราะห์และนำเสนอข้อมูลด้วยเทคโนโลยีดิจิทัล", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "1. การออกแบบการนำเสนองานอย่างสร้างสรรค์และทันสมัย (10 ชม.) / 2. คอมพิวเตอร์เพื่อการพูดและการนำเสนอ (6 ชม.)", "hours": "16 ชม.", "credits": 3},
+    {"code": "15-03-011", "name": "ผู้ประกอบการดิจิทัล", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "การตลาดดิจิทัลสำหรับผู้ประกอบการธุรกิจชุมชน", "hours": "5 ชม.", "credits": 3},
+    {"code": "15-03-014", "name": "การพัฒนาศักยภาพเพื่อมุ่งสู่การเป็นผู้ประกอบการมือใหม่", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "การเริ่มต้นเป็นผู้ประกอบการรายใหม่ (A new entrepreneur)", "hours": "30 ชม.", "credits": 3},
+    {"code": "15-03-015", "name": "ศาสตร์แห่งการสื่อสาร", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "1. ทักษะการสื่อสารระหว่างบุคคลในการทำงาน (10 ชม.) / 2. การสื่อสารและการประสานงาน (5 ชม.)", "hours": "15 ชม.", "credits": 3},
+    {"code": "15-03-016", "name": "ภาษาอังกฤษเพื่อการสื่อสาร", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "1. ภาษาอังกฤษเพื่อการสื่อสาร (10 ชม.) / 2. ภาษาอังกฤษเพื่อการสื่อสารในสังคม (4 ชม.)", "hours": "14 ชม.", "credits": 3},
+    {"code": "15-03-018", "name": "การใช้ภาษาไทยในชีวิตประจำวัน", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "การใช้ภาษาไทย หรือ ภาษาไทยเพื่อการสื่อสารร่วมสมัย", "hours": "10 ชม.", "credits": 3},
+    {"code": "15-03-019", "name": "ทักษะภาษาอังกฤษสำหรับผู้ประกอบการออนไลน์", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "ง่ายสบายกับการอธิบายกราฟเป็นภาษาอังกฤษ", "hours": "10 ชม.", "credits": 3},
+    {"code": "15-03-020", "name": "ทักษะการเรียนภาษาอังกฤษผ่านสื่ออิเล็กทรอนิกส์", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "ภาษาอังกฤษสำหรับเทคโนโลยีสารสนเทศ", "hours": "10 ชม.", "credits": 3},
+    {"code": "15-03-021", "name": "เทคนิคการพูดเพื่อความสำเร็จ", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "รู้รอบด้านการนำเสนอ", "hours": "5 ชม.", "credits": 3},
+    {"code": "15-05-024", "name": "ทักษะชีวิต", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "ทักษะทางสังคม", "hours": "10 ชม.", "credits": 3},
+    {"code": "15-06-027", "name": "ความเป็นพลเมืองไทยและพลเมืองโลก", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "1. ความเป็นพลเมืองโลก (3 ชม.) / 2. การเป็นพลเมือง (10 ชม.)", "hours": "13 ชม.", "credits": 3},
+    {"code": "15-06-028", "name": "วิถีโลก", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "กลยุทธ์สู่ประชาคมอาเซียน: การเมือง เศรษฐกิจ และสังคม", "hours": "8 ชม.", "credits": 3},
+    {"code": "15-06-029", "name": "สังคมและวัฒนธรรมไทย", "group": "หมวดวิชาศึกษาทั่วไป", "mooc": "อารยธรรมและภูมิปัญญาท้องถิ่น", "hours": "1 ชม.", "credits": 3},
+
+    # กลุ่มวิชาแกน
+    {"code": "04-00-101", "name": "หลักการตลาด", "group": "หมวดวิชาแกน", "mooc": "1. การจัดการเชิงกลยุทธ์และการตลาดในยุคโลกาภิวัตน์ (10 ชม.) / 2. การตลาดเชิงสร้างสรรค์ (6 ชม.)", "hours": "16 ชม.", "credits": 3},
+    {"code": "04-00-102", "name": "หลักเศรษฐศาสตร์ (Principles of Economics)", "group": "หมวดวิชาแกน", "mooc": "เศรษฐศาสตร์ตลาดการเงิน", "hours": "10 ชม.", "credits": 3},
+    {"code": "04-00-103", "name": "องค์การและการจัดการ", "group": "หมวดวิชาแกน", "mooc": "1. การบริหารจัดการในศตวรรษที่ 21 (6 ชม.) / 2. การจัดการธุรกิจการค้าสมัยใหม่ในยุค Thailand 4.0 (6 ชม.)", "hours": "12 ชม.", "credits": 3},
+    {"code": "04-00-104", "name": "กฎหมายธุรกิจและการภาษีอากร", "group": "หมวดวิชาแกน", "mooc": "Chula MOOC: 1. กฎหมายกับธุรกิจ Law for Business / 2. กฎหมายพื้นฐานสำหรับธุรกิจ", "hours": "ChulaMOOC", "credits": 3},
+    {"code": "04-00-105", "name": "สถิติเพื่อการวิจัยธุรกิจ", "group": "หมวดวิชาแกน", "mooc": "1. สถิติและการวิเคราะห์ข้อมูลเบื้องต้น (4 ชม.) / 2. วิจัยทางธุรกิจ (6 ชม.)", "hours": "10 ชม.", "credits": 3},
+    {"code": "04-00-106", "name": "ภาษาอังกฤษเพื่อการสื่อสารธุรกิจ", "group": "หมวดวิชาแกน", "mooc": "สตาร์ทอัพอังกฤษ", "hours": "30 ชม.", "credits": 3},
+    {"code": "04-00-107", "name": "การบัญชีเบื้องต้นเพื่อการบริหาร", "group": "หมวดวิชาแกน", "mooc": "1. บัญชีเบื้องต้น (5 ชม.) / 2. การบัญชีบริหาร (10 ชม.)", "hours": "15 ชม.", "credits": 3},
+    {"code": "04-00-108", "name": "การเงินธุรกิจ", "group": "หมวดวิชาแกน", "mooc": "1. การบัญชีเพื่อการจัดการและการจัดการทางการเงิน (10 ชม.) / 2. การเงินสำหรับการเริ่มต้นธุรกิจ SET (1 ชม.)", "hours": "11 ชม.", "credits": 3},
+    {"code": "04-00-109", "name": "การจัดการโลจิสติกส์และห่วงโซ่อุปทาน", "group": "หมวดวิชาแกน", "mooc": "1. โลจิสติกส์และโซ่อุปทานเบื้องต้น (10 ชม.) / 2. การจัดการคลังสินค้า (10 ชม.)", "hours": "20 ชม.", "credits": 3},
+    {"code": "04-00-110", "name": "ทักษะความเข้าใจและการใช้เทคโนโลยีดิจิทัล", "group": "หมวดวิชาแกน", "mooc": "1. การเข้าใจดิจิทัล (15 ชม.) / 2. ทักษะความเข้าใจความมั่นคงปลอดภัยทางไซเบอร์ (4 ชม.)", "hours": "19 ชม.", "credits": 3},
+
+    # กลุ่มวิชาเลือก
+    {"code": "04-05-141", "name": "วิทยาการสารสนเทศทางธุรกิจ", "group": "หมวดวิชาเลือก", "mooc": "1. วิทยาการข้อมูลเบื้องต้น (6 ชม.) / 2. วิทยาการข้อมูลและการประยุกต์ใช้ (30 ชม.)", "hours": "36 ชม.", "credits": 3},
+    {"code": "04-05-232", "name": "การคิดเชิงออกแบบสำหรับนวัตกรรมทางธุรกิจ", "group": "หมวดวิชาเลือก", "mooc": "ปฏิบัติการคิดเชิงออกแบบนวัตกรรม", "hours": "12 ชม.", "credits": 3},
+    {"code": "04-05-233", "name": "ธุรกิจดิจิทัลผ่านสื่อสังคมออนไลน์", "group": "หมวดวิชาเลือก", "mooc": "1. มาตรฐานการผลิตสื่อดิจิทัล (5 ชม.) / 2. การสร้างสรรค์สื่อดิจิทัลบนเครือข่ายสังคมออนไลน์ (5 ชม.)", "hours": "10 ชม.", "credits": 3},
+    {"code": "04-05-234", "name": "เครือข่ายคอมพิวเตอร์และความปลอดภัยสำหรับธุรกิจดิจิทัล", "group": "หมวดวิชาเลือก", "mooc": "เครือข่ายและความปลอดภัย", "hours": "5 ชม.", "credits": 3},
+    {"code": "04-05-241", "name": "การวิเคราะห์ข้อมูลทางธุรกิจ", "group": "หมวดวิชาเลือก", "mooc": "1. การเตรียมข้อมูล (12 ชม.) / 2. การวิเคราะห์ข้อมูลสำหรับการจัดการทางธุรกิจ (3 ชม.)", "hours": "15 ชม.", "credits": 3},
+    {"code": "04-05-342", "name": "ระบบสนับสนุนการตัดสินใจ", "group": "หมวดวิชาเลือก", "mooc": "1. ระบบสนับสนุนการตัดสินใจสำหรับองค์กรธุรกิจ (6 ชม.) / 2. การตัดสินใจโดยการขับเคลื่อนด้วยข้อมูล (4 ชม.)", "hours": "10 ชม.", "credits": 3},
+    {"code": "04-05-441", "name": "ความคิดสร้างสรรค์และนวัตกรรมในการวิเคราะห์ข้อมูล", "group": "หมวดวิชาเลือก", "mooc": "1. การสร้างสรรค์เนื้อหาด้วยข้อมูล Data (4 ชม.) / 2. การตัดสินใจโดยการขับเคลื่อนด้วยข้อมูล (4 ชม.)", "hours": "8 ชม.", "credits": 3},
+    {"code": "04-05-443", "name": "การบริหารโครงการระบบสารสนเทศ", "group": "หมวดวิชาเลือก", "mooc": "1. การวิเคราะห์โครงการและแผนงานยุคดิจิทัล (15 ชม.) / 2. การบริหารโครงการ IT แบบมืออาชีพ (3 ชม.)", "hours": "18 ชม.", "credits": 3}
+]
+
+# ==========================================
 # Routes & Controllers
 # ==========================================
 @app.route('/')
@@ -339,27 +384,27 @@ def home():
         <div class="max-w-5xl mx-auto py-10 md:py-16 grid md:grid-cols-2 gap-10 items-center">
             <div>
                 <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 mb-5 border border-amber-200">
-                    <i class="fa-solid fa-sparkles text-amber-600"></i> ธนาคารหน่วยกิต มทร.ตะวันออก
+                    <i class="fa-solid fa-laptop-code text-amber-600"></i> สาขาวิชาระบบสารสนเทศ (IS) มทร.ตะวันออก
                 </span>
                 
                 <div class="space-y-3 mb-6">
                     <h1 class="text-4xl sm:text-5xl font-black text-slate-900 leading-relaxed tracking-normal">
-                        สะสมหน่วยกิต
+                        ธนาคารหน่วยกิต
                     </h1>
                     <p class="text-3xl sm:text-4xl font-extrabold text-blue-900 leading-relaxed">
-                        เชื่อมต่อทุกโอกาส
+                        เทียบโอน ThaiMOOC
                     </p>
                     <p class="text-3xl sm:text-4xl font-extrabold text-amber-600 leading-relaxed">
-                        การเรียนรู้
+                        สาขาวิชาระบบสารสนเทศ
                     </p>
                 </div>
 
                 <p class="text-slate-600 mb-8 leading-relaxed text-base font-normal">
-                    เทียบโอนหน่วยกิตจากการเรียนรู้ในระบบ นอกระบบ และตามอัธยาศัย เข้าสู่หลักสูตรปริญญาตรี มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก ครอบคลุมทั้ง 4 วิทยาเขต/เขตพื้นที่
+                    ระบบสะสมและเทียบโอนหน่วยกิตดิจิทัล สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ มทร.ตะวันออก เพื่อการเรียนรู้ผ่านระบบ ThaiMOOC และ ChulaMOOC
                 </p>
                 <div class="flex flex-wrap gap-4">
                     <a href="/register" class="px-7 py-3.5 bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold rounded-2xl shadow-lg shadow-blue-900/20 hover:shadow-xl transition-all inline-flex items-center gap-2">
-                        <i class="fa-solid fa-user-plus text-amber-400"></i> สมัครสมาชิกนักศึกษา
+                        <i class="fa-solid fa-user-plus text-amber-400"></i> สมัครสมาชิกนักศึกษา IS
                     </a>
                     <a href="/login" class="px-7 py-3.5 bg-white text-slate-800 border border-slate-200 font-bold rounded-2xl hover:bg-slate-50 transition shadow-sm inline-flex items-center gap-2">
                         เข้าสู่ระบบ
@@ -371,8 +416,8 @@ def home():
                 <div class="w-24 h-24 bg-white/10 text-amber-400 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-6 backdrop-blur border border-white/10">
                     <i class="fa-solid fa-graduation-cap"></i>
                 </div>
-                <h3 class="text-2xl font-bold text-white mb-2">Lifelong Learning</h3>
-                <p class="text-slate-300 text-sm leading-relaxed max-w-sm mx-auto">ระบบคลังหน่วยกิตดิจิทัลที่ช่วยยกระดับและสั่งสมศักยภาพของคุณสู่ความสำเร็จทางการศึกษา</p>
+                <h3 class="text-2xl font-bold text-white mb-2">Information Systems</h3>
+                <p class="text-slate-300 text-sm leading-relaxed max-w-sm mx-auto">ระบบคลังหน่วยกิตการเรียนรู้ผ่านสื่อออนไลน์ ThaiMOOC สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ</p>
             </div>
         </div>
         """
@@ -399,7 +444,7 @@ def home():
 
         content = f"""
         <div class="mb-8">
-            <h2 class="text-2xl font-extrabold text-slate-900">ยินดีต้อนรับ, เจ้าหน้าที่</h2>
+            <h2 class="text-2xl font-extrabold text-slate-900">ยินดีต้อนรับ, เจ้าหน้าที่ประจำสาขาวิชาระบบสารสนเทศ</h2>
             <p class="text-slate-500 text-sm mt-1">แผงควบคุมระบบตรวจสอบและอนุมัติสำหรับเจ้าหน้าที่ ({user.fullname})</p>
         </div>
 
@@ -408,7 +453,7 @@ def home():
                 <div>
                     <div class="flex items-center gap-2 mb-2">
                         <span class="bg-amber-500 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">แอดมินจัดการ</span>
-                        <h3 class="text-2xl font-extrabold text-white">➕ คลิกที่นี่เพื่อ "เพิ่มเจ้าหน้าที่ช่วยตรวจงาน"</h3>
+                        <h3 class="text-2xl font-extrabold text-white">➕ เพิ่มเจ้าหน้าที่ตรวจงานระบบสารสนเทศ</h3>
                     </div>
                     <p class="text-sm text-slate-300">เพิ่มบัญชีเจ้าหน้าที่ใหม่ด้วยเลขบัตรประชาชนและรหัสผ่านส่วนตัว (ปัจจุบันมีเจ้าหน้าที่ {total_admins} คน)</p>
                 </div>
@@ -419,7 +464,7 @@ def home():
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <a href="/admin/students" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between hover:border-blue-500 transition card-hover">
                 <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">นักศึกษาในระบบ</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">นักศึกษาสาขา IS ในระบบ</p>
                     <h3 class="text-3xl font-black text-slate-900">{total_members} <span class="text-xs text-slate-400 font-normal">คน</span></h3>
                 </div>
                 <div class="w-12 h-12 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-users"></i></div>
@@ -456,10 +501,10 @@ def home():
     <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
             <h2 class="text-3xl font-black text-slate-900">สวัสดีครับ, {user.prefix or ''} {user.fullname}</h2>
-            <p class="text-sm font-bold text-blue-900 mt-1"><i class="fa-solid fa-id-card mr-1 text-amber-500"></i> รหัสสมาชิก: {user.member_id or '-'}</p>
+            <p class="text-sm font-bold text-blue-900 mt-1"><i class="fa-solid fa-id-card mr-1 text-amber-500"></i> รหัสนักศึกษา/สมาชิก: {user.member_id or '-'} (สาขาวิชาระบบสารสนเทศ)</p>
         </div>
         <a href="/submit_credit" class="bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold px-6 py-3 rounded-2xl shadow-md shadow-blue-900/20 transition-all inline-flex items-center gap-2 text-sm shrink-0">
-            <i class="fa-solid fa-file-circle-plus text-amber-400"></i> ยื่นคำขอเทียบโอนใหม่
+            <i class="fa-solid fa-file-circle-plus text-amber-400"></i> ยื่นคำขอเทียบโอน ThaiMOOC
         </a>
     </div>
 
@@ -488,7 +533,7 @@ def home():
         </div>
         <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between card-hover">
             <div>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">เป้าหมายหลักสูตร</p>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">เป้าหมายหลักสูตร IS</p>
                 <h3 class="text-3xl font-black text-emerald-600">120 <span class="text-xs font-medium text-slate-400">หน่วยกิต</span></h3>
             </div>
             <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-bullseye"></i></div>
@@ -499,7 +544,7 @@ def home():
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
             <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <i class="fa-solid fa-chart-pie text-blue-900"></i> สัดส่วนความก้าวหน้าหน่วยกิต
+                <i class="fa-solid fa-chart-pie text-blue-900"></i> ความก้าวหน้าหน่วยกิตสาขา IS
             </h3>
             <div class="w-full max-w-[240px] mx-auto py-2">
                 <canvas id="creditDoughnutChart"></canvas>
@@ -520,24 +565,24 @@ def home():
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <a href="/available_courses" class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm card-hover block group">
             <div class="w-12 h-12 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
-                <i class="fa-solid fa-book-open"></i>
+                <i class="fa-solid fa-laptop-code"></i>
             </div>
-            <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-blue-900 transition-colors">ค้นหารายวิชาเปิดเทียบโอน</h3>
-            <p class="text-xs text-slate-500 leading-relaxed">เลือกดูรายวิชาที่เปิดรับเทียบโอนแยกตามคณะ/สาขาวิชา และวิทยาเขต</p>
+            <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-blue-900 transition-colors">รายวิชาเรียน ThaiMOOC</h3>
+            <p class="text-xs text-slate-500 leading-relaxed">เลือกดูรายวิชา ThaiMOOC/ChulaMOOC ที่เทียบโอนเข้าหลักสูตรสาขาวิชาระบบสารสนเทศ</p>
         </a>
         <a href="/submit_credit" class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm card-hover block group">
             <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
                 <i class="fa-solid fa-file-pen"></i>
             </div>
             <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-amber-600 transition-colors">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
-            <p class="text-xs text-slate-500 leading-relaxed">ส่งเอกสารหลักฐานขอเทียบโอนรายวิชาเข้าสู่ระบบ</p>
+            <p class="text-xs text-slate-500 leading-relaxed">ส่งเอกสารเกียรติบัตร ThaiMOOC ขอเทียบโอนรายวิชาเข้าสู่ระบบ</p>
         </a>
         <a href="/request_edit_profile" class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm card-hover block group">
             <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
                 <i class="fa-solid fa-user-gear"></i>
             </div>
             <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-purple-600 transition-colors">ขอแก้ไขข้อมูลส่วนตัว</h3>
-            <p class="text-xs text-slate-500 leading-relaxed">แจ้งเรื่องขอเปลี่ยนชื่อ-สกุล อีเมล หรือเบอร์โทรศัพท์ถึงเจ้าหน้าที่</p>
+            <p class="text-xs text-slate-500 leading-relaxed">แจ้งเรื่องขอเปลี่ยนชื่อ-สกุล อีเมล หรือเบอร์โทรศัพท์ถึงเจ้าหน้าที่ประจำสาขา</p>
         </a>
     </div>
 
@@ -566,7 +611,7 @@ def home():
         new Chart(ctxBar, {{
             type: 'bar',
             data: {{
-                labels: ['หมวดวิชาศึกษาทั่วไป', 'หมวดวิชาเฉพาะ', 'หมวดวิชาเลือกเสรี'],
+                labels: ['หมวดวิชาศึกษาทั่วไป', 'หมวดวิชาแกน', 'หมวดวิชาเลือก'],
                 datasets: [{{
                     label: 'หน่วยกิตสะสม (อนุมัติแล้ว)',
                     data: [{approved_credits}, {approved_credits}, 0],
@@ -586,6 +631,87 @@ def home():
             }}
         }});
     </script>
+    """
+    return render_template_string(LAYOUT_TEMPLATE, content=content)
+
+@app.route('/available_courses')
+def available_courses():
+    if 'user_id' not in session: return redirect(url_for('login'))
+
+    search_query = request.args.get('search', '').strip().lower()
+    selected_group = request.args.get('group', '').strip()
+
+    filtered_courses = IS_THAIMOOC_COURSES
+
+    if selected_group and selected_group != "ทั้งหมด":
+        filtered_courses = [c for c in filtered_courses if c['group'] == selected_group]
+
+    if search_query:
+        filtered_courses = [c for c in filtered_courses if search_query in c['name'].lower() or search_query in c['code'].lower() or search_query in c['mooc'].lower()]
+
+    cards = ""
+    for c in filtered_courses:
+        cards += f"""
+        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between card-hover">
+            <div>
+                <div class="flex justify-between items-start mb-3 gap-2">
+                    <span class="font-mono text-xs text-slate-700 font-bold bg-slate-100 px-3 py-1 rounded-xl border border-slate-200">{c['code']}</span>
+                    <span class="bg-blue-50 text-blue-900 text-xs px-3 py-1 rounded-full font-bold border border-blue-100">{c['group']}</span>
+                </div>
+                <h3 class="text-base font-extrabold text-slate-900 mb-2 leading-snug">{c['name']}</h3>
+                <p class="text-xs text-slate-500 font-medium mb-2"><i class="fa-solid fa-graduation-cap text-amber-500 mr-1"></i> สาขาวิชาระบบสารสนเทศ (3 หน่วยกิต)</p>
+                <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 mb-4">
+                    <p class="text-xs font-bold text-slate-700 mb-1"><i class="fa-solid fa-laptop-code text-blue-900 mr-1"></i> รายวิชาที่ต้องเรียนใน ThaiMOOC / ChulaMOOC:</p>
+                    <p class="text-xs text-slate-600 leading-relaxed">{c['mooc']}</p>
+                </div>
+            </div>
+            <div class="border-t border-slate-100 pt-4 mt-2">
+                <div class="flex justify-between items-center text-xs text-slate-600 mb-4">
+                    <span><i class="fa-regular fa-clock mr-1 text-slate-400"></i> จำนวนชั่วโมง: <b>{c['hours']}</b></span>
+                    <span class="font-black text-blue-950 text-sm bg-blue-50 px-2.5 py-0.5 rounded-lg">{c['credits']} หน่วยกิต</span>
+                </div>
+                {'<a href="/submit_credit?course=' + c['name'] + '&inst=ThaiMOOC / ChulaMOOC&credits=' + str(c['credits']) + '&cat=' + c['group'] + '" class="block text-center w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm">ยื่นเทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
+            </div>
+        </div>
+        """
+
+    content = f"""
+    <div class="hero-gradient text-white p-8 rounded-3xl shadow-xl mb-8 flex flex-col md:flex-row justify-between items-center gap-6 border border-slate-700/50">
+        <div>
+            <span class="bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">IS Major Database</span>
+            <h2 class="text-3xl font-extrabold">💻 วิชาเทียบโอน ThaiMOOC สาขาวิชาระบบสารสนเทศ</h2>
+            <p class="text-slate-300 text-xs mt-1.5 leading-relaxed">ฐานข้อมูลการเทียบโอนรายวิชาในหลักสูตรสาขาวิชาระบบสารสนเทศ ผ่านบทเรียนออนไลน์ ThaiMOOC และ ChulaMOOC</p>
+        </div>
+        <div class="bg-white/10 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 text-center shrink-0">
+            <span class="text-xs text-slate-300 block font-medium">จำนวนรายวิชาหลักสูตร</span>
+            <span class="text-3xl font-black text-amber-400">{len(filtered_courses)}</span> <span class="text-xs text-slate-300">/ {len(IS_THAIMOOC_COURSES)} วิชา</span>
+        </div>
+    </div>
+
+    <form method="GET" action="/available_courses" class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm mb-8 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-layer-group mr-1 text-amber-500"></i> หมวดวิชาหลักสูตร</label>
+                <select name="group" onchange="this.form.submit()" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
+                    <option value="ทั้งหมด" {'selected' if selected_group=='ทั้งหมด' or not selected_group else ''}>ทุกหมวดวิชา</option>
+                    <option value="หมวดวิชาศึกษาทั่วไป" {'selected' if selected_group=='หมวดวิชาศึกษาทั่วไป' else ''}>หมวดวิชาศึกษาทั่วไป</option>
+                    <option value="หมวดวิชาแกน" {'selected' if selected_group=='หมวดวิชาแกน' else ''}>หมวดวิชาแกน</option>
+                    <option value="หมวดวิชาเลือก" {'selected' if selected_group=='หมวดวิชาเลือก' else ''}>หมวดวิชาเลือก</option>
+                </select>
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-magnifying-glass mr-1 text-blue-900"></i> ค้นหาด้วยรหัสวิชา / ชื่อวิชา / วิชา ThaiMOOC</label>
+                <div class="flex gap-2">
+                    <input type="text" name="search" value="{search_query}" placeholder="พิมพ์ชื่อวิชา หรือคำค้นหา..." class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
+                    <button type="submit" class="bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold px-7 py-3 rounded-2xl text-sm transition shadow-md shadow-blue-900/20 shrink-0">ค้นหา</button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {cards if cards else '<div class="col-span-3 text-center py-16 text-slate-400 bg-white rounded-3xl border border-slate-200/80">ไม่พบรายวิชาที่ตรงกับเงื่อนไขการค้นหา</div>'}
+    </div>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
 
@@ -613,7 +739,8 @@ def admin_students():
                 <span class="text-xs text-slate-400 font-normal">({s.id_card or '-'})</span>
             </td>
             <td class="py-4 px-4 font-extrabold text-slate-900">
-                {s.prefix or ''} {s.fullname}
+                {s.prefix or ''} {s.fullname}<br>
+                <span class="text-xs text-slate-500 font-normal">สาขาวิชาระบบสารสนเทศ</span>
             </td>
             <td class="py-4 px-4 text-xs text-slate-600 font-medium leading-relaxed">
                 <i class="fa-solid fa-phone text-slate-400 mr-1"></i>{s.phone or '-'}<br>
@@ -634,7 +761,7 @@ def admin_students():
     <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div>
-                <h3 class="text-xl font-black text-slate-900"><i class="fa-solid fa-users text-blue-900 mr-2"></i>รายชื่อนักศึกษาในระบบทั้งหมด</h3>
+                <h3 class="text-xl font-black text-slate-900"><i class="fa-solid fa-users text-blue-900 mr-2"></i>รายชื่อนักศึกษาสาขาวิชาระบบสารสนเทศ</h3>
                 <p class="text-xs text-slate-500 mt-1">แสดงข้อมูลนักศึกษาและจำนวนหน่วยกิตที่ได้รับการอนุมัติ</p>
             </div>
             <div class="bg-blue-50 text-blue-900 px-4 py-2 rounded-2xl border border-blue-100 text-xs font-bold">
@@ -644,8 +771,8 @@ def admin_students():
         <table class="w-full text-left min-w-[700px]">
             <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
                 <tr>
-                    <th class="py-3 px-4">รหัสสมาชิก / บัตรประชาชน</th>
-                    <th class="py-3 px-4">ชื่อ-นามสกุล</th>
+                    <th class="py-3 px-4">รหัสนักศึกษา / บัตรประชาชน</th>
+                    <th class="py-3 px-4">ชื่อ-นามสกุล / สาขา</th>
                     <th class="py-3 px-4">ข้อมูลติดต่อ</th>
                     <th class="py-3 px-4">ที่อยู่</th>
                     <th class="py-3 px-4 text-center">หน่วยกิตสะสม</th>
@@ -707,14 +834,14 @@ def register():
         db.session.add(new_user)
         db.session.commit()
 
-        flash(f'สมัครสมาชิกเรียบร้อยแล้ว! รหัสสมาชิกของคุณคือ: {new_member_id}', 'success')
+        flash(f'สมัครสมาชิกเรียบร้อยแล้ว! รหัสนักศึกษาของคุณคือ: {new_member_id}', 'success')
         return redirect(url_for('login'))
 
     content = """
     <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
         <div class="text-center mb-8">
-            <h2 class="text-2xl font-black text-slate-900">สมัครสมาชิกนักศึกษา</h2>
-            <p class="text-xs text-slate-500 mt-1">กรอกข้อมูลส่วนตัวและที่อยู่เพื่อสร้างคลังหน่วยกิต</p>
+            <h2 class="text-2xl font-black text-slate-900">ลงทะเบียนนักศึกษาสาขาวิชาระบบสารสนเทศ</h2>
+            <p class="text-xs text-slate-500 mt-1">กรอกข้อมูลส่วนตัวเพื่อสร้างคลังหน่วยกิต ThaiMOOC</p>
         </div>
         <form method="POST" class="space-y-5">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -769,167 +896,9 @@ def register():
             </div>
 
             <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-4">
-                <i class="fa-solid fa-user-plus mr-1 text-amber-400"></i> ยืนยันการสมัครสมาชิก
+                <i class="fa-solid fa-user-plus mr-1 text-amber-400"></i> ยืนยันการลงทะเบียน
             </button>
         </form>
-    </div>
-    """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
-
-@app.route('/admin/requests')
-def admin_requests():
-    if session.get('role') not in ['admin', 'superadmin']: return redirect(url_for('login'))
-    
-    try:
-        all_requests = CreditRequest.query.order_by(CreditRequest.id.desc()).all()
-    except Exception:
-        all_requests = []
-
-    rows = ""
-    for r in all_requests:
-        status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอพิจารณา</span>' if getattr(r, 'status', 'Pending') == 'Pending' else ('<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติ</span>' if getattr(r, 'status', '') == 'Approved' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ</span>')
-        
-        student_name = r.user.fullname if getattr(r, 'user', None) else '-'
-        student_code = r.user.member_id if getattr(r, 'user', None) else '-'
-
-        rows += f"""
-        <tr class="border-b border-slate-100 text-sm hover:bg-slate-50 transition">
-            <td class="py-4 px-4 font-mono font-bold text-blue-900">{getattr(r, 'req_code', 'TR001')}</td>
-            <td class="py-4 px-4 font-bold text-slate-900">{student_name}<br><span class="text-xs text-blue-900 font-semibold">({student_code})</span></td>
-            <td class="py-4 px-4 text-slate-700 font-medium">{getattr(r, 'course_name', '-')}</td>
-            <td class="py-4 px-4 text-slate-500 text-xs font-medium">{getattr(r, 'date_submitted', '-')}</td>
-            <td class="py-4 px-4">{status_badge}</td>
-            <td class="py-4 px-4">
-                <a href="/admin/review/{r.id}" class="bg-gradient-to-r from-blue-900 to-indigo-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-blue-950 hover:to-indigo-900 inline-block shadow-sm">พิจารณา</a>
-            </td>
-        </tr>
-        """
-
-    content = f"""
-    <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
-        <h3 class="text-xl font-black text-slate-900 mb-6">รายการคำร้องเทียบโอนทั้งหมด</h3>
-        <table class="w-full text-left min-w-[650px]">
-            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                <tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">ชื่อนักศึกษา</th><th class="py-3 px-4">วิชาที่ขอเทียบโอน</th><th class="py-3 px-4">วันที่ยื่น</th><th class="py-3 px-4">สถานะ</th><th class="py-3 px-4">จัดการ</th></tr>
-            </thead>
-            <tbody>{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีคำร้องในระบบ</td></tr>'}</tbody>
-        </table>
-    </div>
-    """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
-
-@app.route('/available_courses')
-def available_courses():
-    if 'user_id' not in session: return redirect(url_for('login'))
-    
-    all_courses = [
-        {"code": "04-00-101", "name": "หลักการตลาด", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "03-211-101 / 3200-1005", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการ 2568 (วิชาเดิม: หลักการตลาด / การขายเบื้องต้น)"},
-        {"code": "04-00-102", "name": "หลักเศรษฐศาสตร์", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "3200-1001 / 05-000-101", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการ 2568 (วิชาเดิม: หลักเศรษฐศาสตร์)"},
-        {"code": "04-00-104", "name": "กฎหมายธุรกิจและการภาษีอากร", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ / การตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30001-1055 / 20215-2004", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการและแบบเทียบโอนสาขาการตลาด 2568"},
-        {"code": "04-00-106", "name": "ภาษาอังกฤษเพื่อการสื่อสารธุรกิจ", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ / การตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "05-081-122 / 05-031-105", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการและสาขาการตลาด 2568"},
-        {"code": "04-00-107", "name": "การบัญชีเบื้องต้น", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการจัดการ / การตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวช./ปวส. การบัญชี", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขาการจัดการและสาขาการตลาด"},
-        {"code": "04-00-105", "name": "สถิติเพื่อการวิจัยธุรกิจ", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส./รายวิชาเทียบเท่า", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามแบบเทียบโอนสาขาการตลาด 2568"},
-        {"code": "04-00-108", "name": "การเงินธุรกิจ", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส./รายวิชาเทียบเท่า", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามแบบเทียบโอนสาขาการตลาด 2568"},
-        {"code": "04-00-109", "name": "การจัดการโลจิสติกส์", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส./รายวิชาเทียบเท่า", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามแบบเทียบโอนสาขาการตลาด 2568"},
-        {"code": "04-00-110", "name": "ทักษะความเข้าใจธุรกิจ", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาการตลาด", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส./รายวิชาเทียบเท่า", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามแบบเทียบโอนสาขาการตลาด 2568"},
-        {"code": "00-31-001", "name": "เทคโนโลยีสารสนเทศในยุคดิจิทัล", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "3001-2100 / 30204-2103", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568 (วิชาเดิม: เทคโนโลยีสารสนเทศเพื่องานอาชีพ)"},
-        {"code": "00-31-002", "name": "คณิตศาสตร์และสถิติในชีวิตประจำวัน", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "05-000-105 / 30000-1401", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568 (วิชาเดิม: สถิติธุรกิจ / คณิตศาสตร์เพื่องานอาชีพ)"},
-        {"code": "TR-IT01", "name": "การประกอบเครื่องและการติดตั้งซอฟต์แวร์", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30204-2201 / 5051106", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568"},
-        {"code": "TR-IT02", "name": "การใช้โปรแกรมสำนักงานชั้นสูง", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30204-2202 / 5051107", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568"},
-        {"code": "TR-IT03", "name": "โปรแกรมกราฟิกสำหรับการออกแบบเว็บไซต์", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30204-2403", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568"},
-        {"code": "TR-IT04", "name": "การผลิตสื่อมัลติมีเดียสำหรับธุรกิจดิจิทัล", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30204-2204", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568"},
-        {"code": "TR-IT05", "name": "การออกแบบและพัฒนาเว็บไซต์", "campus": "เขตพื้นที่จักรพงษภูวนารถ", "faculty": "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ", "major": "สาขาวิชาเทคโนโลยีสารสนเทศ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "30901-1002", "status": "มทร.ตะวันออก", "desc": "เทียบโอนได้ตามคู่มือเทียบโอนสาขา IT 2568"},
-
-        {"code": "00-11-001", "name": "ภาษาไทยเพื่อการสื่อสาร", "campus": "เขตพื้นที่บางพระ", "faculty": "คณะมนุษยศาสตร์และสังคมศาสตร์", "major": "หมวดวิชาศึกษาทั่วไป", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "ปวส. / มหาวิทยาลัยอื่น", "status": "มทร.ตะวันออก", "desc": "ทักษะการฟัง การพูด การอ่าน และการเขียนภาษาไทยเพื่อการสื่อสารในงานอาชีพ"},
-        {"code": "00-12-002", "name": "ภาษาอังกฤษเพื่อการสื่อสารสากล", "campus": "เขตพื้นที่บางพระ", "faculty": "คณะมนุษยศาสตร์และสังคมศาสตร์", "major": "หมวดวิชาศึกษาทั่วไป", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "ปวส. / มหาวิทยาลัยอื่น", "status": "มทร.ตะวันออก", "desc": "การสื่อสารภาษาอังกฤษเบื้องต้น การนำเสนอผลงาน และไวยากรณ์ประยุกต์"},
-        {"code": "01-10-101", "name": "หลักสัตวศาสตร์เบื้องต้น", "campus": "เขตพื้นที่บางพระ", "faculty": "คณะเกษตรศาสตร์และทรัพยากรธรรมชาติ", "major": "สาขาวิชาสัตวศาสตร์", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.เกษตรศาสตร์", "status": "มทร.ตะวันออก", "desc": "การเลี้ยงดูและการจัดการสัตว์เศรษฐกิจ การสุขาภิบาล และโภชนาการสัตว์"},
-        {"code": "02-20-102", "name": "วิทยาศาสตร์และเทคโนโลยีเพื่อชีวิต", "campus": "เขตพื้นที่บางพระ", "faculty": "คณะวิทยาศาสตร์และเทคโนโลยี", "major": "ทุกสาขาวิชา", "main_category": "หมวดวิชาศึกษาทั่วไป", "credits": 3, "source": "ปวส. / สถาบันเดิม", "status": "มทร.ตะวันออก", "desc": "กระบวนการทางวิทยาศาสตร์ นวัตกรรมเทคโนโลยีสมัยใหม่ และการประยุกต์ในชีวิตประจำวัน"},
-        {"code": "06-10-101", "name": "การจัดการการบินเบื้องต้น", "campus": "เขตพื้นที่บางพระ", "faculty": "สถาบันเทคโนโลยีการบินและอวกาศ", "major": "สาขาวิชาการจัดการการบิน", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส. / สถานศึกษาเดิม", "status": "มทร.ตะวันออก", "desc": "ระบบการขนส่งทางอากาศ โครงสร้างอุตสาหกรรมการบิน และกฎหมายการบินเบื้องต้น"},
-
-        {"code": "08-11-101", "name": "เขียนแบบวิศวกรรม (Engineering Drawing)", "campus": "เขตพื้นที่อุเทนถวาย", "faculty": "คณะวิศวกรรมศาสตร์และสถาปัตยกรรมศาสตร์", "major": "สาขาวิชาวิศวกรรมโยธา", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.ช่างก่อสร้าง/ช่างโยธา", "status": "มทร.ตะวันออก", "desc": "ทักษะการเขียนแบบวิศวกรรม สัญลักษณ์ทางช่าง การเขียนแบบด้วยคอมพิวเตอร์ CAD"},
-        {"code": "08-12-102", "name": "การสำรวจทางวิศวกรรม (Engineering Surveying)", "campus": "เขตพื้นที่อุเทนถวาย", "faculty": "คณะวิศวกรรมศาสตร์และสถาปัตยกรรมศาสตร์", "major": "สาขาวิชาวิศวกรรมสำรวจ/โยธา", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.ช่างสำรวจ/โยธา", "status": "มทร.ตะวันออก", "desc": "การใช้กล้องรังวัด การทำแผนที่ภูมิประเทศ การหาค่าระดับ และงานสำรวจเพื่อการก่อสร้าง"},
-        {"code": "08-20-103", "name": "การออกแบบสถาปัตยกรรมเบื้องต้น", "campus": "เขตพื้นที่อุเทนถวาย", "faculty": "คณะวิศวกรรมศาสตร์และสถาปัตยกรรมศาสตร์", "major": "สาขาวิชาสถาปัตยกรรมภายใน", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.สถาปัตยกรรม", "status": "มทร.ตะวันออก", "desc": "องค์ประกอบศิลป์ การจัดพื้นที่ใช้สอย การเขียนแบบสถาปัตยกรรม และแนวคิดการออกแบบ"},
-
-        {"code": "10-11-101", "name": "การจัดการเพื่อผู้ประกอบการยุคดิจิทัล", "campus": "เขตพื้นที่จันทบุรี", "faculty": "คณะเทคโนโลยีสังคม", "major": "สาขาวิชาการจัดการเพื่อผู้ประกอบการ", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.การจัดการ/การตลาด", "status": "มทร.ตะวันออก", "desc": "การเริ่มธุรกิจใหม่ การวางแผนการเงิน การตลาดดิจิทัล และนวัตกรรมสำหรับผู้ประกอบการ"},
-        {"code": "10-12-102", "name": "นวัตกรรมการบริการและการท่องเที่ยว", "campus": "เขตพื้นที่จันทบุรี", "faculty": "คณะเทคโนโลยีสังคม", "major": "สาขาวิชานวัตกรรมการท่องเที่ยวและการโรงแรม", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.การท่องเที่ยวและโรงแรม", "status": "มทร.ตะวันออก", "desc": "อุตสาหกรรมการท่องเที่ยว พฤติกรรมนักท่องเที่ยว การจัดการโรงแรมและการบริการลูกค้า"},
-        {"code": "10-21-103", "name": "เทคโนโลยียานยนต์ไฟฟ้า (EV Technology)", "campus": "เขตพื้นที่จันทบุรี", "faculty": "คณะวิศวกรรมศาสตร์", "major": "สาขาวิชาวิศวกรรมยานยนต์ไฟฟ้า", "main_category": "หมวดวิชาเฉพาะ", "credits": 3, "source": "ปวส.ช่างยนต์/ไฟฟ้า", "status": "มทร.ตะวันออก", "desc": "ระบบขับเคลื่อนไฟฟ้า แบตเตอรี่และการประจุพลังงาน ความปลอดภัยในยานยนต์ไฟฟ้า"},
-
-        {"code": "MOOC-0008", "name": "การเงินส่วนบุคคล (Personal Finance Online)", "campus": "ทุกวิทยาเขต", "faculty": "ทุกคณะ", "major": "ทุกสาขาวิชา", "main_category": "หมวดวิชาเลือกเสรี", "credits": 3, "source": "ThaiMOOC", "status": "ต้องตรวจสอบกับประกาศ", "desc": "การวางแผนการเงิน การออม การลงทุน สินเชื่อ และภาษีบุคคลธรรมดาผ่านระบบออนไลน์"}
-    ]
-
-    search_query = request.args.get('search', '').strip().lower()
-    selected_campus = request.args.get('campus', '').strip()
-
-    filtered_courses = all_courses
-
-    if selected_campus and selected_campus != "ทั้งหมด":
-        filtered_courses = [c for c in filtered_courses if selected_campus in c['campus']]
-
-    if search_query:
-        filtered_courses = [c for c in filtered_courses if search_query in c['name'].lower() or search_query in c['code'].lower() or search_query in c['faculty'].lower() or search_query in c['major'].lower()]
-
-    cards = ""
-    for c in filtered_courses:
-        cards += f"""
-        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between card-hover">
-            <div>
-                <div class="flex justify-between items-start mb-3 gap-2">
-                    <span class="font-mono text-xs text-slate-700 font-bold bg-slate-100 px-3 py-1 rounded-xl border border-slate-200">{c['code']}</span>
-                    <span class="bg-blue-50 text-blue-900 text-xs px-3 py-1 rounded-full font-bold border border-blue-100">{c['main_category']}</span>
-                </div>
-                <h3 class="text-base font-extrabold text-slate-900 mb-2 leading-snug">{c['name']}</h3>
-                <p class="text-xs text-blue-900 font-bold mb-1"><i class="fa-solid fa-location-dot text-amber-500 mr-1"></i> {c['campus']}</p>
-                <p class="text-xs text-slate-600 font-medium mb-1"><i class="fa-solid fa-building-columns mr-1 text-slate-400"></i> {c['faculty']}</p>
-                <p class="text-xs text-emerald-700 font-bold mb-3"><i class="fa-solid fa-graduation-cap mr-1"></i> {c['major']}</p>
-                <p class="text-xs text-slate-500 mb-4 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-100">{c['desc']}</p>
-            </div>
-            <div class="border-t border-slate-100 pt-4 mt-2">
-                <div class="flex justify-between items-center text-xs text-slate-600 mb-4">
-                    <span><i class="fa-solid fa-school mr-1 text-slate-400"></i> วิชาเดิม: {c['source']}</span>
-                    <span class="font-black text-blue-950 text-sm bg-blue-50 px-2.5 py-0.5 rounded-lg">{c['credits']} หน่วยกิต</span>
-                </div>
-                {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['source'] + '&credits=' + str(c['credits']) + '&cat=' + c['main_category'] + '&fac=' + c['faculty'] + '&maj=' + c['major'] + '" class="block text-center w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm">เทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
-            </div>
-        </div>
-        """
-
-    content = f"""
-    <div class="hero-gradient text-white p-8 rounded-3xl shadow-xl mb-8 flex flex-col md:flex-row justify-between items-center gap-6 border border-slate-700/50">
-        <div>
-            <span class="bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">RMUTTO Database</span>
-            <h2 class="text-3xl font-extrabold">📚 รายวิชาเปิดรับเทียบโอน</h2>
-            <p class="text-slate-300 text-xs mt-1.5 leading-relaxed">ฐานข้อมูลรายวิชาเปิดรับเทียบโอนฉบับสำรวจ รวบรวมทุกวิทยาเขต/เขตพื้นที่ คณะ และสาขาวิชา</p>
-        </div>
-        <div class="bg-white/10 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 text-center shrink-0">
-            <span class="text-xs text-slate-300 block font-medium">จำนวนรายวิชาที่พบ</span>
-            <span class="text-3xl font-black text-amber-400">{len(filtered_courses)}</span> <span class="text-xs text-slate-300">/ {len(all_courses)} วิชา</span>
-        </div>
-    </div>
-
-    <form method="GET" action="/available_courses" class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm mb-8 space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-location-dot mr-1 text-amber-500"></i> วิทยาเขต / เขตพื้นที่</label>
-                <select name="campus" onchange="this.form.submit()" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
-                    <option value="ทั้งหมด" {'selected' if selected_campus=='ทั้งหมด' or not selected_campus else ''}>ทุกวิทยาเขต/เขตพื้นที่</option>
-                    <option value="จักรพงษภูวนารถ" {'selected' if selected_campus=='จักรพงษภูวนารถ' else ''}>เขตพื้นที่จักรพงษภูวนารถ (กรุงเทพฯ)</option>
-                    <option value="บางพระ" {'selected' if selected_campus=='บางพระ' else ''}>เขตพื้นที่บางพระ (ชลบุรี)</option>
-                    <option value="อุเทนถวาย" {'selected' if selected_campus=='อุเทนถวาย' else ''}>เขตพื้นที่อุเทนถวาย (กรุงเทพฯ)</option>
-                    <option value="จันทบุรี" {'selected' if selected_campus=='จันทบุรี' else ''}>เขตพื้นที่จันทบุรี</option>
-                </select>
-            </div>
-            <div class="md:col-span-2">
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-magnifying-glass mr-1 text-blue-900"></i> ค้นหาด้วยรหัสวิชา / ชื่อวิชา / คณะ / สาขา</label>
-                <div class="flex gap-2">
-                    <input type="text" name="search" value="{search_query}" placeholder="พิมพ์คำที่ต้องการค้นหา..." class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
-                    <button type="submit" class="bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold px-7 py-3 rounded-2xl text-sm transition shadow-md shadow-blue-900/20 shrink-0">ค้นหา</button>
-                </div>
-            </div>
-        </div>
-    </form>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {cards if cards else '<div class="col-span-3 text-center py-16 text-slate-400 bg-white rounded-3xl border border-slate-200/80">ไม่พบรายวิชาที่ตรงกับเงื่อนไขการค้นหา</div>'}
     </div>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
@@ -956,9 +925,9 @@ def login():
     content = """
     <div class="max-w-md mx-auto my-12 bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
         <div class="text-center mb-8">
-            <div class="w-14 h-14 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center font-black text-2xl mx-auto mb-3">CB</div>
+            <div class="w-14 h-14 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center font-black text-2xl mx-auto mb-3">IS</div>
             <h2 class="text-2xl font-black text-slate-900">เข้าสู่ระบบ</h2>
-            <p class="text-xs text-slate-500 mt-1">ระบบธนาคารหน่วยกิต มทร.ตะวันออก</p>
+            <p class="text-xs text-slate-500 mt-1">ธนาคารหน่วยกิต สาขาวิชาระบบสารสนเทศ มทร.ตะวันออก</p>
         </div>
         <form method="POST" class="space-y-4">
             <div>
@@ -971,8 +940,80 @@ def login():
             </div>
             <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-2">เข้าสู่ระบบ</button>
             <div class="text-center text-xs pt-4 border-t border-slate-100">
-                <a href="/register" class="text-slate-500 hover:text-blue-900 font-medium">ยังไม่มีบัญชีนักศึกษา? <span class="font-bold text-blue-900 underline">สมัครสมาชิก</span></a>
+                <a href="/register" class="text-slate-500 hover:text-blue-900 font-medium">ยังไม่มีบัญชีนักศึกษา? <span class="font-bold text-blue-900 underline">ลงทะเบียนเข้าใช้งาน</span></a>
             </div>
+        </form>
+    </div>
+    """
+    return render_template_string(LAYOUT_TEMPLATE, content=content)
+
+@app.route('/submit_credit', methods=['GET', 'POST'])
+def submit_credit():
+    if 'user_id' not in session: return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        try:
+            credits_raw = request.form.get('credits', '3')
+            try:
+                credits_val = int(credits_raw)
+            except (ValueError, TypeError):
+                credits_val = 3
+
+            course_name = request.form.get('course_name', '').strip() or 'รายวิชาเทียบโอน'
+            institution = request.form.get('institution', '').strip() or 'ThaiMOOC / ChulaMOOC'
+            category = request.form.get('category', 'หมวดวิชาศึกษาทั่วไป')
+            faculty = "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ"
+            major = "สาขาวิชาระบบสารสนเทศ"
+
+            req_code = f"TR2569{uuid.uuid4().hex[:4].upper()}"
+
+            req = CreditRequest(
+                req_code=req_code,
+                user_id=session['user_id'], 
+                course_name=course_name, 
+                institution=institution, 
+                credits=credits_val,
+                category=category,
+                faculty=faculty,
+                major=major,
+                date_submitted=datetime.now().strftime("%Y-%m-%d"),
+                doc_img="default_doc.png",
+                status='Pending'
+            )
+            db.session.add(req)
+            db.session.commit()
+            flash('ยื่นคำขอเทียบโอน ThaiMOOC เรียบร้อยแล้ว!', 'success')
+            return redirect(url_for('history'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง ({str(e)})', 'error')
+            return redirect(url_for('submit_credit'))
+
+    init_course = request.args.get('course', '')
+    init_inst = request.args.get('inst', 'ThaiMOOC / ChulaMOOC')
+    init_credits = request.args.get('credits', '3')
+    init_cat = request.args.get('cat', 'หมวดวิชาศึกษาทั่วไป')
+
+    content = f"""
+    <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
+        <h3 class="text-2xl font-black text-slate-900 mb-2">ยื่นคำขอเทียบโอนหน่วยกิต (สาขาวิชาระบบสารสนเทศ)</h3>
+        <p class="text-xs text-slate-500 mb-6">กรอกข้อมูลบทเรียนออนไลน์ ThaiMOOC/ChulaMOOC เพื่อส่งเรื่องอนุมัติเทียบโอน</p>
+        <form method="POST" class="space-y-4">
+            <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อรายวิชาในหลักสูตร *</label><input type="text" name="course_name" value="{init_course}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
+            <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">แหล่งเรียนรู้ / ระบบออนไลน์ *</label><input type="text" name="institution" value="{init_inst}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">จำนวนหน่วยกิต *</label><input type="number" name="credits" value="{init_credits}" min="1" max="10" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">หมวดวิชาหลักสูตร</label>
+                    <select name="category" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
+                        <option value="หมวดวิชาศึกษาทั่วไป" {'selected' if init_cat=='หมวดวิชาศึกษาทั่วไป' else ''}>หมวดวิชาศึกษาทั่วไป</option>
+                        <option value="หมวดวิชาแกน" {'selected' if init_cat=='หมวดวิชาแกน' else ''}>หมวดวิชาแกน</option>
+                        <option value="หมวดวิชาเลือก" {'selected' if init_cat=='หมวดวิชาเลือก' else ''}>หมวดวิชาเลือก</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-2">ส่งคำร้องขอเทียบโอน</button>
         </form>
     </div>
     """
@@ -1005,9 +1046,9 @@ def history():
         """
     content = f"""
     <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
-        <h3 class="text-xl font-black text-slate-900 mb-6">ประวัติคำร้องเทียบโอน</h3>
+        <h3 class="text-xl font-black text-slate-900 mb-6">ประวัติคำร้องเทียบโอน (สาขาวิชาระบบสารสนเทศ)</h3>
         <table class="w-full text-left min-w-[700px]">
-            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider"><tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">สถาบัน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">เจ้าหน้าที่ผู้ตรวจ</th><th class="py-3 px-4">สถานะ</th></tr></thead>
+            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider"><tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">ระบบที่เรียน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">เจ้าหน้าที่ผู้ตรวจ</th><th class="py-3 px-4">สถานะ</th></tr></thead>
             <tbody>{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีรายการประวัติคำร้อง</td></tr>'}</tbody>
         </table>
     </div>
@@ -1037,12 +1078,36 @@ def credits():
         </tr>
         """
     content = f"""
-    <div class="mb-6"><h2 class="text-2xl font-black text-slate-900">💳 หน่วยกิตสะสมของฉัน ({total_approved} หน่วยกิต)</h2></div>
+    <div class="mb-6"><h2 class="text-2xl font-black text-slate-900">💳 หน่วยกิตสะสมสาขา IS ({total_approved} หน่วยกิต)</h2></div>
     <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
         <table class="w-full text-left min-w-[600px]">
-            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider"><tr><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">สถาบัน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">ผู้อนุมัติ</th></tr></thead>
+            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider"><tr><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">ระบบที่เรียน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">ผู้อนุมัติ</th></tr></thead>
             <tbody>{rows if rows else '<tr><td colspan="4" class="py-12 text-center text-slate-400 text-sm">ยังไม่มีรายการหน่วยกิตที่ได้รับการอนุมัติ</td></tr>'}</tbody>
         </table>
+    </div>
+    """
+    return render_template_string(LAYOUT_TEMPLATE, content=content)
+
+@app.route('/profile')
+def profile():
+    if 'user_id' not in session: return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    if not user: return redirect(url_for('login'))
+    display_title = "เจ้าหน้าที่" if user.role in ['admin', 'superadmin'] else f"{user.prefix or ''} {user.fullname}"
+    
+    content = f"""
+    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
+        <h3 class="text-2xl font-black text-slate-900 mb-1">{display_title}</h3>
+        <p class="text-sm font-bold text-blue-900 mb-1">รหัสนักศึกษา/สมาชิก: {user.member_id or '-'}</p>
+        <p class="text-xs text-slate-500 mb-6">สาขาวิชาระบบสารสนเทศ คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 bg-slate-50 p-6 rounded-2xl border border-slate-100 text-sm">
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ชื่อ-สกุล</span> <span class="font-bold text-slate-800">{user.fullname}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เลขบัตรประชาชน</span> <span class="font-bold text-slate-800">{user.id_card or '-'}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เบอร์โทรศัพท์</span> <span class="font-bold text-slate-800">{user.phone or '-'}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">อีเมล</span> <span class="font-bold text-slate-800">{user.email or '-'}</span></div>
+            <div class="md:col-span-2"><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ที่อยู่ตามทะเบียนบ้าน/ที่อยู่ปัจจุบัน</span> <span class="font-bold text-slate-800">{user.address or '-'}</span></div>
+        </div>
     </div>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
@@ -1091,7 +1156,7 @@ def request_edit_profile():
     content = f"""
     <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
         <h3 class="text-2xl font-black text-slate-900 mb-2">ส่งคำร้องขอแก้ไขข้อมูลส่วนตัว</h3>
-        <p class="text-xs text-slate-500 mb-6">กรอกข้อมูลที่ต้องการอัปเดตเพื่อส่งเรื่องให้เจ้าหน้าที่อนุมัติ</p>
+        <p class="text-xs text-slate-500 mb-6">กรอกข้อมูลที่ต้องการอัปเดตเพื่อส่งเรื่องให้เจ้าหน้าที่ประจำสาขาอนุมัติ</p>
         <form method="POST" class="space-y-4">
             <div class="grid grid-cols-3 gap-3">
                 <div>
@@ -1121,100 +1186,44 @@ def request_edit_profile():
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
 
-@app.route('/submit_credit', methods=['GET', 'POST'])
-def submit_credit():
-    if 'user_id' not in session: return redirect(url_for('login'))
+@app.route('/admin/requests')
+def admin_requests():
+    if session.get('role') not in ['admin', 'superadmin']: return redirect(url_for('login'))
     
-    if request.method == 'POST':
-        try:
-            credits_raw = request.form.get('credits', '3')
-            try:
-                credits_val = int(credits_raw)
-            except (ValueError, TypeError):
-                credits_val = 3
+    try:
+        all_requests = CreditRequest.query.order_by(CreditRequest.id.desc()).all()
+    except Exception:
+        all_requests = []
 
-            course_name = request.form.get('course_name', '').strip() or 'รายวิชาเทียบโอน'
-            institution = request.form.get('institution', '').strip() or 'สถาบันเดิม'
-            category = request.form.get('category', 'ในระบบ')
-            faculty = request.form.get('faculty', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ')
-            major = request.form.get('major', 'สาขาการจัดการ')
-
-            req_code = f"TR2569{uuid.uuid4().hex[:4].upper()}"
-
-            req = CreditRequest(
-                req_code=req_code,
-                user_id=session['user_id'], 
-                course_name=course_name, 
-                institution=institution, 
-                credits=credits_val,
-                category=category,
-                faculty=faculty,
-                major=major,
-                date_submitted=datetime.now().strftime("%Y-%m-%d"),
-                doc_img="default_doc.png",
-                status='Pending'
-            )
-            db.session.add(req)
-            db.session.commit()
-            flash('ยื่นคำขอเทียบโอนเรียบร้อยแล้ว!', 'success')
-            return redirect(url_for('history'))
-
-        except Exception as e:
-            db.session.rollback()
-            flash(f'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง ({str(e)})', 'error')
-            return redirect(url_for('submit_credit'))
-
-    init_course = request.args.get('course', '')
-    init_inst = request.args.get('inst', '')
-    init_credits = request.args.get('credits', '3')
-    init_cat = request.args.get('cat', 'ในระบบ')
-    init_fac = request.args.get('fac', '')
-    init_maj = request.args.get('maj', '')
-
-    content = f"""
-    <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
-        <h3 class="text-2xl font-black text-slate-900 mb-6">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
-        <form method="POST" class="space-y-4">
-            <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อหลักสูตร / รายวิชา *</label><input type="text" name="course_name" value="{init_course}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
-            <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">สถาบันเดิม / แหล่งเรียนรู้ *</label><input type="text" name="institution" value="{init_inst}" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
-            <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">จำนวนหน่วยกิต *</label><input type="number" name="credits" value="{init_credits}" min="1" max="10" required class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium"></div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">หมวดหมู่การเรียนรู้</label>
-                    <select name="category" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
-                        <option value="ในระบบ" {'selected' if init_cat in ['ในระบบ', 'หมวดวิชาเฉพาะ', 'หมวดวิชาศึกษาทั่วไป'] else ''}>ในระบบ</option>
-                        <option value="นอกระบบ" {'selected' if init_cat=='นอกระบบ' else ''}>นอกระบบ</option>
-                        <option value="ตามอัธยาศัย" {'selected' if init_cat in ['ตามอัธยาศัย', 'หมวดวิชาเลือกเสรี'] else ''}>ตามอัธยาศัย</option>
-                    </select>
-                </div>
-            </div>
-            <input type="hidden" name="faculty" value="{init_fac}">
-            <input type="hidden" name="major" value="{init_maj}">
-            <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-2">ส่งคำร้องขอเทียบโอน</button>
-        </form>
-    </div>
-    """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
-
-@app.route('/profile')
-def profile():
-    if 'user_id' not in session: return redirect(url_for('login'))
-    user = User.query.get(session['user_id'])
-    if not user: return redirect(url_for('login'))
-    display_title = "เจ้าหน้าที่" if user.role in ['admin', 'superadmin'] else f"{user.prefix or ''} {user.fullname}"
-    
-    content = f"""
-    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
-        <h3 class="text-2xl font-black text-slate-900 mb-1">{display_title}</h3>
-        <p class="text-sm font-bold text-blue-900 mb-6">รหัสประจำตัว: {user.member_id or '-'}</p>
+    rows = ""
+    for r in all_requests:
+        status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอพิจารณา</span>' if getattr(r, 'status', 'Pending') == 'Pending' else ('<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติ</span>' if getattr(r, 'status', '') == 'Approved' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ</span>')
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 bg-slate-50 p-6 rounded-2xl border border-slate-100 text-sm">
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ชื่อ-สกุล</span> <span class="font-bold text-slate-800">{user.fullname}</span></div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เลขบัตรประชาชน</span> <span class="font-bold text-slate-800">{user.id_card or '-'}</span></div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เบอร์โทรศัพท์</span> <span class="font-bold text-slate-800">{user.phone or '-'}</span></div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">อีเมล</span> <span class="font-bold text-slate-800">{user.email or '-'}</span></div>
-            <div class="md:col-span-2"><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ที่อยู่ตามทะเบียนบ้าน/ที่อยู่ปัจจุบัน</span> <span class="font-bold text-slate-800">{user.address or '-'}</span></div>
-        </div>
+        student_name = r.user.fullname if getattr(r, 'user', None) else '-'
+        student_code = r.user.member_id if getattr(r, 'user', None) else '-'
+
+        rows += f"""
+        <tr class="border-b border-slate-100 text-sm hover:bg-slate-50 transition">
+            <td class="py-4 px-4 font-mono font-bold text-blue-900">{getattr(r, 'req_code', 'TR001')}</td>
+            <td class="py-4 px-4 font-bold text-slate-900">{student_name}<br><span class="text-xs text-blue-900 font-semibold">({student_code})</span></td>
+            <td class="py-4 px-4 text-slate-700 font-medium">{getattr(r, 'course_name', '-')}</td>
+            <td class="py-4 px-4 text-slate-500 text-xs font-medium">{getattr(r, 'date_submitted', '-')}</td>
+            <td class="py-4 px-4">{status_badge}</td>
+            <td class="py-4 px-4">
+                <a href="/admin/review/{r.id}" class="bg-gradient-to-r from-blue-900 to-indigo-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-blue-950 hover:to-indigo-900 inline-block shadow-sm">พิจารณา</a>
+            </td>
+        </tr>
+        """
+
+    content = f"""
+    <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
+        <h3 class="text-xl font-black text-slate-900 mb-6">รายการคำร้องเทียบโอนทั้งหมด (สาขาวิชาระบบสารสนเทศ)</h3>
+        <table class="w-full text-left min-w-[650px]">
+            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">ชื่อนักศึกษา</th><th class="py-3 px-4">วิชาที่ขอเทียบโอน</th><th class="py-3 px-4">วันที่ยื่น</th><th class="py-3 px-4">สถานะ</th><th class="py-3 px-4">จัดการ</th></tr>
+            </thead>
+            <tbody>{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีคำร้องในระบบ</td></tr>'}</tbody>
+        </table>
     </div>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
@@ -1272,7 +1281,7 @@ def manage_admins():
             <div class="flex items-center gap-3 mb-6">
                 <div class="w-12 h-12 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center font-bold text-xl shrink-0"><i class="fa-solid fa-user-plus text-amber-500"></i></div>
                 <div>
-                    <h3 class="text-xl font-black text-slate-900">เพิ่มบัญชีเจ้าหน้าที่ตรวจงาน</h3>
+                    <h3 class="text-xl font-black text-slate-900">เพิ่มบัญชีเจ้าหน้าที่ตรวจงานสาขาวิชา IS</h3>
                     <p class="text-xs text-slate-500">กำหนดเลขบัตรประชาชนและรหัสผ่านส่วนตัวสำหรับเจ้าหน้าที่ในการเข้าสู่ระบบ</p>
                 </div>
             </div>
@@ -1395,7 +1404,7 @@ def admin_review(req_id):
         <h3 class="text-2xl font-black text-slate-900 mb-6">พิจารณาคำร้องเทียบโอน #{getattr(req, 'req_code', 'TR001')}</h3>
         <div class="grid md:grid-cols-2 gap-5 text-sm mb-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
             <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ผู้ยื่นคำร้อง</span><b class="text-slate-800">{student_name}</b> (รหัส: {student_code})</div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">หมวดหมู่</span><b class="text-slate-800">{getattr(req, 'category', 'ในระบบ')}</b></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">หมวดวิชา</span><b class="text-slate-800">{getattr(req, 'category', 'หมวดวิชาศึกษาทั่วไป')}</b></div>
             <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">รายวิชา</span><b class="text-slate-800">{getattr(req, 'course_name', '-')}</b> ({getattr(req, 'credits', 0)} หน่วยกิต)</div>
             <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">สถานะปัจจุบัน</span><b class="text-slate-800">{getattr(req, 'status', 'Pending')}</b></div>
         </div>
