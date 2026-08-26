@@ -1,14 +1,13 @@
 import os
 import uuid
 from datetime import datetime
-from collections import defaultdict
 from flask import Flask, render_template_string, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import text
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_is_rmutto_secret_key_2026_v2'
+app.secret_key = 'credit_bank_is_rmutto_secret_key_2026_v3'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -17,6 +16,12 @@ if db_url and db_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///credit_bank.db'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
+
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 db = SQLAlchemy(app)
 
@@ -51,7 +56,8 @@ class CreditRequest(db.Model):
     major = db.Column(db.String(100), default="สาขาวิชาระบบสารสนเทศ")
     date_submitted = db.Column(db.String(20), default="2026-08-26")
     doc_img = db.Column(db.String(200), nullable=True)
-    status = db.Column(db.String(20), default='Pending')
+    status = db.Column(db.String(20), default='Pending') # Pending, Approved, Rejected
+    reject_reason = db.Column(db.Text, nullable=True)
     approved_by = db.Column(db.String(100), nullable=True)
     user = db.relationship('User', backref=db.backref('credits_list', lazy=True))
 
@@ -209,8 +215,8 @@ LAYOUT_TEMPLATE = """
                 {% else %}
                     <p class="section-title text-[11px] font-extrabold text-slate-500 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา IS</p>
                     <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-laptop-code text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
-                        <span class="nav-text font-semibold">ค้นหาวิชา Thai/Chula MOOC</span>
+                        <i class="fa-solid fa-magnifying-glass text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
+                        <span class="nav-text font-semibold">ค้นหารายวิชา</span>
                     </a>
                     <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium text-sm group">
                         <i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-slate-400 group-hover:text-amber-400 transition-colors"></i>
@@ -325,53 +331,52 @@ LAYOUT_TEMPLATE = """
 """
 
 # ==========================================
-# THAIMOOC & CHULAMOOC IS DATABASE
+# THAIMOOC & CHULAMOOC IS DATABASE (Structured Multi-Line)
 # ==========================================
 IS_THAIMOOC_COURSES = [
-    # กลุ่มศึกษาทั่วไป (ThaiMOOC)
-    {"code": "15-02-002", "name": "คุณภาพการใช้ชีวิต", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "1. ชีวิตและการสร้างคุณค่า (2 ชม.) / 2. การคิดสร้างสรรค์เพื่อการพัฒนาตนเอง (5 ชม.)", "hours": "7 ชม.", "credits": 3},
-    {"code": "15-02-003", "name": "การคิดอย่างมีวิจารณญาณและการแก้ปัญหา", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "1. การคิดเชิงวิพากษ์และการจัดการปัญหา (5 ชม.) / 2. การคิดแก้ปัญหาเชิงสร้างสรรค์ (6 ชม.)", "hours": "11 ชม.", "credits": 3},
-    {"code": "15-02-004", "name": "คุณธรรมจริยธรรมในโลกเทคโนโลยีสารสนเทศ", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "จริยธรรมสารสนเทศสำหรับพลเมืองดิจิทัล", "hours": "7 ชม.", "credits": 3},
-    {"code": "15-03-005", "name": "ผู้ประกอบการนวัตกรรม", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "การเป็นผู้ประกอบการในศตวรรษที่ 21", "hours": "30 ชม.", "credits": 3},
-    {"code": "15-03-006", "name": "การจัดการเศรษฐกิจชีวภาพ เศรษฐกิจหมุนเวียน และเศรษฐกิจสีเขียว", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "1. ชุมชนแห่งความยั่งยืน (2 ชม.) / 2. หลักเศรษฐศาสตร์เกษตร (6 ชม.)", "hours": "8 ชม.", "credits": 3},
-    {"code": "15-03-007", "name": "เทคโนโลยีสารสนเทศในยุคดิจิทัล", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "เทคโนโลยีสารสนเทศในยุคดิจิทัล", "hours": "10 ชม.", "credits": 3},
-    {"code": "15-03-008", "name": "คณิตศาสตร์และสถิติเพื่อการประกอบอาชีพ", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "สถิติธุรกิจ (สถิติเรื่องใกล้ตัว…ไม่น่ากลัวอย่างที่คิด)", "hours": "10 ชม.", "credits": 3},
-    {"code": "15-03-009", "name": "ภูมิปัญญาเพื่อการประกอบอาชีพ", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "ภูมิปัญญาไทย กับการพัฒนาการเกษตรอย่างยั่งยืน", "hours": "10 ชม.", "credits": 3},
-    {"code": "15-03-010", "name": "การวิเคราะห์และนำเสนอข้อมูลด้วยเทคโนโลยีดิจิทัล", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "1. การออกแบบการนำเสนองานอย่างสร้างสรรค์และทันสมัย (10 ชม.) / 2. คอมพิวเตอร์เพื่อการพูดและการนำเสนอ (6 ชม.)", "hours": "16 ชม.", "credits": 3},
-    {"code": "15-03-011", "name": "ผู้ประกอบการดิจิทัล", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "การตลาดดิจิทัลสำหรับผู้ประกอบการธุรกิจชุมชน", "hours": "5 ชม.", "credits": 3},
-    {"code": "15-03-014", "name": "การพัฒนาศักยภาพเพื่อมุ่งสู่การเป็นผู้ประกอบการมือใหม่", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "การเริ่มต้นเป็นผู้ประกอบการรายใหม่ (A new entrepreneur)", "hours": "30 ชม.", "credits": 3},
-    {"code": "15-03-015", "name": "ศาสตร์แห่งการสื่อสาร", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "1. ทักษะการสื่อสารระหว่างบุคคลในการทำงาน (10 ชม.) / 2. การสื่อสารและการประสานงาน (5 ชม.)", "hours": "15 ชม.", "credits": 3},
-    {"code": "15-03-016", "name": "ภาษาอังกฤษเพื่อการสื่อสาร", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "1. ภาษาอังกฤษเพื่อการสื่อสาร (10 ชม.) / 2. ภาษาอังกฤษเพื่อการสื่อสารในสังคม (4 ชม.)", "hours": "14 ชม.", "credits": 3},
-    {"code": "15-03-018", "name": "การใช้ภาษาไทยในชีวิตประจำวัน", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "การใช้ภาษาไทย หรือ ภาษาไทยเพื่อการสื่อสารร่วมสมัย", "hours": "10 ชม.", "credits": 3},
-    {"code": "15-03-019", "name": "ทักษะภาษาอังกฤษสำหรับผู้ประกอบการออนไลน์", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "ง่ายสบายกับการอธิบายกราฟเป็นภาษาอังกฤษ", "hours": "10 ชม.", "credits": 3},
-    {"code": "15-03-020", "name": "ทักษะการเรียนภาษาอังกฤษผ่านสื่ออิเล็กทรอนิกส์", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "ภาษาอังกฤษสำหรับเทคโนโลยีสารสนเทศ", "hours": "10 ชม.", "credits": 3},
-    {"code": "15-03-021", "name": "เทคนิคการพูดเพื่อความสำเร็จ", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "รู้รอบด้านการนำเสนอ", "hours": "5 ชม.", "credits": 3},
-    {"code": "15-05-024", "name": "ทักษะชีวิต", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "ทักษะทางสังคม", "hours": "10 ชม.", "credits": 3},
-    {"code": "15-06-027", "name": "ความเป็นพลเมืองไทยและพลเมืองโลก", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "1. ความเป็นพลเมืองโลก (3 ชม.) / 2. การเป็นพลเมือง (10 ชม.)", "hours": "13 ชม.", "credits": 3},
-    {"code": "15-06-028", "name": "วิถีโลก", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "กลยุทธ์สู่ประชาคมอาเซียน: การเมือง เศรษฐกิจ และสังคม", "hours": "8 ชม.", "credits": 3},
-    {"code": "15-06-029", "name": "สังคมและวัฒนธรรมไทย", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc": "อารยธรรมและภูมิปัญญาท้องถิ่น", "hours": "1 ชม.", "credits": 3},
+    {"code": "15-02-002", "name": "คุณภาพการใช้ชีวิต", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["1. ชีวิตและการสร้างคุณค่า (2 ชม.)", "2. การคิดสร้างสรรค์เพื่อการพัฒนาตนเอง (5 ชม.)"], "hours": "7 ชม.", "credits": 3},
+    {"code": "15-02-003", "name": "การคิดอย่างมีวิจารณญาณและการแก้ปัญหา", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["1. การคิดเชิงวิพากษ์และการจัดการปัญหา (5 ชม.)", "2. การคิดแก้ปัญหาเชิงสร้างสรรค์ (6 ชม.)"], "hours": "11 ชม.", "credits": 3},
+    {"code": "15-02-004", "name": "คุณธรรมจริยธรรมในโลกเทคโนโลยีสารสนเทศ", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["จริยธรรมสารสนเทศสำหรับพลเมืองดิจิทัล (7 ชม.)"], "hours": "7 ชม.", "credits": 3},
+    {"code": "15-03-005", "name": "ผู้ประกอบการนวัตกรรม", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["การเป็นผู้ประกอบการในศตวรรษที่ 21 (30 ชม.)"], "hours": "30 ชม.", "credits": 3},
+    {"code": "15-03-006", "name": "การจัดการเศรษฐกิจชีวภาพ เศรษฐกิจหมุนเวียน และเศรษฐกิจสีเขียว", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["1. ชุมชนแห่งความยั่งยืน (2 ชม.)", "2. หลักเศรษฐศาสตร์เกษตร (6 ชม.)"], "hours": "8 ชม.", "credits": 3},
+    {"code": "15-03-007", "name": "เทคโนโลยีสารสนเทศในยุคดิจิทัล", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["เทคโนโลยีสารสนเทศในยุคดิจิทัล (10 ชม.)"], "hours": "10 ชม.", "credits": 3},
+    {"code": "15-03-008", "name": "คณิตศาสตร์และสถิติเพื่อการประกอบอาชีพ", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["สถิติธุรกิจ (สถิติเรื่องใกล้ตัว…ไม่น่ากลัวอย่างที่คิด) (10 ชม.)"], "hours": "10 ชม.", "credits": 3},
+    {"code": "15-03-009", "name": "ภูมิปัญญาเพื่อการประกอบอาชีพ", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["ภูมิปัญญาไทย กับการพัฒนาการเกษตรอย่างยั่งยืน (10 ชม.)"], "hours": "10 ชม.", "credits": 3},
+    {"code": "15-03-010", "name": "การวิเคราะห์และนำเสนอข้อมูลด้วยเทคโนโลยีดิจิทัล", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["1. การออกแบบการนำเสนองานอย่างสร้างสรรค์และทันสมัย (10 ชม.)", "2. คอมพิวเตอร์เพื่อการพูดและการนำเสนอ (6 ชม.)"], "hours": "16 ชม.", "credits": 3},
+    {"code": "15-03-011", "name": "ผู้ประกอบการดิจิทัล", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["การตลาดดิจิทัลสำหรับผู้ประกอบการธุรกิจชุมชน (5 ชม.)"], "hours": "5 ชม.", "credits": 3},
+    {"code": "15-03-014", "name": "การพัฒนาศักยภาพเพื่อมุ่งสู่การเป็นผู้ประกอบการมือใหม่", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["การเริ่มต้นเป็นผู้ประกอบการรายใหม่ (A new entrepreneur) (30 ชม.)"], "hours": "30 ชม.", "credits": 3},
+    {"code": "15-03-015", "name": "ศาสตร์แห่งการสื่อสาร", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["1. ทักษะการสื่อสารระหว่างบุคคลในการทำงาน (10 ชม.)", "2. การสื่อสารและการประสานงาน (5 ชม.)"], "hours": "15 ชม.", "credits": 3},
+    {"code": "15-03-016", "name": "ภาษาอังกฤษเพื่อการสื่อสาร", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["1. ภาษาอังกฤษเพื่อการสื่อสาร (10 ชม.)", "2. ภาษาอังกฤษเพื่อการสื่อสารในสังคม (4 ชม.)"], "hours": "14 ชม.", "credits": 3},
+    {"code": "15-03-018", "name": "การใช้ภาษาไทยในชีวิตประจำวัน", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["การใช้ภาษาไทย หรือ ภาษาไทยเพื่อการสื่อสารร่วมสมัย (10 ชม.)"], "hours": "10 ชม.", "credits": 3},
+    {"code": "15-03-019", "name": "ทักษะภาษาอังกฤษสำหรับผู้ประกอบการออนไลน์", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["ง่ายสบายกับการอธิบายกราฟเป็นภาษาอังกฤษ (10 ชม.)"], "hours": "10 ชม.", "credits": 3},
+    {"code": "15-03-020", "name": "ทักษะการเรียนภาษาอังกฤษผ่านสื่ออิเล็กทรอนิกส์", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["ภาษาอังกฤษสำหรับเทคโนโลยีสารสนเทศ (10 ชม.)"], "hours": "10 ชม.", "credits": 3},
+    {"code": "15-03-021", "name": "เทคนิคการพูดเพื่อความสำเร็จ", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["รู้รอบด้านการนำเสนอ (5 ชม.)"], "hours": "5 ชม.", "credits": 3},
+    {"code": "15-05-024", "name": "ทักษะชีวิต", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["ทักษะทางสังคม (10 ชม.)"], "hours": "10 ชม.", "credits": 3},
+    {"code": "15-06-027", "name": "ความเป็นพลเมืองไทยและพลเมืองโลก", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["1. ความเป็นพลเมืองโลก (3 ชม.)", "2. การเป็นพลเมือง (10 ชม.)"], "hours": "13 ชม.", "credits": 3},
+    {"code": "15-06-028", "name": "วิถีโลก", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["กลยุทธ์สู่ประชาคมอาเซียน: การเมือง เศรษฐกิจ และสังคม (8 ชม.)"], "hours": "8 ชม.", "credits": 3},
+    {"code": "15-06-029", "name": "สังคมและวัฒนธรรมไทย", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["อารยธรรมและภูมิปัญญาท้องถิ่น (1 ชม.)"], "hours": "1 ชม.", "credits": 3},
 
     # กลุ่มวิชาแกน (ThaiMOOC & ChulaMOOC)
-    {"code": "04-00-101", "name": "หลักการตลาด", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc": "1. การจัดการเชิงกลยุทธ์และการตลาดในยุคโลกาภิวัตน์ (10 ชม.) / 2. การตลาดเชิงสร้างสรรค์ (6 ชม.)", "hours": "16 ชม.", "credits": 3},
-    {"code": "04-00-102", "name": "หลักเศรษฐศาสตร์ (Principles of Economics)", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc": "เศรษฐศาสตร์ตลาดการเงิน", "hours": "10 ชม.", "credits": 3},
-    {"code": "04-00-103", "name": "องค์การและการจัดการ", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc": "1. การบริหารจัดการในศตวรรษที่ 21 (6 ชม.) / 2. การจัดการธุรกิจการค้าสมัยใหม่ในยุค Thailand 4.0 (6 ชม.)", "hours": "12 ชม.", "credits": 3},
-    {"code": "04-00-104", "name": "กฎหมายธุรกิจและการภาษีอากร", "group": "หมวดวิชาแกน", "provider": "ChulaMOOC", "mooc": "1. กฎหมายกับธุรกิจ Law for Business: กฎหมายกับธุรกิจยุค Thailand 4.0 และภาษี / 2. กฎหมายพื้นฐานสำหรับธุรกิจ", "hours": "ตามโครงสร้าง ChulaMOOC", "credits": 3},
-    {"code": "04-00-105", "name": "สถิติเพื่อการวิจัยธุรกิจ", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc": "1. สถิติและการวิเคราะห์ข้อมูลเบื้องต้น (4 ชม.) / 2. วิจัยทางธุรกิจ (6 ชม.)", "hours": "10 ชม.", "credits": 3},
-    {"code": "04-00-106", "name": "ภาษาอังกฤษเพื่อการสื่อสารธุรกิจ", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc": "สตาร์ทอัพอังกฤษ", "hours": "30 ชม.", "credits": 3},
-    {"code": "04-00-107", "name": "การบัญชีเบื้องต้นเพื่อการบริหาร", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc": "1. บัญชีเบื้องต้น (5 ชม.) / 2. การบัญชีบริหาร (10 ชม.)", "hours": "15 ชม.", "credits": 3},
-    {"code": "04-00-108", "name": "การเงินธุรกิจ", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc": "1. การบัญชีเพื่อการจัดการและการจัดการทางการเงิน (10 ชม.) / 2. การเงินสำหรับการเริ่มต้นธุรกิจ SET (1 ชม.)", "hours": "11 ชม.", "credits": 3},
-    {"code": "04-00-109", "name": "การจัดการโลจิสติกส์และห่วงโซ่อุปทาน", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc": "1. โลจิสติกส์และโซ่อุปทานเบื้องต้น (10 ชม.) / 2. การจัดการคลังสินค้า (10 ชม.)", "hours": "20 ชม.", "credits": 3},
-    {"code": "04-00-110", "name": "ทักษะความเข้าใจและการใช้เทคโนโลยีดิจิทัล", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc": "1. การเข้าใจดิจิทัล (15 ชม.) / 2. ทักษะความเข้าใจความมั่นคงปลอดภัยทางไซเบอร์ (4 ชม.)", "hours": "19 ชม.", "credits": 3},
+    {"code": "04-00-101", "name": "หลักการตลาด", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc_list": ["1. การจัดการเชิงกลยุทธ์และการตลาดในยุคโลกาภิวัตน์ (10 ชม.)", "2. การตลาดเชิงสร้างสรรค์ (6 ชม.)"], "hours": "16 ชม.", "credits": 3},
+    {"code": "04-00-102", "name": "หลักเศรษฐศาสตร์ (Principles of Economics)", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc_list": ["เศรษฐศาสตร์ตลาดการเงิน (10 ชม.)"], "hours": "10 ชม.", "credits": 3},
+    {"code": "04-00-103", "name": "องค์การและการจัดการ", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc_list": ["1. การบริหารจัดการในศตวรรษที่ 21 (6 ชม.)", "2. การจัดการธุรกิจการค้าสมัยใหม่ในยุค Thailand 4.0 (6 ชม.)"], "hours": "12 ชม.", "credits": 3},
+    {"code": "04-00-104", "name": "กฎหมายธุรกิจและการภาษีอากร", "group": "หมวดวิชาแกน", "provider": "ChulaMOOC", "mooc_list": ["1. กฎหมายกับธุรกิจ Law for Business: กฎหมายกับธุรกิจยุค Thailand 4.0 และภาษี", "2. กฎหมายกับธุรกิจ Law for Business: กฎหมายพื้นฐานสำหรับธุรกิจ"], "hours": "ChulaMOOC", "credits": 3},
+    {"code": "04-00-105", "name": "สถิติเพื่อการวิจัยธุรกิจ", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc_list": ["1. สถิติและการวิเคราะห์ข้อมูลเบื้องต้น (4 ชม.)", "2. วิจัยทางธุรกิจ (6 ชม.)"], "hours": "10 ชม.", "credits": 3},
+    {"code": "04-00-106", "name": "ภาษาอังกฤษเพื่อการสื่อสารธุรกิจ", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc_list": ["สตาร์ทอัพอังกฤษ (30 ชม.)"], "hours": "30 ชม.", "credits": 3},
+    {"code": "04-00-107", "name": "การบัญชีเบื้องต้นเพื่อการบริหาร", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc_list": ["1. บัญชีเบื้องต้น (5 ชม.)", "2. การบัญชีบริหาร (10 ชม.)"], "hours": "15 ชม.", "credits": 3},
+    {"code": "04-00-108", "name": "การเงินธุรกิจ", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc_list": ["1. การบัญชีเพื่อการจัดการและการจัดการทางการเงิน (10 ชม.)", "2. การเงินสำหรับการเริ่มต้นธุรกิจ SET (1 ชม.)"], "hours": "11 ชม.", "credits": 3},
+    {"code": "04-00-109", "name": "การจัดการโลจิสติกส์และห่วงโซ่อุปทาน", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc_list": ["1. โลจิสติกส์และโซ่อุปทานเบื้องต้น (10 ชม.)", "2. การจัดการคลังสินค้า (10 ชม.)"], "hours": "20 ชม.", "credits": 3},
+    {"code": "04-00-110", "name": "ทักษะความเข้าใจและการใช้เทคโนโลยีดิจิทัล", "group": "หมวดวิชาแกน", "provider": "ThaiMOOC", "mooc_list": ["1. การเข้าใจดิจิทัล (15 ชม.)", "2. ทักษะความเข้าใจความมั่นคงปลอดภัยทางไซเบอร์ (4 ชม.)"], "hours": "19 ชม.", "credits": 3},
 
     # กลุ่มวิชาเลือก (ThaiMOOC)
-    {"code": "04-05-141", "name": "วิทยาการสารสนเทศทางธุรกิจ", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc": "1. วิทยาการข้อมูลเบื้องต้น (6 ชม.) / 2. วิทยาการข้อมูลและการประยุกต์ใช้ (30 ชม.)", "hours": "36 ชม.", "credits": 3},
-    {"code": "04-05-232", "name": "การคิดเชิงออกแบบสำหรับนวัตกรรมทางธุรกิจ", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc": "ปฏิบัติการคิดเชิงออกแบบนวัตกรรม", "hours": "12 ชม.", "credits": 3},
-    {"code": "04-05-233", "name": "ธุรกิจดิจิทัลผ่านสื่อสังคมออนไลน์", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc": "1. มาตรฐานการผลิตสื่อดิจิทัล (5 ชม.) / 2. การสร้างสรรค์สื่อดิจิทัลบนเครือข่ายสังคมออนไลน์ (5 ชม.)", "hours": "10 ชม.", "credits": 3},
-    {"code": "04-05-234", "name": "เครือข่ายคอมพิวเตอร์และความปลอดภัยสำหรับธุรกิจดิจิทัล", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc": "เครือข่ายและความปลอดภัย", "hours": "5 ชม.", "credits": 3},
-    {"code": "04-05-241", "name": "การวิเคราะห์ข้อมูลทางธุรกิจ", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc": "1. การเตรียมข้อมูล (12 ชม.) / 2. การวิเคราะห์ข้อมูลสำหรับการจัดการทางธุรกิจ (3 ชม.)", "hours": "15 ชม.", "credits": 3},
-    {"code": "04-05-342", "name": "ระบบสนับสนุนการตัดสินใจ", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc": "1. ระบบสนับสนุนการตัดสินใจสำหรับองค์กรธุรกิจ (6 ชม.) / 2. การตัดสินใจโดยการขับเคลื่อนด้วยข้อมูล (4 ชม.)", "hours": "10 ชม.", "credits": 3},
-    {"code": "04-05-441", "name": "ความคิดสร้างสรรค์และนวัตกรรมในการวิเคราะห์ข้อมูล", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc": "1. การสร้างสรรค์เนื้อหาด้วยข้อมูล Data (4 ชม.) / 2. การตัดสินใจโดยการขับเคลื่อนด้วยข้อมูล (4 ชม.)", "hours": "8 ชม.", "credits": 3},
-    {"code": "04-05-443", "name": "การบริหารโครงการระบบสารสนเทศ", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc": "1. การวิเคราะห์โครงการและแผนงานยุคดิจิทัล (15 ชม.) / 2. การบริหารโครงการ IT แบบมืออาชีพ (3 ชม.)", "hours": "18 ชม.", "credits": 3}
+    {"code": "04-05-141", "name": "วิทยาการสารสนเทศทางธุรกิจ", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc_list": ["1. วิทยาการข้อมูลเบื้องต้น (6 ชม.)", "2. วิทยาการข้อมูลและการประยุกต์ใช้ (30 ชม.)"], "hours": "36 ชม.", "credits": 3},
+    {"code": "04-05-232", "name": "การคิดเชิงออกแบบสำหรับนวัตกรรมทางธุรกิจ", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc_list": ["ปฏิบัติการคิดเชิงออกแบบนวัตกรรม (12 ชม.)"], "hours": "12 ชม.", "credits": 3},
+    {"code": "04-05-233", "name": "ธุรกิจดิจิทัลผ่านสื่อสังคมออนไลน์", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc_list": ["1. มาตรฐานการผลิตสื่อดิจิทัล (5 ชม.)", "2. การสร้างสรรค์สื่อดิจิทัลบนเครือข่ายสังคมออนไลน์ (5 ชม.)"], "hours": "10 ชม.", "credits": 3},
+    {"code": "04-05-234", "name": "เครือข่ายคอมพิวเตอร์และความปลอดภัยสำหรับธุรกิจดิจิทัล", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc_list": ["เครือข่ายและความปลอดภัย (5 ชม.)"], "hours": "5 ชม.", "credits": 3},
+    {"code": "04-05-241", "name": "การวิเคราะห์ข้อมูลทางธุรกิจ", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc_list": ["1. การเตรียมข้อมูล (12 ชม.)", "2. การวิเคราะห์ข้อมูลสำหรับการจัดการทางธุรกิจ (3 ชม.)"], "hours": "15 ชม.", "credits": 3},
+    {"code": "04-05-342", "name": "ระบบสนับสนุนการตัดสินใจ", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc_list": ["1. ระบบสนับสนุนการตัดสินใจสำหรับองค์กรธุรกิจ (6 ชม.)", "2. การตัดสินใจโดยการขับเคลื่อนด้วยข้อมูล (4 ชม.)"], "hours": "10 ชม.", "credits": 3},
+    {"code": "04-05-441", "name": "ความคิดสร้างสรรค์และนวัตกรรมในการวิเคราะห์ข้อมูล", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc_list": ["1. การสร้างสรรค์เนื้อหาด้วยข้อมูล Data (4 ชม.)", "2. การตัดสินใจโดยการขับเคลื่อนด้วยข้อมูล (4 ชม.)"], "hours": "8 ชม.", "credits": 3},
+    {"code": "04-05-443", "name": "การบริหารโครงการระบบสารสนเทศ", "group": "หมวดวิชาเลือก", "provider": "ThaiMOOC", "mooc_list": ["1. การวิเคราะห์โครงการและแผนงานยุคดิจิทัล (15 ชม.)", "2. การบริหารโครงการ IT แบบมืออาชีพ (3 ชม.)"], "hours": "18 ชม.", "credits": 3}
 ]
 
 # ==========================================
@@ -565,9 +570,9 @@ def home():
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <a href="/available_courses" class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm card-hover block group">
             <div class="w-12 h-12 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
-                <i class="fa-solid fa-laptop-code"></i>
+                <i class="fa-solid fa-magnifying-glass"></i>
             </div>
-            <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-blue-900 transition-colors">วิชา Thai/Chula MOOC</h3>
+            <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-blue-900 transition-colors">ค้นหารายวิชา</h3>
             <p class="text-xs text-slate-500 leading-relaxed">ค้นหารายวิชาออนไลน์ที่เทียบโอนเข้าหลักสูตรสาขาวิชาระบบสารสนเทศ</p>
         </a>
         <a href="/submit_credit" class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm card-hover block group">
@@ -575,7 +580,7 @@ def home():
                 <i class="fa-solid fa-file-pen"></i>
             </div>
             <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-amber-600 transition-colors">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
-            <p class="text-xs text-slate-500 leading-relaxed">เลือกวิชาที่ต้องเรียนเพิ่มและส่งหลักฐานขอเทียบโอนเข้าสู่ระบบ</p>
+            <p class="text-xs text-slate-500 leading-relaxed">เลือกวิชาที่ต้องเรียนเพิ่ม พร้อมอัปโหลดรูปเกียรติบัตรยื่นเทียบโอน</p>
         </a>
         <a href="/request_edit_profile" class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm card-hover block group">
             <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
@@ -651,35 +656,52 @@ def available_courses():
         filtered_courses = [c for c in filtered_courses if c['group'] == selected_group]
 
     if search_query:
-        filtered_courses = [c for c in filtered_courses if search_query in c['name'].lower() or search_query in c['code'].lower() or search_query in c['mooc'].lower()]
+        filtered_courses = [c for c in filtered_courses if search_query in c['name'].lower() or search_query in c['code'].lower() or any(search_query in m.lower() for m in c['mooc_list'])]
 
     cards = ""
     for c in filtered_courses:
-        badge_color = "bg-blue-100 text-blue-900 border-blue-200" if c['provider'] == 'ThaiMOOC' else "bg-amber-100 text-amber-900 border-amber-200"
+        badge_provider = "bg-blue-100 text-blue-900 border-blue-200" if c['provider'] == 'ThaiMOOC' else "bg-amber-100 text-amber-900 border-amber-200"
         
+        # จัดเรียงวิชาออนไลน์ให้อยู่คนละบรรทัด
+        mooc_items_html = "".join([f'<li class="flex items-start gap-1.5"><i class="fa-solid fa-angle-right text-blue-900 mt-1 shrink-0"></i><span>{m}</span></li>' for m in c['mooc_list']])
+
         cards += f"""
         <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between card-hover">
             <div>
-                <div class="flex justify-between items-start mb-3 gap-2">
-                    <span class="font-mono text-xs text-slate-700 font-bold bg-slate-100 px-3 py-1 rounded-xl border border-slate-200">{c['code']}</span>
-                    <div class="flex gap-1.5">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-bold border {badge_color}">{c['provider']}</span>
-                        <span class="bg-blue-50 text-blue-900 text-xs px-2.5 py-1 rounded-full font-bold border border-blue-100">{c['group']}</span>
+                <!-- FIXED TOP BADGES LAYOUT (ไม่เบี้ยว/ไม่ทับกัน) -->
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100">
+                    <span class="font-mono text-xs font-bold bg-slate-100 text-slate-800 px-3 py-1 rounded-xl border border-slate-200 shrink-0">
+                        {c['code']}
+                    </span>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="px-2.5 py-1 rounded-xl text-[11px] font-bold border {badge_provider} shrink-0">
+                            {c['provider']}
+                        </span>
+                        <span class="bg-slate-50 text-slate-700 text-[11px] px-2.5 py-1 rounded-xl font-bold border border-slate-200 shrink-0">
+                            {c['group']}
+                        </span>
                     </div>
                 </div>
-                <h3 class="text-base font-extrabold text-slate-900 mb-2 leading-snug">{c['name']}</h3>
-                <p class="text-xs text-slate-500 font-medium mb-2"><i class="fa-solid fa-graduation-cap text-amber-500 mr-1"></i> สาขาวิชาระบบสารสนเทศ (3 หน่วยกิต)</p>
-                <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 mb-4">
-                    <p class="text-xs font-bold text-slate-700 mb-1"><i class="fa-solid fa-laptop-code text-blue-900 mr-1"></i> รายวิชาที่ต้องเรียนใน {c['provider']}:</p>
-                    <p class="text-xs text-slate-600 leading-relaxed">{c['mooc']}</p>
+
+                <h3 class="text-lg font-extrabold text-slate-900 mb-2 leading-snug">{c['name']}</h3>
+                <p class="text-xs text-slate-500 font-medium mb-3"><i class="fa-solid fa-graduation-cap text-amber-500 mr-1"></i> สาขาวิชาระบบสารสนเทศ (3 หน่วยกิต)</p>
+                
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4">
+                    <p class="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1">
+                        <i class="fa-solid fa-laptop-code text-blue-900"></i> บทเรียนออนไลน์ที่ต้องเรียนเพิ่ม ({c['provider']}):
+                    </p>
+                    <ul class="text-xs text-slate-600 leading-relaxed space-y-1.5 font-medium">
+                        {mooc_items_html}
+                    </ul>
                 </div>
             </div>
+
             <div class="border-t border-slate-100 pt-4 mt-2">
                 <div class="flex justify-between items-center text-xs text-slate-600 mb-4">
-                    <span><i class="fa-regular fa-clock mr-1 text-slate-400"></i> จำนวนชั่วโมง: <b>{c['hours']}</b></span>
-                    <span class="font-black text-blue-950 text-sm bg-blue-50 px-2.5 py-0.5 rounded-lg">{c['credits']} หน่วยกิต</span>
+                    <span><i class="fa-regular fa-clock mr-1 text-slate-400"></i> รวมเวลาเรียน: <b>{c['hours']}</b></span>
+                    <span class="font-black text-blue-950 text-sm bg-blue-50 px-3 py-1 rounded-xl border border-blue-100">{c['credits']} หน่วยกิต</span>
                 </div>
-                {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['provider'] + '&credits=' + str(c['credits']) + '&cat=' + c['group'] + '" class="block text-center w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm">ยื่นเทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
+                {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['provider'] + '&credits=' + str(c['credits']) + '&cat=' + c['group'] + '&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="block text-center w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3 rounded-2xl text-sm transition shadow-md shadow-blue-900/20">ยื่นเทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
             </div>
         </div>
         """
@@ -687,12 +709,12 @@ def available_courses():
     content = f"""
     <div class="hero-gradient text-white p-8 rounded-3xl shadow-xl mb-8 flex flex-col md:flex-row justify-between items-center gap-6 border border-slate-700/50">
         <div>
-            <span class="bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">IS Major Database</span>
-            <h2 class="text-3xl font-extrabold">💻 รายวิชาเทียบโอน ThaiMOOC & ChulaMOOC</h2>
-            <p class="text-slate-300 text-xs mt-1.5 leading-relaxed">แยกหมวดหมู่อย่างชัดเจนสำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ</p>
+            <span class="bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">Search Courses</span>
+            <h2 class="text-3xl font-extrabold">🔍 ค้นหารายวิชาเทียบโอนหลักสูตร</h2>
+            <p class="text-slate-300 text-xs mt-1.5 leading-relaxed">ค้นหารายวิชาในหลักสูตรสาขาวิชาระบบสารสนเทศ และบทเรียนออนไลน์ที่ใช้เปิดเทียบโอน</p>
         </div>
         <div class="bg-white/10 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 text-center shrink-0">
-            <span class="text-xs text-slate-300 block font-medium">จำนวนรายวิชาหลักสูตร</span>
+            <span class="text-xs text-slate-300 block font-medium">จำนวนรายวิชาที่พบ</span>
             <span class="text-3xl font-black text-amber-400">{len(filtered_courses)}</span> <span class="text-xs text-slate-300">/ {len(IS_THAIMOOC_COURSES)} วิชา</span>
         </div>
     </div>
@@ -750,6 +772,34 @@ def submit_credit():
             faculty = "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ"
             major = request.form.get('major', 'สาขาวิชาระบบสารสนเทศ')
 
+            # จัดการไฟล์อัปโหลดรูปเกียรติบัตร
+            doc_filename = "default_doc.png"
+            if 'cert_file' in request.files:
+                file = request.files['cert_file']
+                if file and file.filename != '' and allowed_file(file.filename):
+                    ext = file.filename.rsplit('.', 1)[1].lower()
+                    unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
+                    save_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_fn)
+                    file.save(save_path)
+                    doc_filename = unique_fn
+
+            req_id_to_update = request.form.get('edit_req_id')
+            if req_id_to_update:
+                # กรณีเป็นการแก้ไขเอกสารตามคำสั่งตีกลับ
+                existing_req = CreditRequest.query.get(req_id_to_update)
+                if existing_req and existing_req.user_id == session['user_id']:
+                    existing_req.course_name = course_name
+                    existing_req.institution = institution
+                    existing_req.credits = credits_val
+                    existing_req.category = category
+                    if doc_filename != "default_doc.png":
+                        existing_req.doc_img = doc_filename
+                    existing_req.status = 'Pending'
+                    existing_req.reject_reason = None
+                    db.session.commit()
+                    flash('แก้ไขและยื่นเอกสารขอเทียบโอนอีกครั้งเรียบร้อยแล้ว!', 'success')
+                    return redirect(url_for('history'))
+
             req_code = f"TR2569{uuid.uuid4().hex[:4].upper()}"
 
             req = CreditRequest(
@@ -762,7 +812,7 @@ def submit_credit():
                 faculty=faculty,
                 major=major,
                 date_submitted=datetime.now().strftime("%Y-%m-%d"),
-                doc_img="default_doc.png",
+                doc_img=doc_filename,
                 status='Pending'
             )
             db.session.add(req)
@@ -779,49 +829,66 @@ def submit_credit():
     init_inst = request.args.get('inst', 'ThaiMOOC')
     init_credits = request.args.get('credits', '3')
     init_cat = request.args.get('cat', 'หมวดวิชาศึกษาทั่วไป')
-    selected_major = request.args.get('major_select', 'สาขาวิชาระบบสารสนเทศ')
+    selected_major = request.args.get('major_select', '')
+    edit_req_id = request.args.get('edit_id', '')
 
-    # สร้างรายการวิชาสำหรับสาขาวิชาระบบสารสนเทศ
+    # ถ้าเป็นการกดแก้คำร้องตีกลับ ให้ดึงข้อมูลเก่า
+    if edit_req_id:
+        old_req = CreditRequest.query.get(edit_req_id)
+        if old_req and old_req.user_id == session['user_id']:
+            init_course = old_req.course_name
+            init_inst = old_req.institution
+            init_credits = str(old_req.credits)
+            init_cat = old_req.category
+            selected_major = "สาขาวิชาระบบสารสนเทศ"
+
+    # แสดงตารางวิชาเฉพาะเมื่อเลือกสาขาระบบสารสนเทศเท่านั้น
     is_subject_rows = ""
-    for idx, item in enumerate(IS_THAIMOOC_COURSES, 1):
-        provider_badge = '<span class="bg-blue-100 text-blue-900 border border-blue-200 px-2 py-0.5 rounded-full text-[10px] font-bold">ThaiMOOC</span>' if item['provider'] == 'ThaiMOOC' else '<span class="bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-bold">ChulaMOOC</span>'
-        
-        is_subject_rows += f"""
-        <tr class="border-b border-slate-100 text-xs hover:bg-slate-50 transition">
-            <td class="py-3 px-3 font-mono font-bold text-slate-500">{item['code']}</td>
-            <td class="py-3 px-3 font-extrabold text-slate-900">{item['name']}<br>{provider_badge}</td>
-            <td class="py-3 px-3 text-slate-600 leading-relaxed max-w-xs">{item['mooc']}</td>
-            <td class="py-3 px-3 text-center font-bold text-slate-700">{item['hours']}</td>
-            <td class="py-3 px-3 text-center">
-                <a href="/submit_credit?course={item['name']}&inst={item['provider']}&credits={item['credits']}&cat={item['group']}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm">
-                    เลือกวิชานี้เพื่อยื่นเทียบโอน
-                </a>
-            </td>
-        </tr>
-        """
+    if selected_major == "สาขาวิชาระบบสารสนเทศ":
+        for item in IS_THAIMOOC_COURSES:
+            provider_badge = '<span class="bg-blue-100 text-blue-900 border border-blue-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ThaiMOOC</span>' if item['provider'] == 'ThaiMOOC' else '<span class="bg-amber-100 text-amber-900 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ChulaMOOC</span>'
+            
+            # ขึ้นบรรทัดใหม่เมื่อมีหลายวิชา
+            mooc_multiline = "<br>".join([f"• {m}" for m in item['mooc_list']])
+
+            is_subject_rows += f"""
+            <tr class="border-b border-slate-100 text-xs hover:bg-slate-50 transition">
+                <td class="py-3.5 px-3 font-mono font-bold text-slate-500">{item['code']}</td>
+                <td class="py-3.5 px-3 font-extrabold text-slate-900">{item['name']}<br>{provider_badge}</td>
+                <td class="py-3.5 px-3 text-slate-700 leading-relaxed max-w-xs font-medium">{mooc_multiline}</td>
+                <td class="py-3.5 px-3 text-center font-bold text-slate-700">{item['hours']}</td>
+                <td class="py-3.5 px-3 text-center">
+                    <a href="/submit_credit?course={item['name']}&inst={item['provider']}&credits={item['credits']}&cat={item['group']}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm">
+                        เลือกวิชานี้เพื่อยื่นเทียบโอน
+                    </a>
+                </td>
+            </tr>
+            """
 
     content = f"""
     <div class="max-w-4xl mx-auto space-y-8">
         
-        <!-- Step 1: เลือกสาขาวิชาเพื่อดูวิชาที่ต้องเรียนเพิ่ม -->
+        <!-- Step 1: เลือกล็อกสาขาวิชาก่อน -->
         <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-xl">
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-10 h-10 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0"><i class="fa-solid fa-graduation-cap text-amber-500"></i></div>
                 <div>
                     <h3 class="text-xl font-black text-slate-900">เลือกสาขาวิชาเพื่อดูรายวิชาที่ต้องเรียนเพิ่ม</h3>
-                    <p class="text-xs text-slate-500">ระบบจะแสดงบทเรียนออนไลน์ ThaiMOOC / ChulaMOOC ทั้งหมดที่ต้องเรียนเพิ่มตามหลักสูตร</p>
+                    <p class="text-xs text-slate-500">เลือกสาขาวิชาเพื่อแสดงบทเรียนออนไลน์ ThaiMOOC / ChulaMOOC ทั้งหมดในหลักสูตร</p>
                 </div>
             </div>
 
-            <form method="GET" action="/submit_credit" class="mb-6">
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">เลือกสาขาวิชาของคุณ *</label>
+            <form method="GET" action="/submit_credit" class="mb-4">
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">เลือกสาขาวิชาของคุณ <span class="text-rose-500">*</span></label>
                 <div class="flex gap-3">
                     <select name="major_select" onchange="this.form.submit()" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-extrabold text-blue-950">
-                        <option value="สาขาวิชาระบบสารสนเทศ" selected>สาขาวิชาระบบสารสนเทศ (Information Systems - IS)</option>
+                        <option value="" {'selected' if not selected_major else ''}>-- กรุณาเลือกสาขาวิชาเพื่อเริ่มใช้งาน --</option>
+                        <option value="สาขาวิชาระบบสารสนเทศ" {'selected' if selected_major=='สาขาวิชาระบบสารสนเทศ' else ''}>สาขาวิชาระบบสารสนเทศ (Information Systems - IS)</option>
                     </select>
                 </div>
             </form>
 
+            {'''
             <div class="bg-amber-50 border border-amber-200/80 p-4 rounded-2xl mb-6 flex items-start gap-3 text-amber-900 text-xs leading-relaxed font-medium">
                 <i class="fa-solid fa-circle-info text-amber-600 text-base shrink-0 mt-0.5"></i>
                 <div>
@@ -829,7 +896,6 @@ def submit_credit():
                 </div>
             </div>
 
-            <!-- ตารางรายวิชาต้องเรียนเพิ่ม -->
             <div class="overflow-x-auto rounded-2xl border border-slate-200">
                 <table class="w-full text-left min-w-[650px]">
                     <thead class="bg-slate-100 text-slate-600 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200">
@@ -842,19 +908,27 @@ def submit_credit():
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                        {is_subject_rows}
+                        ''' + is_subject_rows + '''
                     </tbody>
                 </table>
             </div>
+            ''' if selected_major == 'สาขาวิชาระบบสารสนเทศ' else '''
+            <div class="text-center py-10 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                <i class="fa-solid fa-arrow-up text-blue-900 text-2xl mb-2"></i>
+                <p class="text-xs font-bold text-slate-500">กรุณาเลือก "สาขาวิชาระบบสารสนเทศ" จากช่องด้านบน เพื่อดูตารางวิชาที่ต้องเรียนเพิ่ม</p>
+            </div>
+            '''}
         </div>
 
-        <!-- Step 2: ฟอร์มยื่นคำร้องขอเทียบโอน -->
+        <!-- Step 2: ฟอร์มยื่นคำร้องขอเทียบโอน + แนบรูปภาพเกียรติบัตร -->
         <div id="form_section" class="bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl scroll-mt-6">
             <h3 class="text-2xl font-black text-slate-900 mb-2">แบบฟอร์มยื่นคำขอเทียบโอนหน่วยกิต</h3>
-            <p class="text-xs text-slate-500 mb-6">ตรวจสอบรายละเอียดวิชา และกดส่งคำร้องขอเทียบโอนถึงเจ้าหน้าที่</p>
+            <p class="text-xs text-slate-500 mb-6">กรอกรายละเอียดและแนบรูปภาพวุฒิบัตร/เกียรติบัตร ที่เรียนจบมาแล้ว</p>
             
-            <form method="POST" class="space-y-4">
+            <form method="POST" enctype="multipart/form-data" class="space-y-4">
                 <input type="hidden" name="major" value="สาขาวิชาระบบสารสนเทศ">
+                <input type="hidden" name="edit_req_id" value="{edit_req_id}">
+
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อรายวิชาในหลักสูตร *</label>
                     <input type="text" name="course_name" value="{init_course}" required placeholder="เช่น คุณภาพการใช้ชีวิต" class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-900 outline-none bg-slate-50 font-medium">
@@ -880,6 +954,14 @@ def submit_credit():
                         </select>
                     </div>
                 </div>
+
+                <!-- อัปโหลดรูปภาพเกียรติบัตร -->
+                <div class="border-t border-slate-100 pt-4">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-amber-500"></i> แนบรูปภาพเกียรติบัตร / วุฒิบัตร *</label>
+                    <input type="file" name="cert_file" accept="image/*,.pdf" class="w-full border border-slate-200 rounded-2xl p-2.5 text-xs bg-slate-50 font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-900 file:text-white hover:file:bg-blue-950">
+                    <p class="text-[11px] text-slate-400 mt-1">รองรับไฟล์รูปภาพ PNG, JPG, JPEG หรือ PDF ขนาดไม่เกิน 16MB</p>
+                </div>
+
                 <button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-blue-900/20 text-sm mt-2">
                     <i class="fa-solid fa-paper-plane mr-1 text-amber-400"></i> ยืนยันส่งคำร้องขอเทียบโอน
                 </button>
@@ -894,32 +976,53 @@ def history():
     if 'user_id' not in session: return redirect(url_for('login'))
     
     try:
-        user_requests = CreditRequest.query.filter_by(user_id=session['user_id']).all()
+        user_requests = CreditRequest.query.filter_by(user_id=session['user_id']).order_by(CreditRequest.id.desc()).all()
     except Exception:
         user_requests = []
 
     rows = ""
     for r in user_requests:
         status = getattr(r, 'status', 'Pending')
-        badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอการพิจารณา</span>' if status == 'Pending' else ('<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>' if status == 'Approved' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ</span>')
+        
+        if status == 'Pending':
+            badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอการพิจารณา</span>'
+            action_btn = '-'
+        elif status == 'Approved':
+            badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>'
+            action_btn = '-'
+        else: # Rejected
+            badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ / ให้แก้ไข</span>'
+            action_btn = f'<a href="/submit_credit?edit_id={r.id}#form_section" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold inline-block shadow-sm">แก้ไขเอกสารและยื่นใหม่</a>'
+
         approved_by = getattr(r, 'approved_by', '-') or '-'
+        reason_box = f'<div class="mt-1 text-xs text-rose-600 font-medium"><b>เหตุผลที่ไม่ผ่าน:</b> {r.reject_reason}</div>' if getattr(r, 'reject_reason', None) else ''
+
+        # รูปภาพหลักฐาน
+        img_preview = f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-xs text-blue-900 underline font-bold"><i class="fa-solid fa-image mr-1"></i>ดูรูปหลักฐาน</a>' if getattr(r, 'doc_img', None) and r.doc_img != 'default_doc.png' else '<span class="text-xs text-slate-400">ไม่มีแนบรูป</span>'
 
         rows += f"""
         <tr class="border-b border-slate-100 text-sm hover:bg-slate-50 transition">
             <td class="py-4 px-4 font-mono font-bold text-slate-500">{getattr(r, 'req_code', 'TR001')}</td>
-            <td class="py-4 px-4 font-extrabold text-slate-900">{getattr(r, 'course_name', '-')}</td>
+            <td class="py-4 px-4 font-extrabold text-slate-900">
+                {getattr(r, 'course_name', '-')}<br>
+                {img_preview}
+                {reason_box}
+            </td>
             <td class="py-4 px-4 text-slate-600 font-medium">{getattr(r, 'institution', '-')}</td>
             <td class="py-4 px-4 font-black text-blue-900">{getattr(r, 'credits', 0)}</td>
             <td class="py-4 px-4 text-xs text-slate-500 font-medium">{approved_by}</td>
             <td class="py-4 px-4">{badge}</td>
+            <td class="py-4 px-4">{action_btn}</td>
         </tr>
         """
     content = f"""
     <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
         <h3 class="text-xl font-black text-slate-900 mb-6">ประวัติคำร้องเทียบโอน (สาขาวิชาระบบสารสนเทศ)</h3>
-        <table class="w-full text-left min-w-[700px]">
-            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider"><tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">ระบบที่เรียน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">เจ้าหน้าที่ผู้ตรวจ</th><th class="py-3 px-4">สถานะ</th></tr></thead>
-            <tbody>{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีรายการประวัติคำร้อง</td></tr>'}</tbody>
+        <table class="w-full text-left min-w-[750px]">
+            <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">วิชา / หลักฐาน</th><th class="py-3 px-4">ระบบที่เรียน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">เจ้าหน้าที่ผู้ตรวจ</th><th class="py-3 px-4">สถานะ</th><th class="py-3 px-4">จัดการ</th></tr>
+            </thead>
+            <tbody>{rows if rows else '<tr><td colspan="7" class="py-12 text-center text-slate-400">ไม่มีรายการประวัติคำร้อง</td></tr>'}</tbody>
         </table>
     </div>
     """
@@ -1067,8 +1170,18 @@ def admin_requests():
 
     rows = ""
     for r in all_requests:
-        status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอพิจารณา</span>' if getattr(r, 'status', 'Pending') == 'Pending' else ('<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติ</span>' if getattr(r, 'status', '') == 'Approved' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ</span>')
+        status_val = getattr(r, 'status', 'Pending')
         
+        if status_val == 'Pending':
+            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอการพิจารณา</span>'
+            action_col = f'<a href="/admin/review/{r.id}" class="bg-gradient-to-r from-blue-900 to-indigo-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-blue-950 hover:to-indigo-900 inline-block shadow-sm">พิจารณาคำร้อง</a>'
+        elif status_val == 'Approved':
+            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>'
+            action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200"><i class="fa-solid fa-lock mr-1"></i>พิจารณาแล้ว</span>'
+        else:
+            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ / ให้แก้ไข</span>'
+            action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200"><i class="fa-solid fa-lock mr-1"></i>พิจารณาแล้ว</span>'
+
         student_name = r.user.fullname if getattr(r, 'user', None) else '-'
         student_code = r.user.member_id if getattr(r, 'user', None) else '-'
 
@@ -1079,9 +1192,7 @@ def admin_requests():
             <td class="py-4 px-4 text-slate-700 font-medium">{getattr(r, 'course_name', '-')}</td>
             <td class="py-4 px-4 text-slate-500 text-xs font-medium">{getattr(r, 'date_submitted', '-')}</td>
             <td class="py-4 px-4">{status_badge}</td>
-            <td class="py-4 px-4">
-                <a href="/admin/review/{r.id}" class="bg-gradient-to-r from-blue-900 to-indigo-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-blue-950 hover:to-indigo-900 inline-block shadow-sm">พิจารณา</a>
-            </td>
+            <td class="py-4 px-4">{action_col}</td>
         </tr>
         """
 
@@ -1094,6 +1205,76 @@ def admin_requests():
             </thead>
             <tbody>{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีคำร้องในระบบ</td></tr>'}</tbody>
         </table>
+    </div>
+    """
+    return render_template_string(LAYOUT_TEMPLATE, content=content)
+
+@app.route('/admin/review/<int:req_id>', methods=['GET', 'POST'])
+def admin_review(req_id):
+    if session.get('role') not in ['admin', 'superadmin']: return redirect(url_for('login'))
+    req = CreditRequest.query.get_or_404(req_id)
+
+    # ล็อกไม่ให้พิจารณาซ้ำหากอนุมัติหรือไม่อนุมัติไปแล้ว
+    if req.status != 'Pending':
+        flash('คำร้องนี้ได้รับการพิจารณาไปแล้ว ไม่สามารถแก้ไขได้อีก', 'error')
+        return redirect(url_for('admin_requests'))
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        reject_reason = request.form.get('reject_reason', '').strip()
+        admin_user = User.query.get(session['user_id'])
+
+        if action == 'approve':
+            req.status = 'Approved'
+            req.approved_by = admin_user.fullname if admin_user else "เจ้าหน้าที่"
+            db.session.commit()
+            flash('อนุมัติคำร้องเทียบโอนเรียบร้อยแล้ว', 'success')
+            return redirect(url_for('admin_requests'))
+        
+        elif action == 'reject':
+            if not reject_reason:
+                flash('กรุณาระบุเหตุผลหรือสิ่งที่ต้องแก้ไขก่อนส่งตีกลับให้นักศึกษาด้วยครับ', 'error')
+                return redirect(url_for('admin_review', req_id=req_id))
+            
+            req.status = 'Rejected'
+            req.reject_reason = reject_reason
+            req.approved_by = admin_user.fullname if admin_user else "เจ้าหน้าที่"
+            db.session.commit()
+            flash('ปฏิเสธ/ส่งเรื่องกลับให้นักศึกษาแก้ไขเรียบร้อยแล้ว', 'success')
+            return redirect(url_for('admin_requests'))
+
+    student_name = req.user.fullname if getattr(req, 'user', None) else '-'
+    student_code = req.user.member_id if getattr(req, 'user', None) else '-'
+
+    img_html = f'<a href="/static/uploads/{req.doc_img}" target="_blank"><img src="/static/uploads/{req.doc_img}" class="max-h-64 rounded-2xl border border-slate-200 shadow-sm hover:opacity-90 transition"></a>' if getattr(req, 'doc_img', None) and req.doc_img != 'default_doc.png' else '<span class="text-xs text-slate-400">ไม่มีแนบรูปภาพหลักฐาน</span>'
+
+    content = f"""
+    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
+        <h3 class="text-2xl font-black text-slate-900 mb-6">พิจารณาคำร้องเทียบโอน #{getattr(req, 'req_code', 'TR001')}</h3>
+        
+        <div class="grid md:grid-cols-2 gap-5 text-sm mb-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ผู้ยื่นคำร้อง</span><b class="text-slate-800">{student_name}</b> (รหัส: {student_code})</div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">หมวดวิชา</span><b class="text-slate-800">{getattr(req, 'category', 'หมวดวิชาศึกษาทั่วไป')}</b></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">รายวิชา</span><b class="text-slate-800">{getattr(req, 'course_name', '-')}</b> ({getattr(req, 'credits', 0)} หน่วยกิต)</div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ระบบออนไลน์</span><b class="text-slate-800">{getattr(req, 'institution', '-')}</b></div>
+            <div class="md:col-span-2"><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-2">หลักฐานเกียรติบัตรที่แนบมา</span><div>{img_html}</div></div>
+        </div>
+
+        <form method="POST" class="space-y-4 border-t border-slate-100 pt-6">
+            <div>
+                <label class="block text-xs font-bold text-rose-600 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-triangle-exclamation mr-1"></i> กรณีไม่ผ่านการพิจารณา: ระบุเหตุผล / สิ่งที่ให้นักศึกษาแก้ไข</label>
+                <textarea name="reject_reason" rows="3" placeholder="ระบุข้อความเพื่อแจ้งเตือนนักศึกษา เช่น รูปถ่ายวุฒิบัตรไม่ชัดเจน หรือ เรียนไม่ครบตามรายวิชาที่กำหนด..." class="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-rose-500 outline-none bg-slate-50 font-medium"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="submit" name="action" value="reject" class="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs transition shadow-md">
+                    <i class="fa-solid fa-xmark mr-1"></i> ไม่ผ่านการพิจารณา / ส่งกลับแก้ไข
+                </button>
+                <button type="submit" name="action" value="approve" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs transition shadow-md">
+                    <i class="fa-solid fa-check mr-1"></i> อนุมัติผ่านการเทียบโอน
+                </button>
+            </div>
+        </form>
     </div>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
@@ -1492,56 +1673,6 @@ def admin_profile_requests():
     </div>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
-
-@app.route('/admin/review/<int:req_id>')
-def admin_review(req_id):
-    if session.get('role') not in ['admin', 'superadmin']: return redirect(url_for('login'))
-    req = CreditRequest.query.get_or_404(req_id)
-
-    student_name = req.user.fullname if getattr(req, 'user', None) else '-'
-    student_code = req.user.member_id if getattr(req, 'user', None) else '-'
-
-    content = f"""
-    <div class="max-w-4xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
-        <h3 class="text-2xl font-black text-slate-900 mb-6">พิจารณาคำร้องเทียบโอน #{getattr(req, 'req_code', 'TR001')}</h3>
-        <div class="grid md:grid-cols-2 gap-5 text-sm mb-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ผู้ยื่นคำร้อง</span><b class="text-slate-800">{student_name}</b> (รหัส: {student_code})</div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">หมวดวิชา</span><b class="text-slate-800">{getattr(req, 'category', 'หมวดวิชาศึกษาทั่วไป')}</b></div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">รายวิชา</span><b class="text-slate-800">{getattr(req, 'course_name', '-')}</b> ({getattr(req, 'credits', 0)} หน่วยกิต)</div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">สถานะปัจจุบัน</span><b class="text-slate-800">{getattr(req, 'status', 'Pending')}</b></div>
-        </div>
-
-        <div class="flex justify-end space-x-3 mt-6 border-t border-slate-100 pt-6">
-            <a href="/admin/reject/{req.id}" class="px-6 py-3 bg-rose-600 text-white rounded-2xl text-xs font-bold hover:bg-rose-700 transition">ไม่อนุมัติ</a>
-            <a href="/admin/approve/{req.id}" class="px-6 py-3 bg-emerald-600 text-white rounded-2xl text-xs font-bold hover:bg-emerald-700 transition">อนุมัติคำร้อง</a>
-        </div>
-    </div>
-    """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
-
-@app.route('/admin/approve/<int:req_id>')
-def approve(req_id):
-    if session.get('role') in ['admin', 'superadmin']:
-        admin_user = User.query.get(session['user_id'])
-        req = CreditRequest.query.get(req_id)
-        if req:
-            req.status = 'Approved'
-            req.approved_by = admin_user.fullname if admin_user else "เจ้าหน้าที่"
-            db.session.commit()
-            flash('อนุมัติคำร้องเทียบโอนเรียบร้อยแล้ว', 'success')
-    return redirect(url_for('admin_requests'))
-
-@app.route('/admin/reject/<int:req_id>')
-def reject(req_id):
-    if session.get('role') in ['admin', 'superadmin']:
-        admin_user = User.query.get(session['user_id'])
-        req = CreditRequest.query.get(req_id)
-        if req:
-            req.status = 'Rejected'
-            req.approved_by = admin_user.fullname if admin_user else "เจ้าหน้าที่"
-            db.session.commit()
-            flash('ปฏิเสธคำร้องเรียบร้อยแล้ว', 'error')
-    return redirect(url_for('admin_requests'))
 
 @app.route('/admin/approve_profile/<int:req_id>')
 def approve_profile(req_id):
