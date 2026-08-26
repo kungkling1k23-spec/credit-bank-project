@@ -8,8 +8,9 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_is_rmutto_secret_key_2026_v5'
+app.secret_key = 'credit_bank_is_rmutto_production_key_2026'
 
+# เชื่อมต่อ PostgreSQL บน Render หรือ SQLite
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
@@ -32,7 +33,7 @@ db = SQLAlchemy(app)
 # ==========================================
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.String(20), unique=True, nullable=True)
+    member_id = db.Column(db.String(20), unique=True, nullable=True) # เช่น IS69001
     prefix = db.Column(db.String(20), default="นาย")
     fullname = db.Column(db.String(100), nullable=False)
     id_card = db.Column(db.String(20), unique=True, nullable=False)
@@ -77,20 +78,26 @@ class ProfileEditRequest(db.Model):
     created_at = db.Column(db.String(20), default="2026-08-26")
     user = db.relationship('User', backref=db.backref('edit_requests', lazy=True))
 
+# ==========================================
+# Database Auto-Reset & Migration (สำหรับใช้งานจริง)
+# ==========================================
+RESET_DB_FOR_PRODUCTION = True  # ลบข้อมูลทดสอบเก่าทิ้งเพื่อเริ่มใช้จริง
+
 with app.app_context():
-    db.create_all()
+    if RESET_DB_FOR_PRODUCTION:
+        try:
+            db.drop_all()  # ลบตารางเก่าทดสอบออกทั้งหมด
+        except Exception:
+            pass
 
-    try:
-        db.session.execute(text("ALTER TABLE credit_request ADD COLUMN reject_reason TEXT;"))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
+    db.create_all()  # สร้างโครงสร้างตารางใหม่สดใหม่
 
+    # สร้างบัญชี Super Admin หลักของระบบประจำสาขา IS
     try:
         main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
         if not main_admin:
             main_admin = User(
-                member_id='ADM000',
+                member_id='ADM001',
                 prefix='นาย',
                 fullname='ผู้ดูแลระบบหลัก (Super Admin)', 
                 id_card='0000000000000',
@@ -106,17 +113,21 @@ with app.app_context():
         db.session.rollback()
 
 # ==========================================
-# Helper Functions
+# Helper Functions (รหัสนักศึกษาขึ้นต้นด้วย IS + รหัส)
 # ==========================================
 def generate_member_id():
+    """ รหัสนักศึกษาขึ้นต้นด้วย IS ตามด้วยเลข 5 หลัก เช่น IS69001, IS69002 """
     try:
         last_user = User.query.filter(User.member_id.like('IS%')).order_by(User.id.desc()).first()
         if not last_user or not last_user.member_id:
-            return "IS00001"
-        last_num = int(last_user.member_id.replace("IS", ""))
+            return "IS69001"
+        
+        # ดึงเฉพาะตัวเลขหลัง IS
+        raw_num = last_user.member_id.replace("IS", "")
+        last_num = int(raw_num)
         return f"IS{last_num + 1:05d}"
     except Exception:
-        return f"IS{uuid.uuid4().hex[:5].upper()}"
+        return f"IS69{uuid.uuid4().hex[:3].upper()}"
 
 def format_address(house_no, moo, soi, subdistrict, district, province, postal_code):
     parts = []
@@ -130,7 +141,7 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     return " ".join(parts)
 
 # ==========================================
-# Layout Template (กับ โลโก้ใหม่)
+# Layout Template
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -174,15 +185,13 @@ LAYOUT_TEMPLATE = """
         <!-- Header Logo Zone -->
         <div class="p-4 flex flex-col border-b border-slate-800/80">
             <a href="/" class="flex items-center justify-center overflow-hidden py-1">
-                <!-- โลโก้แบบเต็มหน้ากว้าง -->
                 <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="w-full max-h-20 object-contain logo-img-full transition-all" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO+Credit+Bank';">
-                <!-- โลโก้ย่อเมื่อพับเมนู -->
                 <div class="logo-img-small hidden">
                     <div class="w-10 h-10 bg-gradient-to-tr from-blue-700 to-indigo-600 text-amber-400 rounded-2xl flex items-center justify-center font-black text-lg shadow-md">IS</div>
                 </div>
             </a>
 
-            <!-- Toggle Button BELOW Logo -->
+            <!-- Toggle Button -->
             <div class="mt-3 pt-3 border-t border-slate-800/60 hidden md:flex justify-center">
                 <button id="sidebar-toggle" class="w-full py-1.5 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-amber-400 flex items-center justify-center gap-2 transition-all group border border-slate-700/50">
                     <i class="fa-solid fa-chevron-left text-xs toggle-icon transition-transform duration-300"></i>
@@ -511,7 +520,7 @@ def home():
     <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
             <h2 class="text-3xl font-black text-slate-900">สวัสดีครับ, {user.prefix or ''} {user.fullname}</h2>
-            <p class="text-sm font-bold text-blue-900 mt-1"><i class="fa-solid fa-id-card mr-1 text-amber-500"></i> รหัสนักศึกษา/สมาชิก: {user.member_id or '-'} (สาขาวิชาระบบสารสนเทศ)</p>
+            <p class="text-sm font-bold text-blue-900 mt-1"><i class="fa-solid fa-id-card mr-1 text-amber-500"></i> รหัสนักศึกษา: {user.member_id or '-'} (สาขาวิชาระบบสารสนเทศ)</p>
         </div>
         <a href="/submit_credit" class="bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold px-6 py-3 rounded-2xl shadow-md shadow-blue-900/20 transition-all inline-flex items-center gap-2 text-sm shrink-0">
             <i class="fa-solid fa-file-circle-plus text-amber-400"></i> ยื่นคำขอเทียบโอนออนไลน์
@@ -1062,7 +1071,7 @@ def profile():
     content = f"""
     <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
         <h3 class="text-2xl font-black text-slate-900 mb-1">{display_title}</h3>
-        <p class="text-sm font-bold text-blue-900 mb-1">รหัสนักศึกษา/สมาชิก: {user.member_id or '-'}</p>
+        <p class="text-sm font-bold text-blue-900 mb-1">รหัสนักศึกษา: {user.member_id or '-'}</p>
         <p class="text-xs text-slate-500 mb-6">สาขาวิชาระบบสารสนเทศ คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ</p>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 bg-slate-50 p-6 rounded-2xl border border-slate-100 text-sm">
@@ -1370,6 +1379,7 @@ def register():
             flash('Username นี้ถูกใช้งานแล้ว กรุณาเลือกชื่อผู้ใช้ใหม่', 'error')
             return redirect(url_for('register'))
 
+        # เจนรหัสนักศึกษา IS69XXX อัตโนมัติ
         new_member_id = generate_member_id()
 
         new_user = User(
@@ -1519,7 +1529,7 @@ def manage_admins():
             return redirect(url_for('manage_admins'))
 
         new_admin = User(
-            member_id=f"ADM{uuid.uuid4().hex[:4].upper()}",
+            member_id=f"ADM{uuid.uuid4().hex[:3].upper()}",
             prefix="เจ้าหน้าที่",
             fullname=fullname,
             id_card=id_card,
