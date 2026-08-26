@@ -33,7 +33,7 @@ db = SQLAlchemy(app)
 # ==========================================
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.String(20), unique=True, nullable=True) # เช่น IS69001
+    member_id = db.Column(db.String(20), unique=True, nullable=True)
     prefix = db.Column(db.String(20), default="นาย")
     fullname = db.Column(db.String(100), nullable=False)
     id_card = db.Column(db.String(20), unique=True, nullable=False)
@@ -59,7 +59,7 @@ class CreditRequest(db.Model):
     major = db.Column(db.String(100), default="สาขาวิชาระบบสารสนเทศ")
     date_submitted = db.Column(db.String(20), default="2026-08-26")
     doc_img = db.Column(db.String(200), nullable=True)
-    status = db.Column(db.String(20), default='Pending') # Pending, Approved, Rejected
+    status = db.Column(db.String(20), default='Pending')
     reject_reason = db.Column(db.Text, nullable=True)
     approved_by = db.Column(db.String(100), nullable=True)
     user = db.relationship('User', backref=db.backref('credits_list', lazy=True))
@@ -138,7 +138,7 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     return " ".join(parts)
 
 # ==========================================
-# Layout Template (Footer อัปเดตชื่อเต็มมหาลัยและชื่อสาขา)
+# Layout Template (แก้ไขแถบเมนูทึบแสงแบบ Solid)
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -168,19 +168,19 @@ LAYOUT_TEMPLATE = """
 </head>
 <body class="bg-sky-50/50 min-h-screen text-slate-800 antialiased flex flex-col md:flex-row">
 
-    <!-- Mobile Top Header -->
-    <div class="md:hidden bg-sky-100 text-slate-800 p-3 flex justify-between items-center sticky top-0 z-50 border-b border-sky-200 shadow-sm">
+    <!-- Mobile Top Header (ปรับสีทึบ 100% ป้องกันภาพซ้อน) -->
+    <div class="md:hidden bg-sky-100 text-slate-800 p-3 flex justify-between items-center sticky top-0 z-50 border-b border-sky-200 shadow-md">
         <a href="/" class="flex items-center gap-2 px-2 py-1">
             <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="h-10 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50?text=IS+RMUTTO';">
         </a>
-        <button id="mobile-toggle" class="p-2 text-sky-700 hover:text-sky-900"><i class="fa-solid fa-bars text-xl"></i></button>
+        <button id="mobile-toggle" class="p-2 text-sky-800 hover:text-sky-950 focus:outline-none"><i class="fa-solid fa-bars text-xl"></i></button>
     </div>
 
-    <!-- Collapsible Left Sidebar -->
-    <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100/70 text-slate-700 min-h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-lg shadow-sky-200/40 border-r border-sky-200/80 hidden md:flex shrink-0">
+    <!-- Collapsible Left Sidebar (ปรับพื้นหลังทึบ bg-sky-100 ป้องกันภาพซ้อนตอนเปิดในมือถือ) -->
+    <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100 text-slate-700 min-h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-xl border-r border-sky-200 hidden md:flex shrink-0 w-full md:w-auto">
         
         <!-- Header Logo Zone -->
-        <div class="p-4 flex flex-col border-b border-sky-200/60 bg-sky-200/20">
+        <div class="p-4 flex flex-col border-b border-sky-200 bg-sky-200/40">
             <a href="/" class="flex items-center justify-center overflow-hidden py-2 px-2 group">
                 <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="w-full max-h-20 object-contain logo-img-full transition-transform group-hover:scale-105" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO+Credit+Bank';">
                 <div class="logo-img-small hidden">
@@ -189,8 +189,8 @@ LAYOUT_TEMPLATE = """
             </a>
 
             <!-- Toggle Button -->
-            <div class="mt-3 pt-2 border-t border-sky-200/50 hidden md:flex justify-center">
-                <button id="sidebar-toggle" class="w-full py-1.5 px-3 rounded-xl bg-sky-200/50 hover:bg-sky-200 text-sky-800 flex items-center justify-center gap-2 transition-all group border border-sky-300/40">
+            <div class="mt-3 pt-2 border-t border-sky-200/60 hidden md:flex justify-center">
+                <button id="sidebar-toggle" class="w-full py-1.5 px-3 rounded-xl bg-sky-200 hover:bg-sky-300 text-sky-800 flex items-center justify-center gap-2 transition-all group border border-sky-300/50">
                     <i class="fa-solid fa-chevron-left text-xs toggle-icon transition-transform duration-300"></i>
                     <span class="nav-text text-xs font-bold text-sky-800">ย่อแถบเมนู</span>
                 </button>
@@ -199,54 +199,54 @@ LAYOUT_TEMPLATE = """
 
         <!-- Navigation Links -->
         <div class="flex-grow p-4 space-y-1.5 overflow-y-auto">
-            <p class="section-title text-[11px] font-extrabold text-sky-600 uppercase tracking-wider px-3 mb-2 pt-2">เมนูหลัก</p>
+            <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-2">เมนูหลัก</p>
             
-            <a href="/" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+            <a href="/" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
                 <i class="fa-solid fa-house text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                 <span class="nav-text font-semibold">หน้าแรก</span>
             </a>
 
             {% if session.get('user_id') %}
                 {% if session.get('role') in ['admin', 'superadmin'] %}
-                    <p class="section-title text-[11px] font-extrabold text-sky-600 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
-                    <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                    <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
+                    <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
                         <i class="fa-solid fa-users text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">รายชื่อนักศึกษา</span>
                     </a>
-                    <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                    <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
                         <i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">คำร้องเทียบโอน</span>
                     </a>
-                    <a href="/admin/profile_requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                    <a href="/admin/profile_requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
                         <i class="fa-solid fa-user-pen text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">คำร้องแก้ไขข้อมูล</span>
                     </a>
-                    <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sky-900 bg-sky-200/70 border border-sky-300/80 hover:bg-sky-200 transition-all font-medium text-sm group mt-2">
+                    <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sky-900 bg-sky-200 border border-sky-300 hover:bg-sky-300 transition-all font-medium text-sm group mt-2">
                         <i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-600"></i>
                         <span class="nav-text font-bold">เพิ่ม/จัดการเจ้าหน้าที่</span>
                     </a>
                 {% else %}
-                    <p class="section-title text-[11px] font-extrabold text-sky-600 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา IS</p>
-                    <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                    <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา IS</p>
+                    <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
                         <i class="fa-solid fa-magnifying-glass text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">ค้นหารายวิชา</span>
                     </a>
-                    <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                    <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
                         <i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">ยื่นคำขอเทียบโอน</span>
                     </a>
-                    <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                    <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
                         <i class="fa-solid fa-graduation-cap text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">หน่วยกิตสะสม</span>
                     </a>
-                    <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                    <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
                         <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">ประวัติคำขอ</span>
                     </a>
                 {% endif %}
             {% else %}
                 <div class="pt-4 space-y-2">
-                    <a href="/login" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group border border-sky-200/50">
+                    <a href="/login" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group border border-sky-200">
                         <i class="fa-solid fa-right-to-bracket text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i>
                         <span class="nav-text font-semibold">เข้าสู่ระบบ</span>
                     </a>
@@ -260,8 +260,8 @@ LAYOUT_TEMPLATE = """
 
         <!-- Footer Profile Link -->
         {% if session.get('user_id') %}
-            <div class="p-4 border-t border-sky-200/60 bg-sky-200/30">
-                <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl hover:bg-sky-200/50 transition-all group border border-transparent">
+            <div class="p-4 border-t border-sky-200 bg-sky-200/40">
+                <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl hover:bg-sky-200/60 transition-all group border border-transparent">
                     <div class="w-9 h-9 rounded-xl bg-sky-200 text-sky-700 font-bold flex items-center justify-center shrink-0">
                         <i class="fa-regular fa-user"></i>
                     </div>
@@ -302,8 +302,8 @@ LAYOUT_TEMPLATE = """
             {{ content | safe }}
         </main>
 
-        <!-- Footer ด้านล่างแสดงชื่อสาขาและชื่อเต็มมหาวิทยาลัย -->
-        <footer class="bg-sky-100/80 text-slate-600 mt-auto border-t border-sky-200/80">
+        <!-- Footer ด้านล่างทึบแสง -->
+        <footer class="bg-sky-100 text-slate-600 mt-auto border-t border-sky-200">
             <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-center md:text-left">
                     <div class="flex items-center gap-3">
