@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_is_rmutto_secret_key_2026_v4'
+app.secret_key = 'credit_bank_is_rmutto_secret_key_2026_v5'
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
@@ -20,6 +20,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs('static/images', exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -79,7 +80,6 @@ class ProfileEditRequest(db.Model):
 with app.app_context():
     db.create_all()
 
-    # Auto Migration: เพิ่มคอลัมน์ reject_reason เข้าตารางเดิมหากยังไม่มี
     try:
         db.session.execute(text("ALTER TABLE credit_request ADD COLUMN reject_reason TEXT;"))
         db.session.commit()
@@ -130,7 +130,7 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     return " ".join(parts)
 
 # ==========================================
-# Layout Template
+# Layout Template (กับ โลโก้ใหม่)
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -138,7 +138,7 @@ LAYOUT_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ธนาคารหน่วยกิต สาขาวิชาระบบสารสนเทศ - มทร.ตะวันออก</title>
+    <title>ธนาคารหน่วยกิต IS RMUTTO - มทร.ตะวันออก</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -152,7 +152,8 @@ LAYOUT_TEMPLATE = """
         .sidebar-expanded { width: 260px; }
         .sidebar-collapsed { width: 80px; }
         .sidebar-collapsed .nav-text { display: none; }
-        .sidebar-collapsed .logo-text { display: none; }
+        .sidebar-collapsed .logo-img-full { display: none; }
+        .sidebar-collapsed .logo-img-small { display: block !important; }
         .sidebar-collapsed .section-title { display: none; }
         .sidebar-collapsed .toggle-icon { transform: rotate(180deg); }
     </style>
@@ -160,10 +161,9 @@ LAYOUT_TEMPLATE = """
 <body class="bg-slate-50 min-h-screen text-slate-800 antialiased flex flex-col md:flex-row">
 
     <!-- Mobile Top Header -->
-    <div class="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-50 border-b border-slate-800">
-        <a href="/" class="flex items-center gap-2.5">
-            <div class="w-9 h-9 bg-blue-800 text-amber-400 rounded-xl flex items-center justify-center font-extrabold text-base">IS</div>
-            <span class="font-bold text-base tracking-tight">Credit Bank - สาขาวิชาระบบสารสนเทศ</span>
+    <div class="md:hidden bg-slate-900 text-white p-3 flex justify-between items-center sticky top-0 z-50 border-b border-slate-800">
+        <a href="/" class="flex items-center gap-2">
+            <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="h-10 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50?text=IS+RMUTTO';">
         </a>
         <button id="mobile-toggle" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-bars text-xl"></i></button>
     </div>
@@ -172,19 +172,18 @@ LAYOUT_TEMPLATE = """
     <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-slate-900 text-slate-300 min-h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-2xl border-r border-slate-800 hidden md:flex shrink-0">
         
         <!-- Header Logo Zone -->
-        <div class="p-5 flex flex-col border-b border-slate-800/80">
-            <a href="/" class="flex items-center gap-3 overflow-hidden justify-center md:justify-start">
-                <div class="w-10 h-10 bg-gradient-to-tr from-blue-700 to-indigo-600 text-amber-400 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 shadow-md shadow-blue-900/40">
-                    IS
-                </div>
-                <div class="flex flex-col logo-text transition-all">
-                    <span class="font-black text-white text-base leading-tight tracking-tight">Credit Bank</span>
-                    <span class="text-[10px] text-amber-400 font-bold tracking-wider uppercase">ระบบสารสนเทศ มทร.ตะวันออก</span>
+        <div class="p-4 flex flex-col border-b border-slate-800/80">
+            <a href="/" class="flex items-center justify-center overflow-hidden py-1">
+                <!-- โลโก้แบบเต็มหน้ากว้าง -->
+                <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="w-full max-h-20 object-contain logo-img-full transition-all" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO+Credit+Bank';">
+                <!-- โลโก้ย่อเมื่อพับเมนู -->
+                <div class="logo-img-small hidden">
+                    <div class="w-10 h-10 bg-gradient-to-tr from-blue-700 to-indigo-600 text-amber-400 rounded-2xl flex items-center justify-center font-black text-lg shadow-md">IS</div>
                 </div>
             </a>
 
             <!-- Toggle Button BELOW Logo -->
-            <div class="mt-4 pt-3 border-t border-slate-800/60 hidden md:flex justify-center">
+            <div class="mt-3 pt-3 border-t border-slate-800/60 hidden md:flex justify-center">
                 <button id="sidebar-toggle" class="w-full py-1.5 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-amber-400 flex items-center justify-center gap-2 transition-all group border border-slate-700/50">
                     <i class="fa-solid fa-chevron-left text-xs toggle-icon transition-transform duration-300"></i>
                     <span class="nav-text text-xs font-bold text-slate-300 group-hover:text-amber-400">ย่อแถบเมนู</span>
@@ -301,7 +300,7 @@ LAYOUT_TEMPLATE = """
             <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-center md:text-left">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-blue-800 text-amber-400 font-bold flex items-center justify-center">IS</div>
+                        <img src="/static/images/logo.png" alt="IS RMUTTO Logo" class="h-10 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50?text=IS+RMUTTO';">
                         <div>
                             <p class="text-slate-200 font-bold text-sm">สาขาวิชาระบบสารสนเทศ - มทร.ตะวันออก</p>
                             <p class="text-slate-500 mt-0.5">คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ</p>
@@ -425,12 +424,10 @@ def home():
                 </div>
             </div>
 
-            <div class="hero-gradient p-10 rounded-3xl text-center shadow-2xl relative overflow-hidden border border-slate-700/50">
-                <div class="w-24 h-24 bg-white/10 text-amber-400 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-6 backdrop-blur border border-white/10">
-                    <i class="fa-solid fa-graduation-cap"></i>
-                </div>
-                <h3 class="text-2xl font-bold text-white mb-2">Information Systems</h3>
-                <p class="text-slate-300 text-sm leading-relaxed max-w-sm mx-auto">ระบบคลังหน่วยกิตการเรียนรู้ผ่านสื่อออนไลน์ ThaiMOOC / ChulaMOOC สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ</p>
+            <div class="hero-gradient p-8 rounded-3xl text-center shadow-2xl relative overflow-hidden border border-slate-700/50 flex flex-col items-center justify-center">
+                <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank Logo" class="w-full max-w-xs object-contain mb-4 drop-shadow-lg" onerror="this.onerror=null; this.src='https://via.placeholder.com/300x150?text=IS+RMUTTO+Credit+Bank';">
+                <h3 class="text-xl font-bold text-white mb-2">Information Systems</h3>
+                <p class="text-slate-300 text-xs leading-relaxed max-w-sm mx-auto">ระบบคลังหน่วยกิตการเรียนรู้ผ่านสื่อออนไลน์ ThaiMOOC / ChulaMOOC สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ</p>
             </div>
         </div>
         """
@@ -669,14 +666,11 @@ def available_courses():
     cards = ""
     for c in filtered_courses:
         badge_provider = "bg-blue-100 text-blue-900 border-blue-200" if c['provider'] == 'ThaiMOOC' else "bg-amber-100 text-amber-900 border-amber-200"
-        
-        # จัดเรียงวิชาออนไลน์ให้อยู่คนละบรรทัด
         mooc_items_html = "".join([f'<li class="flex items-start gap-1.5"><i class="fa-solid fa-angle-right text-blue-900 mt-1 shrink-0"></i><span>{m}</span></li>' for m in c['mooc_list']])
 
         cards += f"""
         <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between card-hover">
             <div>
-                <!-- FIXED TOP BADGES LAYOUT (ไม่เบี้ยว/ไม่ทับกัน) -->
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100">
                     <span class="font-mono text-xs font-bold bg-slate-100 text-slate-800 px-3 py-1 rounded-xl border border-slate-200 shrink-0">
                         {c['code']}
@@ -780,7 +774,6 @@ def submit_credit():
             faculty = "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ"
             major = request.form.get('major', 'สาขาวิชาระบบสารสนเทศ')
 
-            # จัดการไฟล์อัปโหลดรูปเกียรติบัตร
             doc_filename = "default_doc.png"
             if 'cert_file' in request.files:
                 file = request.files['cert_file']
@@ -793,7 +786,6 @@ def submit_credit():
 
             req_id_to_update = request.form.get('edit_req_id')
             if req_id_to_update:
-                # กรณีเป็นการแก้ไขเอกสารตามคำสั่งตีกลับ
                 existing_req = CreditRequest.query.get(req_id_to_update)
                 if existing_req and existing_req.user_id == session['user_id']:
                     existing_req.course_name = course_name
@@ -840,7 +832,6 @@ def submit_credit():
     selected_major = request.args.get('major_select', '')
     edit_req_id = request.args.get('edit_id', '')
 
-    # ถ้าเป็นการกดแก้คำร้องตีกลับ ให้ดึงข้อมูลเก่า
     if edit_req_id:
         old_req = CreditRequest.query.get(edit_req_id)
         if old_req and old_req.user_id == session['user_id']:
@@ -850,13 +841,10 @@ def submit_credit():
             init_cat = old_req.category
             selected_major = "สาขาวิชาระบบสารสนเทศ"
 
-    # แสดงตารางวิชาเฉพาะเมื่อเลือกสาขาระบบสารสนเทศเท่านั้น
     is_subject_rows = ""
     if selected_major == "สาขาวิชาระบบสารสนเทศ":
         for item in IS_THAIMOOC_COURSES:
             provider_badge = '<span class="bg-blue-100 text-blue-900 border border-blue-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ThaiMOOC</span>' if item['provider'] == 'ThaiMOOC' else '<span class="bg-amber-100 text-amber-900 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ChulaMOOC</span>'
-            
-            # ขึ้นบรรทัดใหม่เมื่อมีหลายวิชา
             mooc_multiline = "<br>".join([f"• {m}" for m in item['mooc_list']])
 
             is_subject_rows += f"""
@@ -875,8 +863,6 @@ def submit_credit():
 
     content = f"""
     <div class="max-w-4xl mx-auto space-y-8">
-        
-        <!-- Step 1: เลือกล็อกสาขาวิชาก่อน -->
         <div class="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-xl">
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-10 h-10 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0"><i class="fa-solid fa-graduation-cap text-amber-500"></i></div>
@@ -928,7 +914,6 @@ def submit_credit():
             '''}
         </div>
 
-        <!-- Step 2: ฟอร์มยื่นคำร้องขอเทียบโอน + แนบรูปภาพเกียรติบัตร -->
         <div id="form_section" class="bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl scroll-mt-6">
             <h3 class="text-2xl font-black text-slate-900 mb-2">แบบฟอร์มยื่นคำขอเทียบโอนหน่วยกิต</h3>
             <p class="text-xs text-slate-500 mb-6">กรอกรายละเอียดและแนบรูปภาพวุฒิบัตร/เกียรติบัตร ที่เรียนจบมาแล้ว</p>
@@ -963,7 +948,6 @@ def submit_credit():
                     </div>
                 </div>
 
-                <!-- อัปโหลดรูปภาพเกียรติบัตร -->
                 <div class="border-t border-slate-100 pt-4">
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-amber-500"></i> แนบรูปภาพเกียรติบัตร / วุฒิบัตร *</label>
                     <input type="file" name="cert_file" accept="image/*,.pdf" class="w-full border border-slate-200 rounded-2xl p-2.5 text-xs bg-slate-50 font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-900 file:text-white hover:file:bg-blue-950">
@@ -1005,7 +989,6 @@ def history():
         approved_by = getattr(r, 'approved_by', '-') or '-'
         reason_box = f'<div class="mt-1 text-xs text-rose-600 font-medium"><b>เหตุผลที่ไม่ผ่าน:</b> {r.reject_reason}</div>' if getattr(r, 'reject_reason', None) else ''
 
-        # รูปภาพหลักฐาน
         img_preview = f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-xs text-blue-900 underline font-bold"><i class="fa-solid fa-image mr-1"></i>ดูรูปหลักฐาน</a>' if getattr(r, 'doc_img', None) and r.doc_img != 'default_doc.png' else '<span class="text-xs text-slate-400">ไม่มีแนบรูป</span>'
 
         rows += f"""
@@ -1222,7 +1205,6 @@ def admin_review(req_id):
     if session.get('role') not in ['admin', 'superadmin']: return redirect(url_for('login'))
     req = CreditRequest.query.get_or_404(req_id)
 
-    # ล็อกไม่ให้พิจารณาซ้ำหากอนุมัติหรือไม่อนุมัติไปแล้ว
     if req.status != 'Pending':
         flash('คำร้องนี้ได้รับการพิจารณาไปแล้ว ไม่สามารถแก้ไขได้อีก', 'error')
         return redirect(url_for('admin_requests'))
@@ -1497,7 +1479,7 @@ def login():
     content = """
     <div class="max-w-md mx-auto my-12 bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xl">
         <div class="text-center mb-8">
-            <div class="w-14 h-14 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center font-black text-2xl mx-auto mb-3">IS</div>
+            <img src="/static/images/logo.png" alt="IS RMUTTO Logo" class="h-16 mx-auto mb-3 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO';">
             <h2 class="text-2xl font-black text-slate-900">เข้าสู่ระบบ</h2>
             <p class="text-xs text-slate-500 mt-1">ธนาคารหน่วยกิต สาขาวิชาระบบสารสนเทศ มทร.ตะวันออก</p>
         </div>
