@@ -138,7 +138,7 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     return " ".join(parts)
 
 # ==========================================
-# Layout Template (แก้ไขแถบเมนูทึบแสงแบบ Solid)
+# Layout Template (ปรับสีทึบแน่น 100% Solid Sky Blue)
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -153,10 +153,10 @@ LAYOUT_TEMPLATE = """
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f0f9ff; }
-        .hero-sky { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%); }
+        .hero-sky { background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 50%, #38bdf8 100%); }
         .sidebar-transition { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .card-hover { transition: all 0.25s ease-in-out; }
-        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -10px rgba(14, 165, 233, 0.15); }
+        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -10px rgba(14, 165, 233, 0.2); }
         .sidebar-expanded { width: 270px; }
         .sidebar-collapsed { width: 85px; }
         .sidebar-collapsed .nav-text { display: none; }
@@ -166,91 +166,91 @@ LAYOUT_TEMPLATE = """
         .sidebar-collapsed .toggle-icon { transform: rotate(180deg); }
     </style>
 </head>
-<body class="bg-sky-50/50 min-h-screen text-slate-800 antialiased flex flex-col md:flex-row">
+<body class="bg-sky-50 min-h-screen text-slate-800 antialiased flex flex-col md:flex-row">
 
-    <!-- Mobile Top Header (ปรับสีทึบ 100% ป้องกันภาพซ้อน) -->
-    <div class="md:hidden bg-sky-100 text-slate-800 p-3 flex justify-between items-center sticky top-0 z-50 border-b border-sky-200 shadow-md">
+    <!-- Mobile Top Header (สีฟ้าทึบแน่น 100% ไม่ซ้อน) -->
+    <div class="md:hidden bg-sky-200 text-slate-900 p-3.5 flex justify-between items-center sticky top-0 z-50 border-b-2 border-sky-300 shadow-md">
         <a href="/" class="flex items-center gap-2 px-2 py-1">
             <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="h-10 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50?text=IS+RMUTTO';">
         </a>
-        <button id="mobile-toggle" class="p-2 text-sky-800 hover:text-sky-950 focus:outline-none"><i class="fa-solid fa-bars text-xl"></i></button>
+        <button id="mobile-toggle" class="p-2 text-sky-900 hover:text-black focus:outline-none"><i class="fa-solid fa-bars text-2xl"></i></button>
     </div>
 
-    <!-- Collapsible Left Sidebar (ปรับพื้นหลังทึบ bg-sky-100 ป้องกันภาพซ้อนตอนเปิดในมือถือ) -->
-    <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100 text-slate-700 min-h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-xl border-r border-sky-200 hidden md:flex shrink-0 w-full md:w-auto">
+    <!-- Collapsible Left Sidebar (ปรับเป็นสีฟ้าทึบแน่น bg-sky-200 / bg-sky-100 ป้องกันการซ้อนทับ 100%) -->
+    <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-200 text-slate-800 min-h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-2xl border-r-2 border-sky-300 hidden md:flex shrink-0 w-full md:w-auto">
         
-        <!-- Header Logo Zone -->
-        <div class="p-4 flex flex-col border-b border-sky-200 bg-sky-200/40">
+        <!-- Header Logo Zone (ไม่มีโปร่งใส ทึบ 100%) -->
+        <div class="p-4 flex flex-col border-b-2 border-sky-300 bg-sky-300">
             <a href="/" class="flex items-center justify-center overflow-hidden py-2 px-2 group">
                 <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="w-full max-h-20 object-contain logo-img-full transition-transform group-hover:scale-105" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO+Credit+Bank';">
                 <div class="logo-img-small hidden">
-                    <div class="w-11 h-11 bg-gradient-to-tr from-sky-500 to-blue-600 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md">IS</div>
+                    <div class="w-11 h-11 bg-sky-600 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md">IS</div>
                 </div>
             </a>
 
             <!-- Toggle Button -->
-            <div class="mt-3 pt-2 border-t border-sky-200/60 hidden md:flex justify-center">
-                <button id="sidebar-toggle" class="w-full py-1.5 px-3 rounded-xl bg-sky-200 hover:bg-sky-300 text-sky-800 flex items-center justify-center gap-2 transition-all group border border-sky-300/50">
+            <div class="mt-3 pt-2 border-t border-sky-400 hidden md:flex justify-center">
+                <button id="sidebar-toggle" class="w-full py-1.5 px-3 rounded-xl bg-sky-100 hover:bg-white text-sky-900 flex items-center justify-center gap-2 transition-all group border border-sky-300 font-bold">
                     <i class="fa-solid fa-chevron-left text-xs toggle-icon transition-transform duration-300"></i>
-                    <span class="nav-text text-xs font-bold text-sky-800">ย่อแถบเมนู</span>
+                    <span class="nav-text text-xs font-bold text-sky-900">ย่อแถบเมนู</span>
                 </button>
             </div>
         </div>
 
-        <!-- Navigation Links -->
-        <div class="flex-grow p-4 space-y-1.5 overflow-y-auto">
-            <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-2">เมนูหลัก</p>
+        <!-- Navigation Links (พื้นหลังสีทึบ) -->
+        <div class="flex-grow p-4 space-y-1.5 overflow-y-auto bg-sky-200">
+            <p class="section-title text-[11px] font-black text-sky-800 uppercase tracking-wider px-3 mb-2 pt-2">เมนูหลัก</p>
             
-            <a href="/" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                <i class="fa-solid fa-house text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
-                <span class="nav-text font-semibold">หน้าแรก</span>
+            <a href="/" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-800 hover:text-sky-950 hover:bg-sky-300 transition-all font-bold text-sm group">
+                <i class="fa-solid fa-house text-lg w-6 text-center text-sky-700 group-hover:text-sky-900 transition-colors"></i>
+                <span class="nav-text">หน้าแรก</span>
             </a>
 
             {% if session.get('user_id') %}
                 {% if session.get('role') in ['admin', 'superadmin'] %}
-                    <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
-                    <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-users text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
-                        <span class="nav-text font-semibold">รายชื่อนักศึกษา</span>
+                    <p class="section-title text-[11px] font-black text-sky-800 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
+                    <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-800 hover:text-sky-950 hover:bg-sky-300 transition-all font-bold text-sm group">
+                        <i class="fa-solid fa-users text-lg w-6 text-center text-sky-700 group-hover:text-sky-900 transition-colors"></i>
+                        <span class="nav-text">รายชื่อนักศึกษา</span>
                     </a>
-                    <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
-                        <span class="nav-text font-semibold">คำร้องเทียบโอน</span>
+                    <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-800 hover:text-sky-950 hover:bg-sky-300 transition-all font-bold text-sm group">
+                        <i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-700 group-hover:text-sky-900 transition-colors"></i>
+                        <span class="nav-text">คำร้องเทียบโอน</span>
                     </a>
-                    <a href="/admin/profile_requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-user-pen text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
-                        <span class="nav-text font-semibold">คำร้องแก้ไขข้อมูล</span>
+                    <a href="/admin/profile_requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-800 hover:text-sky-950 hover:bg-sky-300 transition-all font-bold text-sm group">
+                        <i class="fa-solid fa-user-pen text-lg w-6 text-center text-sky-700 group-hover:text-sky-900 transition-colors"></i>
+                        <span class="nav-text">คำร้องแก้ไขข้อมูล</span>
                     </a>
-                    <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sky-900 bg-sky-200 border border-sky-300 hover:bg-sky-300 transition-all font-medium text-sm group mt-2">
-                        <i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-600"></i>
-                        <span class="nav-text font-bold">เพิ่ม/จัดการเจ้าหน้าที่</span>
+                    <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sky-950 bg-sky-300 border border-sky-400 hover:bg-sky-400 transition-all font-extrabold text-sm group mt-2">
+                        <i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-800"></i>
+                        <span class="nav-text">เพิ่ม/จัดการเจ้าหน้าที่</span>
                     </a>
                 {% else %}
-                    <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา IS</p>
-                    <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-magnifying-glass text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
-                        <span class="nav-text font-semibold">ค้นหารายวิชา</span>
+                    <p class="section-title text-[11px] font-black text-sky-800 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา IS</p>
+                    <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-800 hover:text-sky-950 hover:bg-sky-300 transition-all font-bold text-sm group">
+                        <i class="fa-solid fa-magnifying-glass text-lg w-6 text-center text-sky-700 group-hover:text-sky-900 transition-colors"></i>
+                        <span class="nav-text">ค้นหารายวิชา</span>
                     </a>
-                    <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
-                        <span class="nav-text font-semibold">ยื่นคำขอเทียบโอน</span>
+                    <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-800 hover:text-sky-950 hover:bg-sky-300 transition-all font-bold text-sm group">
+                        <i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-sky-700 group-hover:text-sky-900 transition-colors"></i>
+                        <span class="nav-text">ยื่นคำขอเทียบโอน</span>
                     </a>
-                    <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-graduation-cap text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
-                        <span class="nav-text font-semibold">หน่วยกิตสะสม</span>
+                    <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-800 hover:text-sky-950 hover:bg-sky-300 transition-all font-bold text-sm group">
+                        <i class="fa-solid fa-graduation-cap text-lg w-6 text-center text-sky-700 group-hover:text-sky-900 transition-colors"></i>
+                        <span class="nav-text">หน่วยกิตสะสม</span>
                     </a>
-                    <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
-                        <span class="nav-text font-semibold">ประวัติคำขอ</span>
+                    <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-800 hover:text-sky-950 hover:bg-sky-300 transition-all font-bold text-sm group">
+                        <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-sky-700 group-hover:text-sky-900 transition-colors"></i>
+                        <span class="nav-text">ประวัติคำขอ</span>
                     </a>
                 {% endif %}
             {% else %}
                 <div class="pt-4 space-y-2">
-                    <a href="/login" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group border border-sky-200">
-                        <i class="fa-solid fa-right-to-bracket text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i>
-                        <span class="nav-text font-semibold">เข้าสู่ระบบ</span>
+                    <a href="/login" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-800 hover:text-sky-950 hover:bg-sky-300 transition-all font-bold text-sm group border border-sky-300">
+                        <i class="fa-solid fa-right-to-bracket text-lg w-6 text-center text-sky-700 group-hover:text-sky-900"></i>
+                        <span class="nav-text">เข้าสู่ระบบ</span>
                     </a>
-                    <a href="/register" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold transition-all text-sm group shadow-md shadow-sky-400/30">
+                    <a href="/register" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-extrabold transition-all text-sm group shadow-md">
                         <i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-100"></i>
                         <span class="nav-text">ลงทะเบียนนักศึกษา</span>
                     </a>
@@ -260,17 +260,17 @@ LAYOUT_TEMPLATE = """
 
         <!-- Footer Profile Link -->
         {% if session.get('user_id') %}
-            <div class="p-4 border-t border-sky-200 bg-sky-200/40">
-                <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl hover:bg-sky-200/60 transition-all group border border-transparent">
-                    <div class="w-9 h-9 rounded-xl bg-sky-200 text-sky-700 font-bold flex items-center justify-center shrink-0">
+            <div class="p-4 border-t-2 border-sky-300 bg-sky-300">
+                <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl hover:bg-sky-200 transition-all group border border-transparent">
+                    <div class="w-9 h-9 rounded-xl bg-sky-100 text-sky-800 font-bold flex items-center justify-center shrink-0">
                         <i class="fa-regular fa-user"></i>
                     </div>
                     <div class="flex flex-col min-w-0 nav-text">
-                        <span class="text-xs font-bold text-slate-800 truncate">{{ session.get('fullname', 'ผู้ใช้งาน') }}</span>
-                        <span class="text-[10px] text-sky-700 capitalize font-medium">{% if session.get('role') in ['admin', 'superadmin'] %}เจ้าหน้าที่{% else %}นักศึกษาสาขา IS{% endif %}</span>
+                        <span class="text-xs font-black text-slate-900 truncate">{{ session.get('fullname', 'ผู้ใช้งาน') }}</span>
+                        <span class="text-[10px] text-sky-800 capitalize font-extrabold">{% if session.get('role') in ['admin', 'superadmin'] %}เจ้าหน้าที่{% else %}นักศึกษาสาขา IS{% endif %}</span>
                     </div>
                 </a>
-                <a href="/logout" class="mt-2 flex items-center gap-3 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all">
+                <a href="/logout" class="mt-2 flex items-center gap-3 px-3 py-2 text-xs font-extrabold text-rose-700 hover:bg-rose-100 rounded-xl transition-all">
                     <i class="fa-solid fa-arrow-right-from-bracket text-sm w-6 text-center"></i>
                     <span class="nav-text">ออกจากระบบ</span>
                 </a>
@@ -302,18 +302,18 @@ LAYOUT_TEMPLATE = """
             {{ content | safe }}
         </main>
 
-        <!-- Footer ด้านล่างทึบแสง -->
-        <footer class="bg-sky-100 text-slate-600 mt-auto border-t border-sky-200">
+        <!-- Footer ด้านล่างสีฟ้าทึบแน่น 100% -->
+        <footer class="bg-sky-200 text-slate-800 mt-auto border-t-2 border-sky-300 shadow-md">
             <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-center md:text-left">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-semibold text-center md:text-left">
                     <div class="flex items-center gap-3">
                         <img src="/static/images/logo.png" alt="IS RMUTTO Logo" class="h-10 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50?text=IS+RMUTTO';">
                         <div>
-                            <p class="text-sky-900 font-bold text-sm">สาขาวิชาระบบสารสนเทศ (Information Systems)</p>
-                            <p class="text-slate-600 mt-0.5">คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก</p>
+                            <p class="text-sky-950 font-black text-sm">สาขาวิชาระบบสารสนเทศ (Information Systems)</p>
+                            <p class="text-slate-700 mt-0.5 font-bold">คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก</p>
                         </div>
                     </div>
-                    <div class="text-slate-500 leading-relaxed font-semibold">
+                    <div class="text-slate-700 leading-relaxed font-extrabold">
                         © 2026 Credit Bank System (Information Systems Major).
                     </div>
                 </div>
@@ -402,8 +402,8 @@ def home():
         content = """
         <div class="max-w-5xl mx-auto py-10 md:py-16 grid md:grid-cols-2 gap-10 items-center">
             <div>
-                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800 mb-5 border border-sky-200">
-                    <i class="fa-solid fa-laptop-code text-sky-500"></i> สาขาวิชาระบบสารสนเทศ (IS) มทร.ตะวันออก
+                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-sky-200 text-sky-900 mb-5 border border-sky-300">
+                    <i class="fa-solid fa-laptop-code text-sky-600"></i> สาขาวิชาระบบสารสนเทศ (IS) มทร.ตะวันออก
                 </span>
                 
                 <div class="space-y-2 mb-6">
@@ -413,31 +413,31 @@ def home():
                     <p class="text-3xl sm:text-4xl font-extrabold text-sky-600 leading-relaxed">
                         เทียบโอน Thai & Chula MOOC
                     </p>
-                    <p class="text-3xl sm:text-4xl font-extrabold text-blue-500 leading-relaxed">
+                    <p class="text-3xl sm:text-4xl font-extrabold text-blue-600 leading-relaxed">
                         สาขาวิชาระบบสารสนเทศ
                     </p>
                 </div>
 
-                <p class="text-slate-600 mb-8 leading-relaxed text-base font-normal">
+                <p class="text-slate-600 mb-8 leading-relaxed text-base font-medium">
                     ระบบสะสมและเทียบโอนหน่วยกิตดิจิทัล สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก เพื่อการเรียนรู้ผ่านระบบ ThaiMOOC และ ChulaMOOC
                 </p>
                 <div class="flex flex-wrap gap-4">
-                    <a href="/register" class="px-7 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-sky-400/30 hover:shadow-xl transition-all inline-flex items-center gap-2">
+                    <a href="/register" class="px-7 py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-2xl shadow-lg transition-all inline-flex items-center gap-2">
                         <i class="fa-solid fa-user-plus text-sky-100"></i> สมัครสมาชิกนักศึกษา IS
                     </a>
-                    <a href="/login" class="px-7 py-3.5 bg-white text-slate-800 border border-sky-200 font-bold rounded-2xl hover:bg-sky-50 transition shadow-sm inline-flex items-center gap-2">
+                    <a href="/login" class="px-7 py-3.5 bg-white text-slate-800 border-2 border-sky-200 font-bold rounded-2xl hover:bg-sky-100 transition shadow-sm inline-flex items-center gap-2">
                         เข้าสู่ระบบ
                     </a>
                 </div>
             </div>
 
             <!-- Hero Zone -->
-            <div class="hero-sky p-8 rounded-3xl text-center shadow-lg relative overflow-hidden border border-sky-200 flex flex-col items-center justify-center">
+            <div class="hero-sky p-8 rounded-3xl text-center shadow-lg relative overflow-hidden border-2 border-sky-300 flex flex-col items-center justify-center">
                 <div class="mb-4 w-full max-w-xs flex justify-center py-2">
                     <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank Logo" class="w-full max-h-28 object-contain drop-shadow" onerror="this.onerror=null; this.src='https://via.placeholder.com/300x150?text=IS+RMUTTO+Credit+Bank';">
                 </div>
-                <h3 class="text-xl font-black text-slate-800 mb-1">Information Systems</h3>
-                <p class="text-slate-600 text-xs leading-relaxed max-w-sm mx-auto font-medium">ระบบคลังหน่วยกิตการเรียนรู้ผ่านสื่อออนไลน์ ThaiMOOC / ChulaMOOC สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ</p>
+                <h3 class="text-xl font-black text-slate-900 mb-1">Information Systems</h3>
+                <p class="text-slate-700 text-xs leading-relaxed max-w-sm mx-auto font-bold">ระบบคลังหน่วยกิตการเรียนรู้ผ่านสื่อออนไลน์ ThaiMOOC / ChulaMOOC สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ</p>
             </div>
         </div>
         """
@@ -465,40 +465,40 @@ def home():
         content = f"""
         <div class="mb-8">
             <h2 class="text-2xl font-extrabold text-slate-900">ยินดีต้อนรับ, เจ้าหน้าที่ประจำสาขาวิชาระบบสารสนเทศ</h2>
-            <p class="text-slate-500 text-sm mt-1">แผงควบคุมระบบตรวจสอบและอนุมัติสำหรับเจ้าหน้าที่ ({user.fullname})</p>
+            <p class="text-slate-600 text-sm mt-1 font-semibold">แผงควบคุมระบบตรวจสอบและอนุมัติสำหรับเจ้าหน้าที่ ({user.fullname})</p>
         </div>
 
         <div class="mb-8">
-            <a href="/admin/manage_admins" class="bg-gradient-to-r from-sky-500 to-blue-600 text-white p-7 rounded-3xl shadow-md flex items-center justify-between hover:opacity-95 transition-all block border border-sky-300">
+            <a href="/admin/manage_admins" class="bg-sky-600 hover:bg-sky-700 text-white p-7 rounded-3xl shadow-md flex items-center justify-between transition-all block border-2 border-sky-400">
                 <div>
                     <div class="flex items-center gap-2 mb-2">
                         <span class="bg-white/20 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm border border-white/30">แอดมินจัดการ</span>
                         <h3 class="text-2xl font-extrabold text-white">➕ เพิ่มเจ้าหน้าที่ตรวจงานระบบสารสนเทศ</h3>
                     </div>
-                    <p class="text-sm text-sky-100">เพิ่มบัญชีเจ้าหน้าที่ใหม่ด้วยเลขบัตรประชาชนและรหัสผ่านส่วนตัว (ปัจจุบันมีเจ้าหน้าที่ {total_admins} คน)</p>
+                    <p class="text-sm text-sky-100 font-medium">เพิ่มบัญชีเจ้าหน้าที่ใหม่ด้วยเลขบัตรประชาชนและรหัสผ่านส่วนตัว (ปัจจุบันมีเจ้าหน้าที่ {total_admins} คน)</p>
                 </div>
                 <div class="w-14 h-14 bg-white/20 text-white rounded-2xl flex items-center justify-center text-2xl shrink-0 backdrop-blur"><i class="fa-solid fa-user-plus"></i></div>
             </a>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <a href="/admin/students" class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between hover:border-sky-400 transition card-hover">
+            <a href="/admin/students" class="bg-white p-6 rounded-2xl border-2 border-sky-100 shadow-sm flex items-center justify-between hover:border-sky-400 transition card-hover">
                 <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">นักศึกษาสาขา IS ในระบบ</p>
+                    <p class="text-xs font-black text-slate-500 uppercase tracking-wider mb-1">นักศึกษาสาขา IS ในระบบ</p>
                     <h3 class="text-3xl font-black text-slate-900">{total_members} <span class="text-xs text-slate-400 font-normal">คน</span></h3>
                 </div>
-                <div class="w-12 h-12 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-users"></i></div>
+                <div class="w-12 h-12 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-users"></i></div>
             </a>
-            <a href="/admin/requests" class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between hover:border-amber-400 transition card-hover">
+            <a href="/admin/requests" class="bg-white p-6 rounded-2xl border-2 border-sky-100 shadow-sm flex items-center justify-between hover:border-amber-400 transition card-hover">
                 <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">คำร้องเทียบโอนค้างพิจารณา</p>
+                    <p class="text-xs font-black text-slate-500 uppercase tracking-wider mb-1">คำร้องเทียบโอนค้างพิจารณา</p>
                     <h3 class="text-3xl font-black text-amber-500">{pending_credits} <span class="text-xs text-slate-400 font-normal">รายการ</span></h3>
                 </div>
                 <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-file-signature"></i></div>
             </a>
-            <a href="/admin/profile_requests" class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between hover:border-indigo-400 transition card-hover">
+            <a href="/admin/profile_requests" class="bg-white p-6 rounded-2xl border-2 border-sky-100 shadow-sm flex items-center justify-between hover:border-indigo-400 transition card-hover">
                 <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">คำร้องแก้ไขข้อมูลค้างพิจารณา</p>
+                    <p class="text-xs font-black text-slate-500 uppercase tracking-wider mb-1">คำร้องแก้ไขข้อมูลค้างพิจารณา</p>
                     <h3 class="text-3xl font-black text-indigo-500">{pending_edits} <span class="text-xs text-slate-400 font-normal">รายการ</span></h3>
                 </div>
                 <div class="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-user-pen"></i></div>
@@ -521,37 +521,37 @@ def home():
     <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
             <h2 class="text-3xl font-black text-slate-900">สวัสดีครับ, {user.prefix or ''} {user.fullname}</h2>
-            <p class="text-sm font-bold text-sky-600 mt-1"><i class="fa-solid fa-id-card mr-1 text-sky-400"></i> รหัสนักศึกษา: {user.member_id or '-'} (สาขาวิชาระบบสารสนเทศ)</p>
+            <p class="text-sm font-black text-sky-700 mt-1"><i class="fa-solid fa-id-card mr-1 text-sky-500"></i> รหัสนักศึกษา: {user.member_id or '-'} (สาขาวิชาระบบสารสนเทศ)</p>
         </div>
-        <a href="/submit_credit" class="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold px-6 py-3 rounded-2xl shadow-md shadow-sky-400/20 transition-all inline-flex items-center gap-2 text-sm shrink-0">
+        <a href="/submit_credit" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-6 py-3 rounded-2xl shadow-md transition-all inline-flex items-center gap-2 text-sm shrink-0">
             <i class="fa-solid fa-file-circle-plus text-sky-100"></i> ยื่นคำขอเทียบโอนออนไลน์
         </a>
     </div>
 
     <!-- Stat Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between card-hover">
+        <div class="bg-white p-6 rounded-2xl border-2 border-sky-100 shadow-sm flex items-center justify-between card-hover">
             <div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">หน่วยกิตสะสมทั้งหมด</p>
                 <h3 class="text-3xl font-black text-sky-600">{approved_credits} <span class="text-xs font-medium text-slate-400">หน่วยกิต</span></h3>
             </div>
-            <div class="w-12 h-12 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-graduation-cap"></i></div>
+            <div class="w-12 h-12 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-graduation-cap"></i></div>
         </div>
-        <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between card-hover">
+        <div class="bg-white p-6 rounded-2xl border-2 border-sky-100 shadow-sm flex items-center justify-between card-hover">
             <div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">รออนุมัติเทียบโอน</p>
                 <h3 class="text-3xl font-black text-amber-500">{pending_credits} <span class="text-xs font-medium text-slate-400">หน่วยกิต</span></h3>
             </div>
             <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-hourglass-half"></i></div>
         </div>
-        <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between card-hover">
+        <div class="bg-white p-6 rounded-2xl border-2 border-sky-100 shadow-sm flex items-center justify-between card-hover">
             <div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">คำร้องขอเทียบโอน</p>
                 <h3 class="text-3xl font-black text-slate-800">{len(user_requests)} <span class="text-xs font-medium text-slate-400">รายการ</span></h3>
             </div>
             <div class="w-12 h-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-list-check"></i></div>
         </div>
-        <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between card-hover">
+        <div class="bg-white p-6 rounded-2xl border-2 border-sky-100 shadow-sm flex items-center justify-between card-hover">
             <div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">เป้าหมายหลักสูตร IS</p>
                 <h3 class="text-3xl font-black text-emerald-500">120 <span class="text-xs font-medium text-slate-400">หน่วยกิต</span></h3>
@@ -562,18 +562,18 @@ def home():
 
     <!-- Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white p-6 rounded-3xl border border-sky-100 shadow-sm">
+        <div class="bg-white p-6 rounded-3xl border-2 border-sky-100 shadow-sm">
             <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <i class="fa-solid fa-chart-pie text-sky-500"></i> ความก้าวหน้าหน่วยกิตสาขา IS
+                <i class="fa-solid fa-chart-pie text-sky-600"></i> ความก้าวหน้าหน่วยกิตสาขา IS
             </h3>
             <div class="w-full max-w-[240px] mx-auto py-2">
                 <canvas id="creditDoughnutChart"></canvas>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-3xl border border-sky-100 shadow-sm lg:col-span-2">
+        <div class="bg-white p-6 rounded-3xl border-2 border-sky-100 shadow-sm lg:col-span-2">
             <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <i class="fa-solid fa-chart-column text-sky-500"></i> สรุปการสะสมหน่วยกิตจำแนกตามหมวดวิชา
+                <i class="fa-solid fa-chart-column text-sky-600"></i> สรุปการสะสมหน่วยกิตจำแนกตามหมวดวิชา
             </h3>
             <div class="w-full h-56">
                 <canvas id="creditBarChart"></canvas>
@@ -583,26 +583,26 @@ def home():
 
     <!-- Quick Access Actions -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <a href="/available_courses" class="bg-white p-7 rounded-3xl border border-sky-100 shadow-sm card-hover block group">
-            <div class="w-12 h-12 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+        <a href="/available_courses" class="bg-white p-7 rounded-3xl border-2 border-sky-100 shadow-sm card-hover block group">
+            <div class="w-12 h-12 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
                 <i class="fa-solid fa-magnifying-glass"></i>
             </div>
             <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-sky-600 transition-colors">ค้นหารายวิชา</h3>
-            <p class="text-xs text-slate-500 leading-relaxed">ค้นหารายวิชาออนไลน์ที่เทียบโอนเข้าหลักสูตรสาขาวิชาระบบสารสนเทศ</p>
+            <p class="text-xs text-slate-500 leading-relaxed font-medium">ค้นหารายวิชาออนไลน์ที่เทียบโอนเข้าหลักสูตรสาขาวิชาระบบสารสนเทศ</p>
         </a>
-        <a href="/submit_credit" class="bg-white p-7 rounded-3xl border border-sky-100 shadow-sm card-hover block group">
+        <a href="/submit_credit" class="bg-white p-7 rounded-3xl border-2 border-sky-100 shadow-sm card-hover block group">
             <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
                 <i class="fa-solid fa-file-pen"></i>
             </div>
             <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-amber-500 transition-colors">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
-            <p class="text-xs text-slate-500 leading-relaxed">เลือกวิชาที่ต้องเรียนเพิ่ม พร้อมอัปโหลดรูปเกียรติบัตรยื่นเทียบโอน</p>
+            <p class="text-xs text-slate-500 leading-relaxed font-medium">เลือกวิชาที่ต้องเรียนเพิ่ม พร้อมอัปโหลดรูปเกียรติบัตรยื่นเทียบโอน</p>
         </a>
-        <a href="/request_edit_profile" class="bg-white p-7 rounded-3xl border border-sky-100 shadow-sm card-hover block group">
+        <a href="/request_edit_profile" class="bg-white p-7 rounded-3xl border-2 border-sky-100 shadow-sm card-hover block group">
             <div class="w-12 h-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
                 <i class="fa-solid fa-user-gear"></i>
             </div>
             <h3 class="font-bold text-slate-900 text-lg mb-1 group-hover:text-purple-500 transition-colors">ขอแก้ไขข้อมูลส่วนตัว</h3>
-            <p class="text-xs text-slate-500 leading-relaxed">แจ้งเรื่องขอเปลี่ยนชื่อ-สกุล อีเมล หรือเบอร์โทรศัพท์ถึงเจ้าหน้าที่ประจำสาขา</p>
+            <p class="text-xs text-slate-500 leading-relaxed font-medium">แจ้งเรื่องขอเปลี่ยนชื่อ-สกุล อีเมล หรือเบอร์โทรศัพท์ถึงเจ้าหน้าที่ประจำสาขา</p>
         </a>
     </div>
 
@@ -614,7 +614,7 @@ def home():
                 labels: ['อนุมัติแล้ว', 'รอพิจารณา', 'คงเหลือถึงเป้าหมาย'],
                 datasets: [{{
                     data: [{approved_credits}, {pending_credits}, {remaining_credits}],
-                    backgroundColor: ['#0284c7', '#f59e0b', '#e2e8f0'],
+                    backgroundColor: ['#0284c7', '#f59e0b', '#cbd5e1'],
                     borderWidth: 0
                 }}]
             }},
@@ -635,7 +635,7 @@ def home():
                 datasets: [{{
                     label: 'หน่วยกิตสะสม (อนุมัติแล้ว)',
                     data: [{approved_credits}, {approved_credits}, 0],
-                    backgroundColor: '#38bdf8',
+                    backgroundColor: '#0284c7',
                     borderRadius: 8
                 }}]
             }},
@@ -675,75 +675,75 @@ def available_courses():
 
     cards = ""
     for c in filtered_courses:
-        badge_provider = "bg-sky-100 text-sky-800 border-sky-200" if c['provider'] == 'ThaiMOOC' else "bg-amber-100 text-amber-800 border-amber-200"
-        mooc_items_html = "".join([f'<li class="flex items-start gap-1.5"><i class="fa-solid fa-angle-right text-sky-500 mt-1 shrink-0"></i><span>{m}</span></li>' for m in c['mooc_list']])
+        badge_provider = "bg-sky-200 text-sky-900 border-sky-300" if c['provider'] == 'ThaiMOOC' else "bg-amber-100 text-amber-900 border-amber-300"
+        mooc_items_html = "".join([f'<li class="flex items-start gap-1.5"><i class="fa-solid fa-angle-right text-sky-600 mt-1 shrink-0"></i><span>{m}</span></li>' for m in c['mooc_list']])
 
         cards += f"""
-        <div class="bg-white rounded-3xl border border-sky-100 p-6 shadow-sm flex flex-col justify-between card-hover">
+        <div class="bg-white rounded-3xl border-2 border-sky-100 p-6 shadow-sm flex flex-col justify-between card-hover">
             <div>
-                <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-sky-50">
-                    <span class="font-mono text-xs font-bold bg-sky-50 text-sky-700 px-3 py-1 rounded-xl border border-sky-100 shrink-0">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-sky-100">
+                    <span class="font-mono text-xs font-bold bg-sky-100 text-sky-800 px-3 py-1 rounded-xl border border-sky-200 shrink-0">
                         {c['code']}
                     </span>
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <span class="px-2.5 py-1 rounded-xl text-[11px] font-bold border {badge_provider} shrink-0">
+                        <span class="px-2.5 py-1 rounded-xl text-[11px] font-black border {badge_provider} shrink-0">
                             {c['provider']}
                         </span>
-                        <span class="bg-slate-50 text-slate-600 text-[11px] px-2.5 py-1 rounded-xl font-bold border border-slate-200 shrink-0">
+                        <span class="bg-slate-100 text-slate-700 text-[11px] px-2.5 py-1 rounded-xl font-bold border border-slate-300 shrink-0">
                             {c['group']}
                         </span>
                     </div>
                 </div>
 
                 <h3 class="text-lg font-extrabold text-slate-900 mb-2 leading-snug">{c['name']}</h3>
-                <p class="text-xs text-slate-500 font-medium mb-3"><i class="fa-solid fa-graduation-cap text-sky-400 mr-1"></i> สาขาวิชาระบบสารสนเทศ (3 หน่วยกิต)</p>
+                <p class="text-xs text-slate-500 font-bold mb-3"><i class="fa-solid fa-graduation-cap text-sky-500 mr-1"></i> สาขาวิชาระบบสารสนเทศ (3 หน่วยกิต)</p>
                 
-                <div class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 mb-4">
-                    <p class="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1">
-                        <i class="fa-solid fa-laptop-code text-sky-600"></i> บทเรียนออนไลน์ที่ต้องเรียนเพิ่ม ({c['provider']}):
+                <div class="bg-sky-50 p-4 rounded-2xl border border-sky-200 mb-4">
+                    <p class="text-xs font-black text-slate-800 mb-2 flex items-center gap-1">
+                        <i class="fa-solid fa-laptop-code text-sky-700"></i> บทเรียนออนไลน์ที่ต้องเรียนเพิ่ม ({c['provider']}):
                     </p>
-                    <ul class="text-xs text-slate-600 leading-relaxed space-y-1.5 font-medium">
+                    <ul class="text-xs text-slate-700 leading-relaxed space-y-1.5 font-semibold">
                         {mooc_items_html}
                     </ul>
                 </div>
             </div>
 
-            <div class="border-t border-sky-50 pt-4 mt-2">
+            <div class="border-t border-sky-100 pt-4 mt-2">
                 <div class="flex justify-between items-center text-xs text-slate-600 mb-4">
-                    <span><i class="fa-regular fa-clock mr-1 text-slate-400"></i> รวมเวลาเรียน: <b>{c['hours']}</b></span>
-                    <span class="font-black text-sky-700 text-sm bg-sky-50 px-3 py-1 rounded-xl border border-sky-100">{c['credits']} หน่วยกิต</span>
+                    <span><i class="fa-regular fa-clock mr-1 text-slate-500"></i> รวมเวลาเรียน: <b>{c['hours']}</b></span>
+                    <span class="font-black text-sky-800 text-sm bg-sky-100 px-3 py-1 rounded-xl border border-sky-200">{c['credits']} หน่วยกิต</span>
                 </div>
-                {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['provider'] + '&credits=' + str(c['credits']) + '&cat=' + c['group'] + '&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="block text-center w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3 rounded-2xl text-sm transition shadow-md shadow-sky-400/20">ยื่นเทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
+                {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['provider'] + '&credits=' + str(c['credits']) + '&cat=' + c['group'] + '&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="block text-center w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-2xl text-sm transition shadow-md">ยื่นเทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
             </div>
         </div>
         """
 
     content = f"""
-    <div class="hero-sky text-slate-800 p-8 rounded-3xl shadow-sm mb-8 flex flex-col md:flex-row justify-between items-center gap-6 border border-sky-200">
+    <div class="hero-sky text-slate-900 p-8 rounded-3xl shadow-sm mb-8 flex flex-col md:flex-row justify-between items-center gap-6 border-2 border-sky-300">
         <div>
-            <span class="bg-white/80 text-sky-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block border border-white">Search Courses</span>
-            <h2 class="text-3xl font-extrabold text-slate-900">🔍 ค้นหารายวิชาเทียบโอนหลักสูตร</h2>
-            <p class="text-slate-600 text-xs mt-1.5 leading-relaxed">ค้นหารายวิชาในหลักสูตรสาขาวิชาระบบสารสนเทศ และบทเรียนออนไลน์ที่ใช้เปิดเทียบโอน</p>
+            <span class="bg-white text-sky-900 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block border border-sky-200">Search Courses</span>
+            <h2 class="text-3xl font-black text-slate-900">🔍 ค้นหารายวิชาเทียบโอนหลักสูตร</h2>
+            <p class="text-slate-800 text-xs mt-1.5 leading-relaxed font-bold">ค้นหารายวิชาในหลักสูตรสาขาวิชาระบบสารสนเทศ และบทเรียนออนไลน์ที่ใช้เปิดเทียบโอน</p>
         </div>
-        <div class="bg-white/80 backdrop-blur px-6 py-4 rounded-2xl border border-white text-center shrink-0 shadow-sm">
-            <span class="text-xs text-slate-500 block font-medium">จำนวนรายวิชาที่พบ</span>
-            <span class="text-3xl font-black text-sky-600">{len(filtered_courses)}</span> <span class="text-xs text-slate-500">/ {len(IS_THAIMOOC_COURSES)} วิชา</span>
+        <div class="bg-white px-6 py-4 rounded-2xl border-2 border-sky-200 text-center shrink-0 shadow-sm">
+            <span class="text-xs text-slate-600 block font-bold">จำนวนรายวิชาที่พบ</span>
+            <span class="text-3xl font-black text-sky-700">{len(filtered_courses)}</span> <span class="text-xs text-slate-600 font-bold">/ {len(IS_THAIMOOC_COURSES)} วิชา</span>
         </div>
     </div>
 
-    <form method="GET" action="/available_courses" class="bg-white p-6 rounded-3xl border border-sky-100 shadow-sm mb-8 space-y-4">
+    <form method="GET" action="/available_courses" class="bg-white p-6 rounded-3xl border-2 border-sky-100 shadow-sm mb-8 space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-globe mr-1 text-sky-400"></i> สื่อการเรียนรู้ (Provider)</label>
-                <select name="provider" onchange="this.form.submit()" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-globe mr-1 text-sky-500"></i> สื่อการเรียนรู้ (Provider)</label>
+                <select name="provider" onchange="this.form.submit()" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                     <option value="ทั้งหมด" {'selected' if selected_provider=='ทั้งหมด' or not selected_provider else ''}>ทุกระบบ (Thai & Chula MOOC)</option>
                     <option value="ThaiMOOC" {'selected' if selected_provider=='ThaiMOOC' else ''}>ThaiMOOC</option>
                     <option value="ChulaMOOC" {'selected' if selected_provider=='ChulaMOOC' else ''}>ChulaMOOC</option>
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-layer-group mr-1 text-sky-500"></i> หมวดวิชาหลักสูตร</label>
-                <select name="group" onchange="this.form.submit()" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-layer-group mr-1 text-sky-600"></i> หมวดวิชาหลักสูตร</label>
+                <select name="group" onchange="this.form.submit()" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                     <option value="ทั้งหมด" {'selected' if selected_group=='ทั้งหมด' or not selected_group else ''}>ทุกหมวดวิชา</option>
                     <option value="หมวดวิชาศึกษาทั่วไป" {'selected' if selected_group=='หมวดวิชาศึกษาทั่วไป' else ''}>หมวดวิชาศึกษาทั่วไป</option>
                     <option value="หมวดวิชาแกน" {'selected' if selected_group=='หมวดวิชาแกน' else ''}>หมวดวิชาแกน</option>
@@ -751,17 +751,17 @@ def available_courses():
                 </select>
             </div>
             <div class="md:col-span-2">
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-magnifying-glass mr-1 text-sky-500"></i> ค้นหาด้วยรหัสวิชา / ชื่อวิชา / วิชา MOOC</label>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-magnifying-glass mr-1 text-sky-600"></i> ค้นหาด้วยรหัสวิชา / ชื่อวิชา / วิชา MOOC</label>
                 <div class="flex gap-2">
-                    <input type="text" name="search" value="{search_query}" placeholder="พิมพ์ชื่อวิชา..." class="w-full px-4 py-3 border border-sky-100 rounded-2xl text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
-                    <button type="submit" class="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold px-7 py-3 rounded-2xl text-sm transition shadow-md shadow-sky-400/20 shrink-0">ค้นหา</button>
+                    <input type="text" name="search" value="{search_query}" placeholder="พิมพ์ชื่อวิชา..." class="w-full px-4 py-3 border-2 border-sky-100 rounded-2xl text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
+                    <button type="submit" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-7 py-3 rounded-2xl text-sm transition shadow-md shrink-0">ค้นหา</button>
                 </div>
             </div>
         </div>
     </form>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {cards if cards else '<div class="col-span-3 text-center py-16 text-slate-400 bg-white rounded-3xl border border-sky-100">ไม่พบรายวิชาที่ตรงกับเงื่อนไขการค้นหา</div>'}
+        {cards if cards else '<div class="col-span-3 text-center py-16 text-slate-400 bg-white rounded-3xl border-2 border-sky-100 font-bold">ไม่พบรายวิชาที่ตรงกับเงื่อนไขการค้นหา</div>'}
     </div>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
@@ -854,17 +854,17 @@ def submit_credit():
     is_subject_rows = ""
     if selected_major == "สาขาวิชาระบบสารสนเทศ":
         for item in IS_THAIMOOC_COURSES:
-            provider_badge = '<span class="bg-sky-100 text-sky-800 border border-sky-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ThaiMOOC</span>' if item['provider'] == 'ThaiMOOC' else '<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ChulaMOOC</span>'
+            provider_badge = '<span class="bg-sky-200 text-sky-900 border border-sky-300 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ThaiMOOC</span>' if item['provider'] == 'ThaiMOOC' else '<span class="bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ChulaMOOC</span>'
             mooc_multiline = "<br>".join([f"• {m}" for m in item['mooc_list']])
 
             is_subject_rows += f"""
-            <tr class="border-b border-sky-50 text-xs hover:bg-sky-50/50 transition">
-                <td class="py-3.5 px-3 font-mono font-bold text-slate-500">{item['code']}</td>
+            <tr class="border-b border-sky-100 text-xs hover:bg-sky-100 transition">
+                <td class="py-3.5 px-3 font-mono font-bold text-slate-600">{item['code']}</td>
                 <td class="py-3.5 px-3 font-extrabold text-slate-900">{item['name']}<br>{provider_badge}</td>
-                <td class="py-3.5 px-3 text-slate-700 leading-relaxed max-w-xs font-medium">{mooc_multiline}</td>
-                <td class="py-3.5 px-3 text-center font-bold text-slate-700">{item['hours']}</td>
+                <td class="py-3.5 px-3 text-slate-700 leading-relaxed max-w-xs font-semibold">{mooc_multiline}</td>
+                <td class="py-3.5 px-3 text-center font-bold text-slate-800">{item['hours']}</td>
                 <td class="py-3.5 px-3 text-center">
-                    <a href="/submit_credit?course={item['name']}&inst={item['provider']}&credits={item['credits']}&cat={item['group']}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm">
+                    <a href="/submit_credit?course={item['name']}&inst={item['provider']}&credits={item['credits']}&cat={item['group']}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm">
                         เลือกวิชานี้เพื่อยื่นเทียบโอน
                     </a>
                 </td>
@@ -873,19 +873,19 @@ def submit_credit():
 
     content = f"""
     <div class="max-w-4xl mx-auto space-y-8">
-        <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
+        <div class="bg-white p-8 rounded-3xl border-2 border-sky-100 shadow-xl">
             <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0"><i class="fa-solid fa-graduation-cap"></i></div>
+                <div class="w-10 h-10 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0"><i class="fa-solid fa-graduation-cap"></i></div>
                 <div>
                     <h3 class="text-xl font-black text-slate-900">เลือกสาขาวิชาเพื่อดูรายวิชาที่ต้องเรียนเพิ่ม</h3>
-                    <p class="text-xs text-slate-500">เลือกสาขาวิชาเพื่อแสดงบทเรียนออนไลน์ ThaiMOOC / ChulaMOOC ทั้งหมดในหลักสูตร</p>
+                    <p class="text-xs text-slate-500 font-medium">เลือกสาขาวิชาเพื่อแสดงบทเรียนออนไลน์ ThaiMOOC / ChulaMOOC ทั้งหมดในหลักสูตร</p>
                 </div>
             </div>
 
             <form method="GET" action="/submit_credit" class="mb-4">
                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">เลือกสาขาวิชาของคุณ <span class="text-rose-500">*</span></label>
                 <div class="flex gap-3">
-                    <select name="major_select" onchange="this.form.submit()" class="w-full border border-sky-100 rounded-2xl p-3.5 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-extrabold text-sky-800">
+                    <select name="major_select" onchange="this.form.submit()" class="w-full border-2 border-sky-100 rounded-2xl p-3.5 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-extrabold text-sky-900">
                         <option value="" {'selected' if not selected_major else ''}>-- กรุณาเลือกสาขาวิชาเพื่อเริ่มใช้งาน --</option>
                         <option value="สาขาวิชาระบบสารสนเทศ" {'selected' if selected_major=='สาขาวิชาระบบสารสนเทศ' else ''}>สาขาวิชาระบบสารสนเทศ (Information Systems - IS)</option>
                     </select>
@@ -893,16 +893,16 @@ def submit_credit():
             </form>
 
             {'''
-            <div class="bg-amber-50 border border-amber-200/80 p-4 rounded-2xl mb-6 flex items-start gap-3 text-amber-900 text-xs leading-relaxed font-medium">
-                <i class="fa-solid fa-circle-info text-amber-500 text-base shrink-0 mt-0.5"></i>
+            <div class="bg-amber-100 border border-amber-300 p-4 rounded-2xl mb-6 flex items-start gap-3 text-amber-950 text-xs leading-relaxed font-bold">
+                <i class="fa-solid fa-circle-info text-amber-600 text-base shrink-0 mt-0.5"></i>
                 <div>
                     <b>คำแนะนำสำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ:</b> ตารางด้านล่างแสดงรายวิชาในหลักสูตรและบทเรียนออนไลน์ ThaiMOOC / ChulaMOOC ที่ต้องเรียนเพิ่ม คุณสามารถคลิกปุ่ม <b>"เลือกวิชานี้เพื่อยื่นเทียบโอน"</b> เพื่อดึงข้อมูลลงแบบฟอร์มด้านล่างได้ทันที
                 </div>
             </div>
 
-            <div class="overflow-x-auto rounded-2xl border border-sky-100">
+            <div class="overflow-x-auto rounded-2xl border-2 border-sky-100">
                 <table class="w-full text-left min-w-[650px]">
-                    <thead class="bg-sky-50 text-sky-800 text-[11px] font-bold uppercase tracking-wider border-b border-sky-100">
+                    <thead class="bg-sky-200 text-sky-950 text-[11px] font-black uppercase tracking-wider border-b border-sky-300">
                         <tr>
                             <th class="py-3 px-3">รหัสวิชา</th>
                             <th class="py-3 px-3">รายวิชาในหลักสูตร IS</th>
@@ -911,22 +911,22 @@ def submit_credit():
                             <th class="py-3 px-3 text-center">การดำเนินการ</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-sky-50">
+                    <tbody class="divide-y divide-sky-100">
                         ''' + is_subject_rows + '''
                     </tbody>
                 </table>
             </div>
             ''' if selected_major == 'สาขาวิชาระบบสารสนเทศ' else '''
-            <div class="text-center py-10 border border-dashed border-sky-200 rounded-2xl bg-sky-50/30">
-                <i class="fa-solid fa-arrow-up text-sky-500 text-2xl mb-2"></i>
-                <p class="text-xs font-bold text-slate-500">กรุณาเลือก "สาขาวิชาระบบสารสนเทศ" จากช่องด้านบน เพื่อดูตารางวิชาที่ต้องเรียนเพิ่ม</p>
+            <div class="text-center py-10 border-2 border-dashed border-sky-300 rounded-2xl bg-sky-50">
+                <i class="fa-solid fa-arrow-up text-sky-600 text-2xl mb-2"></i>
+                <p class="text-xs font-bold text-slate-600">กรุณาเลือก "สาขาวิชาระบบสารสนเทศ" จากช่องด้านบน เพื่อดูตารางวิชาที่ต้องเรียนเพิ่ม</p>
             </div>
             '''}
         </div>
 
-        <div id="form_section" class="bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl scroll-mt-6">
+        <div id="form_section" class="bg-white p-8 sm:p-10 rounded-3xl border-2 border-sky-100 shadow-xl scroll-mt-6">
             <h3 class="text-2xl font-black text-slate-900 mb-2">แบบฟอร์มยื่นคำขอเทียบโอนหน่วยกิต</h3>
-            <p class="text-xs text-slate-500 mb-6">กรอกรายละเอียดและแนบรูปภาพวุฒิบัตร/เกียรติบัตร ที่เรียนจบมาแล้ว</p>
+            <p class="text-xs text-slate-500 mb-6 font-medium">กรอกรายละเอียดและแนบรูปภาพวุฒิบัตร/เกียรติบัตร ที่เรียนจบมาแล้ว</p>
             
             <form method="POST" enctype="multipart/form-data" class="space-y-4">
                 <input type="hidden" name="major" value="สาขาวิชาระบบสารสนเทศ">
@@ -934,11 +934,11 @@ def submit_credit():
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อรายวิชาในหลักสูตร *</label>
-                    <input type="text" name="course_name" value="{init_course}" required placeholder="เช่น คุณภาพการใช้ชีวิต" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                    <input type="text" name="course_name" value="{init_course}" required placeholder="เช่น คุณภาพการใช้ชีวิต" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">แหล่งเรียนรู้ / ระบบออนไลน์ *</label>
-                    <select name="institution" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                    <select name="institution" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                         <option value="ThaiMOOC" {'selected' if init_inst=='ThaiMOOC' else ''}>ThaiMOOC</option>
                         <option value="ChulaMOOC" {'selected' if init_inst=='ChulaMOOC' else ''}>ChulaMOOC</option>
                     </select>
@@ -946,11 +946,11 @@ def submit_credit():
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">จำนวนหน่วยกิต *</label>
-                        <input type="number" name="credits" value="{init_credits}" min="1" max="10" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                        <input type="number" name="credits" value="{init_credits}" min="1" max="10" required class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">หมวดวิชาหลักสูตร</label>
-                        <select name="category" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                        <select name="category" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                             <option value="หมวดวิชาศึกษาทั่วไป" {'selected' if init_cat=='หมวดวิชาศึกษาทั่วไป' else ''}>หมวดวิชาศึกษาทั่วไป</option>
                             <option value="หมวดวิชาแกน" {'selected' if init_cat=='หมวดวิชาแกน' else ''}>หมวดวิชาแกน</option>
                             <option value="หมวดวิชาเลือก" {'selected' if init_cat=='หมวดวิชาเลือก' else ''}>หมวดวิชาเลือก</option>
@@ -959,12 +959,12 @@ def submit_credit():
                 </div>
 
                 <div class="border-t border-sky-100 pt-4">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-400"></i> แนบรูปภาพเกียรติบัตร / วุฒิบัตร *</label>
-                    <input type="file" name="cert_file" accept="image/*,.pdf" class="w-full border border-sky-100 rounded-2xl p-2.5 text-xs bg-sky-50/50 font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-500 file:text-white hover:file:bg-sky-600">
-                    <p class="text-[11px] text-slate-400 mt-1">รองรับไฟล์รูปภาพ PNG, JPG, JPEG หรือ PDF ขนาดไม่เกิน 16MB</p>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-600"></i> แนบรูปภาพเกียรติบัตร / วุฒิบัตร *</label>
+                    <input type="file" name="cert_file" accept="image/*,.pdf" class="w-full border-2 border-sky-100 rounded-2xl p-2.5 text-xs bg-sky-50 font-semibold file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-600 file:text-white hover:file:bg-sky-700">
+                    <p class="text-[11px] text-slate-400 mt-1 font-medium">รองรับไฟล์รูปภาพ PNG, JPG, JPEG หรือ PDF ขนาดไม่เกิน 16MB</p>
                 </div>
 
-                <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">
+                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md text-sm mt-2">
                     <i class="fa-solid fa-paper-plane mr-1 text-sky-100"></i> ยืนยันส่งคำร้องขอเทียบโอน
                 </button>
             </form>
@@ -987,43 +987,43 @@ def history():
         status = getattr(r, 'status', 'Pending')
         
         if status == 'Pending':
-            badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอการพิจารณา</span>'
+            badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">รอการพิจารณา</span>'
             action_btn = '-'
         elif status == 'Approved':
-            badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>'
+            badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">อนุมัติแล้ว</span>'
             action_btn = '-'
         else: # Rejected
-            badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ / ให้แก้ไข</span>'
+            badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">ไม่อนุมัติ / ให้แก้ไข</span>'
             action_btn = f'<a href="/submit_credit?edit_id={r.id}#form_section" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold inline-block shadow-sm">แก้ไขเอกสารและยื่นใหม่</a>'
 
         approved_by = getattr(r, 'approved_by', '-') or '-'
-        reason_box = f'<div class="mt-1 text-xs text-rose-600 font-medium"><b>เหตุผลที่ไม่ผ่าน:</b> {r.reject_reason}</div>' if getattr(r, 'reject_reason', None) else ''
+        reason_box = f'<div class="mt-1 text-xs text-rose-600 font-bold"><b>เหตุผลที่ไม่ผ่าน:</b> {r.reject_reason}</div>' if getattr(r, 'reject_reason', None) else ''
 
-        img_preview = f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-xs text-sky-600 underline font-bold"><i class="fa-solid fa-image mr-1"></i>ดูรูปหลักฐาน</a>' if getattr(r, 'doc_img', None) and r.doc_img != 'default_doc.png' else '<span class="text-xs text-slate-400">ไม่มีแนบรูป</span>'
+        img_preview = f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-xs text-sky-600 underline font-extrabold"><i class="fa-solid fa-image mr-1"></i>ดูรูปหลักฐาน</a>' if getattr(r, 'doc_img', None) and r.doc_img != 'default_doc.png' else '<span class="text-xs text-slate-400 font-medium">ไม่มีแนบรูป</span>'
 
         rows += f"""
-        <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
-            <td class="py-4 px-4 font-mono font-bold text-slate-500">{getattr(r, 'req_code', 'TR001')}</td>
+        <tr class="border-b border-sky-100 text-sm hover:bg-sky-50 transition">
+            <td class="py-4 px-4 font-mono font-bold text-slate-600">{getattr(r, 'req_code', 'TR001')}</td>
             <td class="py-4 px-4 font-extrabold text-slate-900">
                 {getattr(r, 'course_name', '-')}<br>
                 {img_preview}
                 {reason_box}
             </td>
-            <td class="py-4 px-4 text-slate-600 font-medium">{getattr(r, 'institution', '-')}</td>
+            <td class="py-4 px-4 text-slate-700 font-bold">{getattr(r, 'institution', '-')}</td>
             <td class="py-4 px-4 font-black text-sky-600">{getattr(r, 'credits', 0)}</td>
-            <td class="py-4 px-4 text-xs text-slate-500 font-medium">{approved_by}</td>
+            <td class="py-4 px-4 text-xs text-slate-600 font-bold">{approved_by}</td>
             <td class="py-4 px-4">{badge}</td>
             <td class="py-4 px-4">{action_btn}</td>
         </tr>
         """
     content = f"""
-    <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
+    <div class="bg-white p-8 rounded-3xl border-2 border-sky-100 shadow-sm overflow-x-auto">
         <h3 class="text-xl font-black text-slate-900 mb-6">ประวัติคำร้องเทียบโอน (สาขาวิชาระบบสารสนเทศ)</h3>
         <table class="w-full text-left min-w-[750px]">
-            <thead class="bg-sky-50 border-b border-sky-100 text-xs font-bold text-sky-700 uppercase tracking-wider">
+            <thead class="bg-sky-200 border-b border-sky-300 text-xs font-black text-sky-950 uppercase tracking-wider">
                 <tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">วิชา / หลักฐาน</th><th class="py-3 px-4">ระบบที่เรียน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">เจ้าหน้าที่ผู้ตรวจ</th><th class="py-3 px-4">สถานะ</th><th class="py-3 px-4">จัดการ</th></tr>
             </thead>
-            <tbody>{rows if rows else '<tr><td colspan="7" class="py-12 text-center text-slate-400">ไม่มีรายการประวัติคำร้อง</td></tr>'}</tbody>
+            <tbody>{rows if rows else '<tr><td colspan="7" class="py-12 text-center text-slate-400 font-bold">ไม่มีรายการประวัติคำร้อง</td></tr>'}</tbody>
         </table>
     </div>
     """
@@ -1044,19 +1044,19 @@ def credits():
     for r in approved_requests:
         approved_by = getattr(r, 'approved_by', 'เจ้าหน้าที่') or 'เจ้าหน้าที่'
         rows += f"""
-        <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
+        <tr class="border-b border-sky-100 text-sm hover:bg-sky-50 transition">
             <td class="py-4 px-4 font-extrabold text-slate-900">{getattr(r, 'course_name', '-')}</td>
-            <td class="py-4 px-4 text-slate-600 font-medium">{getattr(r, 'institution', '-')}</td>
+            <td class="py-4 px-4 text-slate-700 font-bold">{getattr(r, 'institution', '-')}</td>
             <td class="py-4 px-4 font-black text-sky-600">{getattr(r, 'credits', 0)} หน่วยกิต</td>
-            <td class="py-4 px-4 text-xs text-slate-500 font-medium">{approved_by}</td>
+            <td class="py-4 px-4 text-xs text-slate-600 font-bold">{approved_by}</td>
         </tr>
         """
     content = f"""
     <div class="mb-6"><h2 class="text-2xl font-black text-slate-900">💳 หน่วยกิตสะสมสาขา IS ({total_approved} หน่วยกิต)</h2></div>
-    <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
+    <div class="bg-white p-8 rounded-3xl border-2 border-sky-100 shadow-sm overflow-x-auto">
         <table class="w-full text-left min-w-[600px]">
-            <thead class="bg-sky-50 border-b border-sky-100 text-xs font-bold text-sky-700 uppercase tracking-wider"><tr><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">ระบบที่เรียน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">ผู้อนุมัติ</th></tr></thead>
-            <tbody>{rows if rows else '<tr><td colspan="4" class="py-12 text-center text-slate-400 text-sm">ยังไม่มีรายการหน่วยกิตที่ได้รับการอนุมัติ</td></tr>'}</tbody>
+            <thead class="bg-sky-200 border-b border-sky-300 text-xs font-black text-sky-950 uppercase tracking-wider"><tr><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">ระบบที่เรียน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">ผู้อนุมัติ</th></tr></thead>
+            <tbody>{rows if rows else '<tr><td colspan="4" class="py-12 text-center text-slate-400 font-bold text-sm">ยังไม่มีรายการหน่วยกิตที่ได้รับการอนุมัติ</td></tr>'}</tbody>
         </table>
     </div>
     """
@@ -1070,17 +1070,17 @@ def profile():
     display_title = "เจ้าหน้าที่" if user.role in ['admin', 'superadmin'] else f"{user.prefix or ''} {user.fullname}"
     
     content = f"""
-    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
+    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border-2 border-sky-100 shadow-xl">
         <h3 class="text-2xl font-black text-slate-900 mb-1">{display_title}</h3>
-        <p class="text-sm font-bold text-sky-600 mb-1">รหัสนักศึกษา: {user.member_id or '-'}</p>
-        <p class="text-xs text-slate-500 mb-6">สาขาวิชาระบบสารสนเทศ คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ</p>
+        <p class="text-sm font-black text-sky-700 mb-1">รหัสนักศึกษา: {user.member_id or '-'}</p>
+        <p class="text-xs text-slate-500 mb-6 font-bold">สาขาวิชาระบบสารสนเทศ คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ</p>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 bg-sky-50/50 p-6 rounded-2xl border border-sky-100 text-sm">
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ชื่อ-สกุล</span> <span class="font-bold text-slate-800">{user.fullname}</span></div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เลขบัตรประชาชน</span> <span class="font-bold text-slate-800">{user.id_card or '-'}</span></div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เบอร์โทรศัพท์</span> <span class="font-bold text-slate-800">{user.phone or '-'}</span></div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">อีเมล</span> <span class="font-bold text-slate-800">{user.email or '-'}</span></div>
-            <div class="md:col-span-2"><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ที่อยู่ตามทะเบียนบ้าน/ที่อยู่ปัจจุบัน</span> <span class="font-bold text-slate-800">{user.address or '-'}</span></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 bg-sky-50 p-6 rounded-2xl border border-sky-200 text-sm">
+            <div><span class="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">ชื่อ-สกุล</span> <span class="font-extrabold text-slate-900">{user.fullname}</span></div>
+            <div><span class="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">เลขบัตรประชาชน</span> <span class="font-extrabold text-slate-900">{user.id_card or '-'}</span></div>
+            <div><span class="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">เบอร์โทรศัพท์</span> <span class="font-extrabold text-slate-900">{user.phone or '-'}</span></div>
+            <div><span class="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">อีเมล</span> <span class="font-extrabold text-slate-900">{user.email or '-'}</span></div>
+            <div class="md:col-span-2"><span class="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">ที่อยู่ตามทะเบียนบ้าน/ที่อยู่ปัจจุบัน</span> <span class="font-extrabold text-slate-900">{user.address or '-'}</span></div>
         </div>
     </div>
     """
@@ -1128,14 +1128,14 @@ def request_edit_profile():
         return redirect(url_for('profile'))
 
     content = f"""
-    <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
+    <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border-2 border-sky-100 shadow-xl">
         <h3 class="text-2xl font-black text-slate-900 mb-2">ส่งคำร้องขอแก้ไขข้อมูลส่วนตัว</h3>
-        <p class="text-xs text-slate-500 mb-6">กรอกข้อมูลที่ต้องการอัปเดตเพื่อส่งเรื่องให้เจ้าหน้าที่ประจำสาขาอนุมัติ</p>
+        <p class="text-xs text-slate-500 mb-6 font-medium">กรอกข้อมูลที่ต้องการอัปเดตเพื่อส่งเรื่องให้เจ้าหน้าที่ประจำสาขาอนุมัติ</p>
         <form method="POST" class="space-y-4">
             <div class="grid grid-cols-3 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">คำนำหน้าใหม่</label>
-                    <select name="prefix" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                    <select name="prefix" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                         <option value="นาย" {'selected' if user.prefix=='นาย' else ''}>นาย</option>
                         <option value="นาง" {'selected' if user.prefix=='นาง' else ''}>นาง</option>
                         <option value="นางสาว" {'selected' if user.prefix=='นางสาว' else ''}>นางสาว</option>
@@ -1143,18 +1143,18 @@ def request_edit_profile():
                 </div>
                 <div class="col-span-2">
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อ-นามสกุลใหม่</label>
-                    <input type="text" name="fullname" value="{user.fullname}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                    <input type="text" name="fullname" value="{user.fullname}" required class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์ใหม่</label><input type="tel" name="phone" value="{user.phone or ''}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium"></div>
-                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมลใหม่</label><input type="email" name="email" value="{user.email or ''}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์ใหม่</label><input type="tel" name="phone" value="{user.phone or ''}" required class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมลใหม่</label><input type="email" name="email" value="{user.email or ''}" required class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold"></div>
             </div>
             <div>
                 <label class="block text-xs font-bold text-rose-600 uppercase tracking-wider mb-1.5">เหตุผลในการขอแก้ไข *</label>
-                <textarea name="reason" rows="3" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium"></textarea>
+                <textarea name="reason" rows="3" required class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold"></textarea>
             </div>
-            <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">ส่งคำร้องให้เจ้าหน้าที่พิจารณา</button>
+            <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md text-sm mt-2">ส่งคำร้องให้เจ้าหน้าที่พิจารณา</button>
         </form>
     </div>
     """
@@ -1174,37 +1174,37 @@ def admin_requests():
         status_val = getattr(r, 'status', 'Pending')
         
         if status_val == 'Pending':
-            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอการพิจารณา</span>'
-            action_col = f'<a href="/admin/review/{r.id}" class="bg-gradient-to-r from-sky-500 to-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-sky-600 hover:to-blue-700 inline-block shadow-sm">พิจารณาคำร้อง</a>'
+            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">รอการพิจารณา</span>'
+            action_col = f'<a href="/admin/review/{r.id}" class="bg-sky-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-sky-700 inline-block shadow-sm">พิจารณาคำร้อง</a>'
         elif status_val == 'Approved':
-            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>'
-            action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200"><i class="fa-solid fa-lock mr-1"></i>พิจารณาแล้ว</span>'
+            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">อนุมัติแล้ว</span>'
+            action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-300"><i class="fa-solid fa-lock mr-1"></i>พิจารณาแล้ว</span>'
         else:
-            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ / ให้แก้ไข</span>'
-            action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200"><i class="fa-solid fa-lock mr-1"></i>พิจารณาแล้ว</span>'
+            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">ไม่อนุมัติ / ให้แก้ไข</span>'
+            action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-300"><i class="fa-solid fa-lock mr-1"></i>พิจารณาแล้ว</span>'
 
         student_name = r.user.fullname if getattr(r, 'user', None) else '-'
         student_code = r.user.member_id if getattr(r, 'user', None) else '-'
 
         rows += f"""
-        <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
-            <td class="py-4 px-4 font-mono font-bold text-sky-600">{getattr(r, 'req_code', 'TR001')}</td>
-            <td class="py-4 px-4 font-bold text-slate-900">{student_name}<br><span class="text-xs text-sky-600 font-semibold">({student_code})</span></td>
-            <td class="py-4 px-4 text-slate-700 font-medium">{getattr(r, 'course_name', '-')}</td>
-            <td class="py-4 px-4 text-slate-500 text-xs font-medium">{getattr(r, 'date_submitted', '-')}</td>
+        <tr class="border-b border-sky-100 text-sm hover:bg-sky-50 transition">
+            <td class="py-4 px-4 font-mono font-bold text-sky-700">{getattr(r, 'req_code', 'TR001')}</td>
+            <td class="py-4 px-4 font-bold text-slate-900">{student_name}<br><span class="text-xs text-sky-700 font-extrabold">({student_code})</span></td>
+            <td class="py-4 px-4 text-slate-700 font-bold">{getattr(r, 'course_name', '-')}</td>
+            <td class="py-4 px-4 text-slate-500 text-xs font-semibold">{getattr(r, 'date_submitted', '-')}</td>
             <td class="py-4 px-4">{status_badge}</td>
             <td class="py-4 px-4">{action_col}</td>
         </tr>
         """
 
     content = f"""
-    <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
+    <div class="bg-white p-8 rounded-3xl border-2 border-sky-100 shadow-sm overflow-x-auto">
         <h3 class="text-xl font-black text-slate-900 mb-6">รายการคำร้องเทียบโอนทั้งหมด (สาขาวิชาระบบสารสนเทศ)</h3>
         <table class="w-full text-left min-w-[650px]">
-            <thead class="bg-sky-50 border-b border-sky-100 text-xs font-bold text-sky-700 uppercase tracking-wider">
+            <thead class="bg-sky-200 border-b border-sky-300 text-xs font-black text-sky-950 uppercase tracking-wider">
                 <tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">ชื่อนักศึกษา</th><th class="py-3 px-4">วิชาที่ขอเทียบโอน</th><th class="py-3 px-4">วันที่ยื่น</th><th class="py-3 px-4">สถานะ</th><th class="py-3 px-4">จัดการ</th></tr>
             </thead>
-            <tbody>{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีคำร้องในระบบ</td></tr>'}</tbody>
+            <tbody>{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400 font-bold">ไม่มีคำร้องในระบบ</td></tr>'}</tbody>
         </table>
     </div>
     """
@@ -1246,24 +1246,24 @@ def admin_review(req_id):
     student_name = req.user.fullname if getattr(req, 'user', None) else '-'
     student_code = req.user.member_id if getattr(req, 'user', None) else '-'
 
-    img_html = f'<a href="/static/uploads/{req.doc_img}" target="_blank"><img src="/static/uploads/{req.doc_img}" class="max-h-64 rounded-2xl border border-sky-100 shadow-sm hover:opacity-90 transition"></a>' if getattr(req, 'doc_img', None) and req.doc_img != 'default_doc.png' else '<span class="text-xs text-slate-400">ไม่มีแนบรูปภาพหลักฐาน</span>'
+    img_html = f'<a href="/static/uploads/{req.doc_img}" target="_blank"><img src="/static/uploads/{req.doc_img}" class="max-h-64 rounded-2xl border-2 border-sky-200 shadow-sm hover:opacity-90 transition"></a>' if getattr(req, 'doc_img', None) and req.doc_img != 'default_doc.png' else '<span class="text-xs text-slate-400 font-bold">ไม่มีแนบรูปภาพหลักฐาน</span>'
 
     content = f"""
-    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
+    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border-2 border-sky-100 shadow-xl">
         <h3 class="text-2xl font-black text-slate-900 mb-6">พิจารณาคำร้องเทียบโอน #{getattr(req, 'req_code', 'TR001')}</h3>
         
-        <div class="grid md:grid-cols-2 gap-5 text-sm mb-6 bg-sky-50/50 p-6 rounded-2xl border border-sky-100">
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ผู้ยื่นคำร้อง</span><b class="text-slate-800">{student_name}</b> (รหัส: {student_code})</div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">หมวดวิชา</span><b class="text-slate-800">{getattr(req, 'category', 'หมวดวิชาศึกษาทั่วไป')}</b></div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">รายวิชา</span><b class="text-slate-800">{getattr(req, 'course_name', '-')}</b> ({getattr(req, 'credits', 0)} หน่วยกิต)</div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ระบบออนไลน์</span><b class="text-slate-800">{getattr(req, 'institution', '-')}</b></div>
-            <div class="md:col-span-2"><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-2">หลักฐานเกียรติบัตรที่แนบมา</span><div>{img_html}</div></div>
+        <div class="grid md:grid-cols-2 gap-5 text-sm mb-6 bg-sky-50 p-6 rounded-2xl border border-sky-200">
+            <div><span class="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">ผู้ยื่นคำร้อง</span><b class="text-slate-900">{student_name}</b> (รหัส: {student_code})</div>
+            <div><span class="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">หมวดวิชา</span><b class="text-slate-900">{getattr(req, 'category', 'หมวดวิชาศึกษาทั่วไป')}</b></div>
+            <div><span class="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">รายวิชา</span><b class="text-slate-900">{getattr(req, 'course_name', '-')}</b> ({getattr(req, 'credits', 0)} หน่วยกิต)</div>
+            <div><span class="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">ระบบออนไลน์</span><b class="text-slate-900">{getattr(req, 'institution', '-')}</b></div>
+            <div class="md:col-span-2"><span class="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-2">หลักฐานเกียรติบัตรที่แนบมา</span><div>{img_html}</div></div>
         </div>
 
-        <form method="POST" class="space-y-4 border-t border-sky-100 pt-6">
+        <form method="POST" class="space-y-4 border-t border-sky-200 pt-6">
             <div>
                 <label class="block text-xs font-bold text-rose-600 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-triangle-exclamation mr-1"></i> กรณีไม่ผ่านการพิจารณา: ระบุเหตุผล / สิ่งที่ให้นักศึกษาแก้ไข</label>
-                <textarea name="reject_reason" rows="3" placeholder="ระบุข้อความเพื่อแจ้งเตือนนักศึกษา เช่น รูปถ่ายวุฒิบัตรไม่ชัดเจน หรือ เรียนไม่ครบตามรายวิชาที่กำหนด..." class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-rose-500 outline-none bg-sky-50/50 font-medium"></textarea>
+                <textarea name="reject_reason" rows="3" placeholder="ระบุข้อความเพื่อแจ้งเตือนนักศึกษา เช่น รูปถ่ายวุฒิบัตรไม่ชัดเจน หรือ เรียนไม่ครบตามรายวิชาที่กำหนด..." class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-rose-500 outline-none bg-sky-50 font-semibold"></textarea>
             </div>
 
             <div class="flex justify-end gap-3 pt-2">
@@ -1297,24 +1297,24 @@ def admin_students():
             approved_credits = 0
 
         rows += f"""
-        <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
-            <td class="py-4 px-4 font-bold text-sky-600 font-mono">
+        <tr class="border-b border-sky-100 text-sm hover:bg-sky-50 transition">
+            <td class="py-4 px-4 font-bold text-sky-700 font-mono">
                 {s.member_id or '-'}<br>
-                <span class="text-xs text-slate-400 font-normal">({s.id_card or '-'})</span>
+                <span class="text-xs text-slate-500 font-normal">({s.id_card or '-'})</span>
             </td>
             <td class="py-4 px-4 font-extrabold text-slate-900">
                 {s.prefix or ''} {s.fullname}<br>
-                <span class="text-xs text-slate-500 font-normal">สาขาวิชาระบบสารสนเทศ</span>
+                <span class="text-xs text-slate-500 font-bold">สาขาวิชาระบบสารสนเทศ</span>
             </td>
-            <td class="py-4 px-4 text-xs text-slate-600 font-medium leading-relaxed">
+            <td class="py-4 px-4 text-xs text-slate-700 font-semibold leading-relaxed">
                 <i class="fa-solid fa-phone text-slate-400 mr-1"></i>{s.phone or '-'}<br>
                 <i class="fa-solid fa-envelope text-slate-400 mr-1"></i>{s.email or '-'}
             </td>
-            <td class="py-4 px-4 text-xs text-slate-600 max-w-xs leading-relaxed">
+            <td class="py-4 px-4 text-xs text-slate-700 max-w-xs leading-relaxed font-semibold">
                 {s.address or '-'}
             </td>
             <td class="py-4 px-4 font-black text-center">
-                <span class="bg-sky-50 text-sky-700 px-3 py-1 rounded-full text-xs font-bold border border-sky-100">
+                <span class="bg-sky-100 text-sky-800 px-3 py-1 rounded-full text-xs font-black border border-sky-200">
                     {approved_credits} หน่วยกิต
                 </span>
             </td>
@@ -1322,18 +1322,18 @@ def admin_students():
         """
 
     content = f"""
-    <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
+    <div class="bg-white p-8 rounded-3xl border-2 border-sky-100 shadow-sm overflow-x-auto">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div>
-                <h3 class="text-xl font-black text-slate-900"><i class="fa-solid fa-users text-sky-500 mr-2"></i>รายชื่อนักศึกษาสาขาวิชาระบบสารสนเทศ</h3>
-                <p class="text-xs text-slate-500 mt-1">แสดงข้อมูลนักศึกษาและจำนวนหน่วยกิตที่ได้รับการอนุมัติ</p>
+                <h3 class="text-xl font-black text-slate-900"><i class="fa-solid fa-users text-sky-600 mr-2"></i>รายชื่อนักศึกษาสาขาวิชาระบบสารสนเทศ</h3>
+                <p class="text-xs text-slate-500 mt-1 font-medium">แสดงข้อมูลนักศึกษาและจำนวนหน่วยกิตที่ได้รับการอนุมัติ</p>
             </div>
-            <div class="bg-sky-50 text-sky-700 px-4 py-2 rounded-2xl border border-sky-100 text-xs font-bold">
+            <div class="bg-sky-100 text-sky-900 px-4 py-2 rounded-2xl border border-sky-200 text-xs font-black">
                 นักศึกษาในระบบ: {len(students)} คน
             </div>
         </div>
         <table class="w-full text-left min-w-[700px]">
-            <thead class="bg-sky-50 border-b border-sky-100 text-xs font-bold text-sky-700 uppercase tracking-wider">
+            <thead class="bg-sky-200 border-b border-sky-300 text-xs font-black text-sky-950 uppercase tracking-wider">
                 <tr>
                     <th class="py-3 px-4">รหัสนักศึกษา / บัตรประชาชน</th>
                     <th class="py-3 px-4">ชื่อ-นามสกุล / สาขา</th>
@@ -1342,8 +1342,8 @@ def admin_students():
                     <th class="py-3 px-4 text-center">หน่วยกิตสะสม</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-sky-50">
-                {rows if rows else '<tr><td colspan="5" class="py-12 text-center text-slate-400">ยังไม่มีนักศึกษาลงทะเบียนในระบบ</td></tr>'}
+            <tbody class="divide-y divide-sky-100">
+                {rows if rows else '<tr><td colspan="5" class="py-12 text-center text-slate-400 font-bold">ยังไม่มีนักศึกษาลงทะเบียนในระบบ</td></tr>'}
             </tbody>
         </table>
     </div>
@@ -1402,16 +1402,16 @@ def register():
         return redirect(url_for('login'))
 
     content = """
-    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
+    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border-2 border-sky-100 shadow-xl">
         <div class="text-center mb-8">
             <h2 class="text-2xl font-black text-slate-900">ลงทะเบียนนักศึกษาสาขาวิชาระบบสารสนเทศ</h2>
-            <p class="text-xs text-slate-500 mt-1">กรอกข้อมูลส่วนตัวเพื่อสร้างคลังหน่วยกิต Thai/Chula MOOC</p>
+            <p class="text-xs text-slate-500 mt-1 font-medium">กรอกข้อมูลส่วนตัวเพื่อสร้างคลังหน่วยกิต Thai/Chula MOOC</p>
         </div>
         <form method="POST" class="space-y-5">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">คำนำหน้า *</label>
-                    <select name="prefix" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                    <select name="prefix" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                         <option value="นาย">นาย</option>
                         <option value="นาง">นาง</option>
                         <option value="นางสาว">นางสาว</option>
@@ -1419,47 +1419,47 @@ def register():
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อ-นามสกุล *</label>
-                    <input type="text" name="fullname" required placeholder="ชื่อ นามสกุล" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                    <input type="text" name="fullname" required placeholder="ชื่อ นามสกุล" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เลขบัตรประชาชน (13 หลัก) *</label>
-                    <input type="text" name="id_card" maxlength="13" required placeholder="เลขบัตรประชาชน" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                    <input type="text" name="id_card" maxlength="13" required placeholder="เลขบัตรประชาชน" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">วัน/เดือน/ปีเกิด *</label>
-                    <input type="date" name="dob" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                    <input type="date" name="dob" required class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์ *</label><input type="tel" name="phone" required placeholder="08X-XXX-XXXX" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium"></div>
-                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมล *</label><input type="email" name="email" required placeholder="student@rmutto.ac.th" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์ *</label><input type="tel" name="phone" required placeholder="08X-XXX-XXXX" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมล *</label><input type="email" name="email" required placeholder="student@rmutto.ac.th" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold"></div>
             </div>
 
             <div class="border-t border-sky-100 pt-4">
-                <label class="block text-xs font-bold text-sky-700 uppercase tracking-wider mb-3"><i class="fa-solid fa-house-user mr-1 text-sky-400"></i> ข้อมูลที่อยู่ตามทะเบียนบ้าน / ที่อยู่ปัจจุบัน</label>
+                <label class="block text-xs font-bold text-sky-800 uppercase tracking-wider mb-3"><i class="fa-solid fa-house-user mr-1 text-sky-600"></i> ข้อมูลที่อยู่ตามทะเบียนบ้าน / ที่อยู่ปัจจุบัน</label>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">บ้านเลขที่ *</label><input type="text" name="house_no" required placeholder="123/45" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50 font-medium"></div>
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">หมู่ที่</label><input type="text" name="moo" placeholder="1" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50 font-medium"></div>
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">ซอย / ถนน</label><input type="text" name="soi" placeholder="สุขุมวิท 21" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50 font-medium"></div>
+                    <div><label class="block text-xs font-bold text-slate-600 mb-1">บ้านเลขที่ *</label><input type="text" name="house_no" required placeholder="123/45" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm bg-sky-50 font-semibold"></div>
+                    <div><label class="block text-xs font-bold text-slate-600 mb-1">หมู่ที่</label><input type="text" name="moo" placeholder="1" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm bg-sky-50 font-semibold"></div>
+                    <div><label class="block text-xs font-bold text-slate-600 mb-1">ซอย / ถนน</label><input type="text" name="soi" placeholder="สุขุมวิท 21" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm bg-sky-50 font-semibold"></div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">ตำบล/แขวง *</label><input type="text" name="subdistrict" required placeholder="ตำบล" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50 font-medium"></div>
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">อำเภอ/เขต *</label><input type="text" name="district" required placeholder="อำเภอ" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50 font-medium"></div>
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">จังหวัด *</label><input type="text" name="province" required placeholder="จังหวัด" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50 font-medium"></div>
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">รหัสไปรษณีย์ *</label><input type="text" name="postal_code" required placeholder="10110" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50 font-medium"></div>
+                    <div><label class="block text-xs font-bold text-slate-600 mb-1">ตำบล/แขวง *</label><input type="text" name="subdistrict" required placeholder="ตำบล" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm bg-sky-50 font-semibold"></div>
+                    <div><label class="block text-xs font-bold text-slate-600 mb-1">อำเภอ/เขต *</label><input type="text" name="district" required placeholder="อำเภอ" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm bg-sky-50 font-semibold"></div>
+                    <div><label class="block text-xs font-bold text-slate-600 mb-1">จังหวัด *</label><input type="text" name="province" required placeholder="จังหวัด" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm bg-sky-50 font-semibold"></div>
+                    <div><label class="block text-xs font-bold text-slate-600 mb-1">รหัสไปรษณีย์ *</label><input type="text" name="postal_code" required placeholder="10110" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm bg-sky-50 font-semibold"></div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 border-t border-sky-100 pt-4">
-                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อผู้ใช้งาน (Username) *</label><input type="text" name="username" required placeholder="ตั้งชื่อผู้ใช้งาน" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium"></div>
-                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">รหัสผ่าน (Password) *</label><input type="password" name="password" required placeholder="กำหนดรหัสผ่าน" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อผู้ใช้งาน (Username) *</label><input type="text" name="username" required placeholder="ตั้งชื่อผู้ใช้งาน" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">รหัสผ่าน (Password) *</label><input type="password" name="password" required placeholder="กำหนดรหัสผ่าน" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold"></div>
             </div>
 
-            <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-4">
+            <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md text-sm mt-4">
                 <i class="fa-solid fa-user-plus mr-1 text-sky-100"></i> ยืนยันการลงทะเบียน
             </button>
         </form>
@@ -1487,26 +1487,26 @@ def login():
         flash('ชื่อผู้ใช้งาน/เลขบัตรประชาชน หรือรหัสผ่านไม่ถูกต้อง', 'error')
 
     content = """
-    <div class="max-w-md mx-auto my-12 bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
+    <div class="max-w-md mx-auto my-12 bg-white p-8 sm:p-10 rounded-3xl border-2 border-sky-100 shadow-xl">
         <div class="text-center mb-8">
             <div class="p-2 mb-3 inline-block">
                 <img src="/static/images/logo.png" alt="IS RMUTTO Logo" class="h-20 mx-auto object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO';">
             </div>
             <h2 class="text-2xl font-black text-slate-900">เข้าสู่ระบบ</h2>
-            <p class="text-xs text-slate-500 mt-1">ธนาคารหน่วยกิต สาขาวิชาระบบสารสนเทศ มทร.ตะวันออก</p>
+            <p class="text-xs text-slate-500 mt-1 font-bold">ธนาคารหน่วยกิต สาขาวิชาระบบสารสนเทศ มทร.ตะวันออก</p>
         </div>
         <form method="POST" class="space-y-4">
             <div>
                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อผู้ใช้งาน หรือ เลขบัตรประชาชน</label>
-                <input type="text" name="username" required placeholder="Username / เลขบัตรประชาชน 13 หลัก" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                <input type="text" name="username" required placeholder="Username / เลขบัตรประชาชน 13 หลัก" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">รหัสผ่าน (Password)</label>
-                <input type="password" name="password" required placeholder="รหัสผ่านของคุณ" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                <input type="password" name="password" required placeholder="รหัสผ่านของคุณ" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
             </div>
-            <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">เข้าสู่ระบบ</button>
+            <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md text-sm mt-2">เข้าสู่ระบบ</button>
             <div class="text-center text-xs pt-4 border-t border-sky-100">
-                <a href="/register" class="text-slate-500 hover:text-sky-600 font-medium">ยังไม่มีบัญชีนักศึกษา? <span class="font-bold text-sky-600 underline">ลงทะเบียนเข้าใช้งาน</span></a>
+                <a href="/register" class="text-slate-600 hover:text-sky-700 font-bold">ยังไม่มีบัญชีนักศึกษา? <span class="font-extrabold text-sky-700 underline">ลงทะเบียนเข้าใช้งาน</span></a>
             </div>
         </form>
     </div>
@@ -1549,25 +1549,25 @@ def manage_admins():
     admin_list = User.query.filter(User.role.in_(['admin', 'superadmin'])).all()
     rows = ""
     for a in admin_list:
-        role_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-800 border border-sky-200">ผู้ดูแลหลัก</span>' if a.role == 'superadmin' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">เจ้าหน้าที่ตรวจงาน</span>'
+        role_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-sky-200 text-sky-900 border border-sky-300">ผู้ดูแลหลัก</span>' if a.role == 'superadmin' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-200 text-slate-800 border border-slate-300">เจ้าหน้าที่ตรวจงาน</span>'
         
         rows += f"""
-        <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
+        <tr class="border-b border-sky-100 text-sm hover:bg-sky-50 transition">
             <td class="py-4 px-4 font-mono font-bold text-slate-700">{a.id_card}</td>
             <td class="py-4 px-4 font-extrabold text-slate-900">{a.fullname}</td>
-            <td class="py-4 px-4 text-xs text-slate-600 font-medium">{a.email or '-'}<br>{a.phone or '-'}</td>
+            <td class="py-4 px-4 text-xs text-slate-700 font-semibold">{a.email or '-'}<br>{a.phone or '-'}</td>
             <td class="py-4 px-4">{role_badge}</td>
         </tr>
         """
 
     content = f"""
     <div class="max-w-4xl mx-auto space-y-8">
-        <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
+        <div class="bg-white p-8 rounded-3xl border-2 border-sky-100 shadow-xl">
             <div class="flex items-center gap-3 mb-6">
-                <div class="w-12 h-12 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center font-bold text-xl shrink-0"><i class="fa-solid fa-user-plus"></i></div>
+                <div class="w-12 h-12 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center font-bold text-xl shrink-0"><i class="fa-solid fa-user-plus"></i></div>
                 <div>
                     <h3 class="text-xl font-black text-slate-900">เพิ่มบัญชีเจ้าหน้าที่ตรวจงานสาขาวิชา IS</h3>
-                    <p class="text-xs text-slate-500">กำหนดเลขบัตรประชาชนและรหัสผ่านส่วนตัวสำหรับเจ้าหน้าที่ในการเข้าสู่ระบบ</p>
+                    <p class="text-xs text-slate-500 font-medium">กำหนดเลขบัตรประชาชนและรหัสผ่านส่วนตัวสำหรับเจ้าหน้าที่ในการเข้าสู่ระบบ</p>
                 </div>
             </div>
             
@@ -1575,39 +1575,39 @@ def manage_admins():
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อ-นามสกุล เจ้าหน้าที่ <span class="text-rose-500">*</span></label>
-                        <input type="text" name="fullname" placeholder="เช่น นายสมศักดิ์ ตรวจการ" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                        <input type="text" name="fullname" placeholder="เช่น นายสมศักดิ์ ตรวจการ" required class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เลขบัตรประชาชน (13 หลัก) <span class="text-rose-500">* (Username)</span></label>
-                        <input type="text" name="id_card" maxlength="13" placeholder="เลขบัตรประชาชน 13 หลัก" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                        <input type="text" name="id_card" maxlength="13" placeholder="เลขบัตรประชาชน 13 หลัก" required class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมลเจ้าหน้าที่</label>
-                        <input type="email" name="email" placeholder="official@rmutto.ac.th" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                        <input type="email" name="email" placeholder="official@rmutto.ac.th" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์</label>
-                        <input type="tel" name="phone" placeholder="08X-XXX-XXXX" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                        <input type="tel" name="phone" placeholder="08X-XXX-XXXX" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">กำหนดรหัสผ่าน <span class="text-rose-500">*</span></label>
-                        <input type="password" name="password" placeholder="รหัสผ่านเข้าใช้งาน" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
+                        <input type="password" name="password" placeholder="รหัสผ่านเข้าใช้งาน" required class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
                     </div>
                 </div>
 
-                <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">
+                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md text-sm mt-2">
                     <i class="fa-solid fa-plus mr-1 text-sky-100"></i> บันทึกเพิ่มเจ้าหน้าที่
                 </button>
             </form>
         </div>
 
-        <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
-            <h3 class="text-xl font-black text-slate-900 mb-6"><i class="fa-solid fa-users-gear text-sky-500 mr-2"></i>รายชื่อเจ้าหน้าที่ผู้มีสิทธิ์ในระบบ</h3>
+        <div class="bg-white p-8 rounded-3xl border-2 border-sky-100 shadow-sm overflow-x-auto">
+            <h3 class="text-xl font-black text-slate-900 mb-6"><i class="fa-solid fa-users-gear text-sky-600 mr-2"></i>รายชื่อเจ้าหน้าที่ผู้มีสิทธิ์ในระบบ</h3>
             <table class="w-full text-left min-w-[600px]">
-                <thead class="bg-sky-50 border-b border-sky-100 text-xs font-bold text-sky-700 uppercase tracking-wider">
+                <thead class="bg-sky-200 border-b border-sky-300 text-xs font-black text-sky-950 uppercase tracking-wider">
                     <tr><th class="py-3 px-4">เลขบัตรประชาชน (Username)</th><th class="py-3 px-4">ชื่อ-สกุล เจ้าหน้าที่</th><th class="py-3 px-4">ข้อมูลติดต่อ</th><th class="py-3 px-4">สิทธิ์ผู้ใช้งาน</th></tr>
                 </thead>
                 <tbody>{rows}</tbody>
@@ -1628,7 +1628,7 @@ def admin_profile_requests():
 
     rows = ""
     for r in requests_list:
-        status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอพิจารณา</span>' if getattr(r, 'status', 'Pending') == 'Pending' else ('<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>' if getattr(r, 'status', '') == 'Approved' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ</span>')
+        status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">รอพิจารณา</span>' if getattr(r, 'status', 'Pending') == 'Pending' else ('<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">อนุมัติแล้ว</span>' if getattr(r, 'status', '') == 'Approved' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">ไม่อนุมัติ</span>')
         
         actions = f"""
         <div class="flex items-center gap-2">
@@ -1639,38 +1639,38 @@ def admin_profile_requests():
                 <i class="fa-solid fa-xmark"></i> ไม่อนุมัติ
             </a>
         </div>
-        """ if getattr(r, 'status', 'Pending') == 'Pending' else f'<div class="text-xs text-slate-500 font-medium">ผู้อนุมัติ:<br><span class="text-sky-600 font-bold">{getattr(r, "approved_by", "เจ้าหน้าที่") or "เจ้าหน้าที่"}</span></div>'
+        """ if getattr(r, 'status', 'Pending') == 'Pending' else f'<div class="text-xs text-slate-600 font-semibold">ผู้อนุมัติ:<br><span class="text-sky-700 font-bold">{getattr(r, "approved_by", "เจ้าหน้าที่") or "เจ้าหน้าที่"}</span></div>'
 
         student_name = r.user.fullname if getattr(r, 'user', None) else '-'
         student_code = r.user.member_id if getattr(r, 'user', None) else '-'
 
         rows += f"""
-        <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
+        <tr class="border-b border-sky-100 text-sm hover:bg-sky-50 transition">
             <td class="py-4 px-4 font-bold text-slate-900">
                 {student_name}<br>
-                <span class="text-xs text-sky-600 font-semibold">(รหัส: {student_code})</span>
+                <span class="text-xs text-sky-700 font-bold">(รหัส: {student_code})</span>
             </td>
-            <td class="py-4 px-4 text-xs leading-relaxed font-medium text-slate-700">
+            <td class="py-4 px-4 text-xs leading-relaxed font-semibold text-slate-800">
                 <b>ชื่อใหม่:</b> {getattr(r, 'new_prefix', '')}{getattr(r, 'new_fullname', '')}<br>
                 <b>โทร:</b> {getattr(r, 'new_phone', '-')}<br>
                 <b>อีเมล:</b> {getattr(r, 'new_email', '-')}<br>
                 <b>ที่อยู่ใหม่:</b> {getattr(r, 'new_address', '-')}
             </td>
-            <td class="py-4 px-4 text-xs text-slate-600 max-w-xs leading-relaxed">{getattr(r, 'reason', '-')}</td>
-            <td class="py-4 px-4 text-xs text-slate-400 font-medium">{getattr(r, 'created_at', '-')}</td>
+            <td class="py-4 px-4 text-xs text-slate-700 max-w-xs leading-relaxed font-semibold">{getattr(r, 'reason', '-')}</td>
+            <td class="py-4 px-4 text-xs text-slate-500 font-semibold">{getattr(r, 'created_at', '-')}</td>
             <td class="py-4 px-4">{status_badge}</td>
             <td class="py-4 px-4">{actions}</td>
         </tr>
         """
 
     content = f"""
-    <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
+    <div class="bg-white p-8 rounded-3xl border-2 border-sky-100 shadow-sm overflow-x-auto">
         <h3 class="text-xl font-black text-slate-900 mb-6">รายการคำร้องขอแก้ไขข้อมูลส่วนตัว</h3>
         <table class="w-full text-left min-w-[750px]">
-            <thead class="bg-sky-50 border-b border-sky-100 text-xs font-bold text-sky-700 uppercase tracking-wider">
+            <thead class="bg-sky-200 border-b border-sky-300 text-xs font-black text-sky-950 uppercase tracking-wider">
                 <tr><th class="py-3 px-4">นักศึกษา</th><th class="py-3 px-4">ข้อมูลที่ขอเปลี่ยนแปลง</th><th class="py-3 px-4">เหตุผลในการขอแก้ไข</th><th class="py-3 px-4">วันที่ยื่น</th><th class="py-3 px-4">สถานะ</th><th class="py-3 px-4">การจัดการ</th></tr>
             </thead>
-            <tbody class="divide-y divide-sky-50">{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีคำร้องขอแก้ไขข้อมูลในระบบ</td></tr>'}</tbody>
+            <tbody class="divide-y divide-sky-100">{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400 font-bold">ไม่มีคำร้องขอแก้ไขข้อมูลในระบบ</td></tr>'}</tbody>
         </table>
     </div>
     """
