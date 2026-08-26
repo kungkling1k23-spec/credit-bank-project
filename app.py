@@ -138,7 +138,7 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     return " ".join(parts)
 
 # ==========================================
-# Layout Template (โทนสีฟ้าสว่าง Sky-Blue Theme)
+# Layout Template (Sidebar ฟ้าอ่อน & No White Background Logo)
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -169,88 +169,88 @@ LAYOUT_TEMPLATE = """
 <body class="bg-sky-50/50 min-h-screen text-slate-800 antialiased flex flex-col md:flex-row">
 
     <!-- Mobile Top Header -->
-    <div class="md:hidden bg-white text-slate-800 p-3 flex justify-between items-center sticky top-0 z-50 border-b border-sky-100 shadow-sm">
-        <a href="/" class="flex items-center gap-2 bg-white px-2 py-1 rounded-xl">
+    <div class="md:hidden bg-sky-100 text-slate-800 p-3 flex justify-between items-center sticky top-0 z-50 border-b border-sky-200 shadow-sm">
+        <a href="/" class="flex items-center gap-2 px-2 py-1">
             <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="h-10 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50?text=IS+RMUTTO';">
         </a>
-        <button id="mobile-toggle" class="p-2 text-sky-600 hover:text-sky-800"><i class="fa-solid fa-bars text-xl"></i></button>
+        <button id="mobile-toggle" class="p-2 text-sky-700 hover:text-sky-900"><i class="fa-solid fa-bars text-xl"></i></button>
     </div>
 
-    <!-- Collapsible Left Sidebar (โทนสีฟ้าพาสเทล-ขาว) -->
-    <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-white text-slate-600 min-h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-lg shadow-sky-100/50 border-r border-sky-100 hidden md:flex shrink-0">
+    <!-- Collapsible Left Sidebar (ปรับเป็นสีฟ้าอ่อน + ถอดพื้นหลังขาวโลโก้) -->
+    <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100/70 text-slate-700 min-h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-lg shadow-sky-200/40 border-r border-sky-200/80 hidden md:flex shrink-0">
         
-        <!-- Header Logo Zone (ครอบด้วยการ์ดขาวเน้นโลโก้) -->
-        <div class="p-4 flex flex-col border-b border-sky-100 bg-sky-50/30">
-            <a href="/" class="flex items-center justify-center overflow-hidden py-2 px-2 bg-white rounded-2xl shadow-sm border border-sky-100 group">
-                <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="w-full max-h-20 object-contain logo-img-full transition-all group-hover:scale-105" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO+Credit+Bank';">
+        <!-- Header Logo Zone (ไม่มีกรอบสีขาว โลโก้โปร่งแสงบนพื้นหลังฟ้าอ่อน) -->
+        <div class="p-4 flex flex-col border-b border-sky-200/60 bg-sky-200/20">
+            <a href="/" class="flex items-center justify-center overflow-hidden py-2 px-2 group">
+                <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="w-full max-h-20 object-contain logo-img-full transition-transform group-hover:scale-105" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO+Credit+Bank';">
                 <div class="logo-img-small hidden">
-                    <div class="w-11 h-11 bg-gradient-to-tr from-sky-400 to-blue-500 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md">IS</div>
+                    <div class="w-11 h-11 bg-gradient-to-tr from-sky-500 to-blue-600 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md">IS</div>
                 </div>
             </a>
 
             <!-- Toggle Button -->
-            <div class="mt-3 pt-2 border-t border-sky-100 hidden md:flex justify-center">
-                <button id="sidebar-toggle" class="w-full py-1.5 px-3 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-600 flex items-center justify-center gap-2 transition-all group border border-sky-200/60">
+            <div class="mt-3 pt-2 border-t border-sky-200/50 hidden md:flex justify-center">
+                <button id="sidebar-toggle" class="w-full py-1.5 px-3 rounded-xl bg-sky-200/50 hover:bg-sky-200 text-sky-800 flex items-center justify-center gap-2 transition-all group border border-sky-300/40">
                     <i class="fa-solid fa-chevron-left text-xs toggle-icon transition-transform duration-300"></i>
-                    <span class="nav-text text-xs font-bold text-sky-700">ย่อแถบเมนู</span>
+                    <span class="nav-text text-xs font-bold text-sky-800">ย่อแถบเมนู</span>
                 </button>
             </div>
         </div>
 
         <!-- Navigation Links -->
         <div class="flex-grow p-4 space-y-1.5 overflow-y-auto">
-            <p class="section-title text-[11px] font-extrabold text-sky-400 uppercase tracking-wider px-3 mb-2 pt-2">เมนูหลัก</p>
+            <p class="section-title text-[11px] font-extrabold text-sky-600 uppercase tracking-wider px-3 mb-2 pt-2">เมนูหลัก</p>
             
-            <a href="/" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-600 hover:text-sky-700 hover:bg-sky-50 transition-all font-medium text-sm group">
-                <i class="fa-solid fa-house text-lg w-6 text-center text-sky-400 group-hover:text-sky-600 transition-colors"></i>
+            <a href="/" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                <i class="fa-solid fa-house text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                 <span class="nav-text font-semibold">หน้าแรก</span>
             </a>
 
             {% if session.get('user_id') %}
                 {% if session.get('role') in ['admin', 'superadmin'] %}
-                    <p class="section-title text-[11px] font-extrabold text-sky-400 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
-                    <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-600 hover:text-sky-700 hover:bg-sky-50 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-users text-lg w-6 text-center text-sky-400 group-hover:text-sky-600 transition-colors"></i>
+                    <p class="section-title text-[11px] font-extrabold text-sky-600 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
+                    <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-users text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">รายชื่อนักศึกษา</span>
                     </a>
-                    <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-600 hover:text-sky-700 hover:bg-sky-50 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-400 group-hover:text-sky-600 transition-colors"></i>
+                    <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">คำร้องเทียบโอน</span>
                     </a>
-                    <a href="/admin/profile_requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-600 hover:text-sky-700 hover:bg-sky-50 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-user-pen text-lg w-6 text-center text-sky-400 group-hover:text-sky-600 transition-colors"></i>
+                    <a href="/admin/profile_requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-user-pen text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">คำร้องแก้ไขข้อมูล</span>
                     </a>
-                    <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sky-700 bg-sky-50 border border-sky-200 hover:bg-sky-100 transition-all font-medium text-sm group mt-2">
-                        <i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-500"></i>
+                    <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sky-900 bg-sky-200/70 border border-sky-300/80 hover:bg-sky-200 transition-all font-medium text-sm group mt-2">
+                        <i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-600"></i>
                         <span class="nav-text font-bold">เพิ่ม/จัดการเจ้าหน้าที่</span>
                     </a>
                 {% else %}
-                    <p class="section-title text-[11px] font-extrabold text-sky-400 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา IS</p>
-                    <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-600 hover:text-sky-700 hover:bg-sky-50 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-magnifying-glass text-lg w-6 text-center text-sky-400 group-hover:text-sky-600 transition-colors"></i>
+                    <p class="section-title text-[11px] font-extrabold text-sky-600 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา IS</p>
+                    <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-magnifying-glass text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">ค้นหารายวิชา</span>
                     </a>
-                    <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-600 hover:text-sky-700 hover:bg-sky-50 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-sky-400 group-hover:text-sky-600 transition-colors"></i>
+                    <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">ยื่นคำขอเทียบโอน</span>
                     </a>
-                    <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-600 hover:text-sky-700 hover:bg-sky-50 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-graduation-cap text-lg w-6 text-center text-sky-400 group-hover:text-sky-600 transition-colors"></i>
+                    <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-graduation-cap text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">หน่วยกิตสะสม</span>
                     </a>
-                    <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-600 hover:text-sky-700 hover:bg-sky-50 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-sky-400 group-hover:text-sky-600 transition-colors"></i>
+                    <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group">
+                        <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
                         <span class="nav-text font-semibold">ประวัติคำขอ</span>
                     </a>
                 {% endif %}
             {% else %}
                 <div class="pt-4 space-y-2">
-                    <a href="/login" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-600 hover:text-sky-700 hover:bg-sky-50 transition-all font-medium text-sm group border border-sky-100">
-                        <i class="fa-solid fa-right-to-bracket text-lg w-6 text-center text-sky-400 group-hover:text-sky-600"></i>
+                    <a href="/login" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/60 transition-all font-medium text-sm group border border-sky-200/50">
+                        <i class="fa-solid fa-right-to-bracket text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i>
                         <span class="nav-text font-semibold">เข้าสู่ระบบ</span>
                     </a>
-                    <a href="/register" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-sky-400 to-blue-500 text-white font-bold transition-all text-sm group shadow-md shadow-sky-400/30">
+                    <a href="/register" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold transition-all text-sm group shadow-md shadow-sky-400/30">
                         <i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-100"></i>
                         <span class="nav-text">ลงทะเบียนนักศึกษา</span>
                     </a>
@@ -260,14 +260,14 @@ LAYOUT_TEMPLATE = """
 
         <!-- Footer Profile Link -->
         {% if session.get('user_id') %}
-            <div class="p-4 border-t border-sky-100 bg-sky-50/40">
-                <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl hover:bg-white transition-all group border border-transparent hover:border-sky-100">
-                    <div class="w-9 h-9 rounded-xl bg-sky-100 text-sky-600 font-bold flex items-center justify-center shrink-0">
+            <div class="p-4 border-t border-sky-200/60 bg-sky-200/30">
+                <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl hover:bg-sky-200/50 transition-all group border border-transparent">
+                    <div class="w-9 h-9 rounded-xl bg-sky-200 text-sky-700 font-bold flex items-center justify-center shrink-0">
                         <i class="fa-regular fa-user"></i>
                     </div>
                     <div class="flex flex-col min-w-0 nav-text">
                         <span class="text-xs font-bold text-slate-800 truncate">{{ session.get('fullname', 'ผู้ใช้งาน') }}</span>
-                        <span class="text-[10px] text-sky-600 capitalize">{% if session.get('role') in ['admin', 'superadmin'] %}เจ้าหน้าที่{% else %}นักศึกษาสาขา IS{% endif %}</span>
+                        <span class="text-[10px] text-sky-700 capitalize font-medium">{% if session.get('role') in ['admin', 'superadmin'] %}เจ้าหน้าที่{% else %}นักศึกษาสาขา IS{% endif %}</span>
                     </div>
                 </a>
                 <a href="/logout" class="mt-2 flex items-center gap-3 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all">
@@ -302,7 +302,8 @@ LAYOUT_TEMPLATE = """
             {{ content | safe }}
         </main>
 
-        <footer class="bg-white text-slate-500 mt-auto border-t border-sky-100">
+        <!-- Footer ด้านล่างปรับเป็นสีฟ้าอ่อน -->
+        <footer class="bg-sky-100/80 text-slate-600 mt-auto border-t border-sky-200/80">
             <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-center md:text-left">
                     <div class="flex items-center gap-3">
@@ -312,7 +313,7 @@ LAYOUT_TEMPLATE = """
                             <p class="text-slate-500 mt-0.5">คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ</p>
                         </div>
                     </div>
-                    <div class="text-slate-400 leading-relaxed">
+                    <div class="text-slate-500 leading-relaxed">
                         © 2026 Credit Bank System (Information Systems Major).
                     </div>
                 </div>
@@ -421,22 +422,22 @@ def home():
                     ระบบสะสมและเทียบโอนหน่วยกิตดิจิทัล สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ มทร.ตะวันออก เพื่อการเรียนรู้ผ่านระบบ ThaiMOOC และ ChulaMOOC
                 </p>
                 <div class="flex flex-wrap gap-4">
-                    <a href="/register" class="px-7 py-3.5 bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-sky-400/30 hover:shadow-xl transition-all inline-flex items-center gap-2">
+                    <a href="/register" class="px-7 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-sky-400/30 hover:shadow-xl transition-all inline-flex items-center gap-2">
                         <i class="fa-solid fa-user-plus text-sky-100"></i> สมัครสมาชิกนักศึกษา IS
                     </a>
-                    <a href="/login" class="px-7 py-3.5 bg-white text-slate-800 border border-sky-100 font-bold rounded-2xl hover:bg-sky-50 transition shadow-sm inline-flex items-center gap-2">
+                    <a href="/login" class="px-7 py-3.5 bg-white text-slate-800 border border-sky-200 font-bold rounded-2xl hover:bg-sky-50 transition shadow-sm inline-flex items-center gap-2">
                         เข้าสู่ระบบ
                     </a>
                 </div>
             </div>
 
-            <!-- Hero Card ฟ้าสดใส + ดันโลโก้เด่นด้วยการ์ดขาว -->
+            <!-- Hero Zone เอาการ์ดขาวครอบโลโก้ออก -->
             <div class="hero-sky p-8 rounded-3xl text-center shadow-lg relative overflow-hidden border border-sky-200 flex flex-col items-center justify-center">
-                <div class="bg-white/95 backdrop-blur p-6 rounded-3xl shadow-md border border-white mb-4 w-full max-w-xs flex justify-center">
-                    <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank Logo" class="w-full max-h-24 object-contain drop-shadow" onerror="this.onerror=null; this.src='https://via.placeholder.com/300x150?text=IS+RMUTTO+Credit+Bank';">
+                <div class="mb-4 w-full max-w-xs flex justify-center py-2">
+                    <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank Logo" class="w-full max-h-28 object-contain drop-shadow" onerror="this.onerror=null; this.src='https://via.placeholder.com/300x150?text=IS+RMUTTO+Credit+Bank';">
                 </div>
                 <h3 class="text-xl font-black text-slate-800 mb-1">Information Systems</h3>
-                <p class="text-slate-600 text-xs leading-relaxed max-w-sm mx-auto">ระบบคลังหน่วยกิตการเรียนรู้ผ่านสื่อออนไลน์ ThaiMOOC / ChulaMOOC สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ</p>
+                <p class="text-slate-600 text-xs leading-relaxed max-w-sm mx-auto font-medium">ระบบคลังหน่วยกิตการเรียนรู้ผ่านสื่อออนไลน์ ThaiMOOC / ChulaMOOC สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ</p>
             </div>
         </div>
         """
@@ -468,10 +469,10 @@ def home():
         </div>
 
         <div class="mb-8">
-            <a href="/admin/manage_admins" class="bg-gradient-to-r from-sky-400 to-blue-500 text-white p-7 rounded-3xl shadow-md flex items-center justify-between hover:opacity-95 transition-all block border border-sky-300">
+            <a href="/admin/manage_admins" class="bg-gradient-to-r from-sky-500 to-blue-600 text-white p-7 rounded-3xl shadow-md flex items-center justify-between hover:opacity-95 transition-all block border border-sky-300">
                 <div>
                     <div class="flex items-center gap-2 mb-2">
-                        <span class="bg-white text-sky-600 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">แอดมินจัดการ</span>
+                        <span class="bg-white/20 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm border border-white/30">แอดมินจัดการ</span>
                         <h3 class="text-2xl font-extrabold text-white">➕ เพิ่มเจ้าหน้าที่ตรวจงานระบบสารสนเทศ</h3>
                     </div>
                     <p class="text-sm text-sky-100">เพิ่มบัญชีเจ้าหน้าที่ใหม่ด้วยเลขบัตรประชาชนและรหัสผ่านส่วนตัว (ปัจจุบันมีเจ้าหน้าที่ {total_admins} คน)</p>
@@ -522,7 +523,7 @@ def home():
             <h2 class="text-3xl font-black text-slate-900">สวัสดีครับ, {user.prefix or ''} {user.fullname}</h2>
             <p class="text-sm font-bold text-sky-600 mt-1"><i class="fa-solid fa-id-card mr-1 text-sky-400"></i> รหัสนักศึกษา: {user.member_id or '-'} (สาขาวิชาระบบสารสนเทศ)</p>
         </div>
-        <a href="/submit_credit" class="bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-bold px-6 py-3 rounded-2xl shadow-md shadow-sky-400/20 transition-all inline-flex items-center gap-2 text-sm shrink-0">
+        <a href="/submit_credit" class="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold px-6 py-3 rounded-2xl shadow-md shadow-sky-400/20 transition-all inline-flex items-center gap-2 text-sm shrink-0">
             <i class="fa-solid fa-file-circle-plus text-sky-100"></i> ยื่นคำขอเทียบโอนออนไลน์
         </a>
     </div>
@@ -712,7 +713,7 @@ def available_courses():
                     <span><i class="fa-regular fa-clock mr-1 text-slate-400"></i> รวมเวลาเรียน: <b>{c['hours']}</b></span>
                     <span class="font-black text-sky-700 text-sm bg-sky-50 px-3 py-1 rounded-xl border border-sky-100">{c['credits']} หน่วยกิต</span>
                 </div>
-                {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['provider'] + '&credits=' + str(c['credits']) + '&cat=' + c['group'] + '&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="block text-center w-full bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-bold py-3 rounded-2xl text-sm transition shadow-md shadow-sky-400/20">ยื่นเทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
+                {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['provider'] + '&credits=' + str(c['credits']) + '&cat=' + c['group'] + '&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="block text-center w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3 rounded-2xl text-sm transition shadow-md shadow-sky-400/20">ยื่นเทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
             </div>
         </div>
         """
@@ -720,11 +721,11 @@ def available_courses():
     content = f"""
     <div class="hero-sky text-slate-800 p-8 rounded-3xl shadow-sm mb-8 flex flex-col md:flex-row justify-between items-center gap-6 border border-sky-200">
         <div>
-            <span class="bg-white text-sky-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block shadow-sm">Search Courses</span>
+            <span class="bg-white/80 text-sky-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block border border-white">Search Courses</span>
             <h2 class="text-3xl font-extrabold text-slate-900">🔍 ค้นหารายวิชาเทียบโอนหลักสูตร</h2>
             <p class="text-slate-600 text-xs mt-1.5 leading-relaxed">ค้นหารายวิชาในหลักสูตรสาขาวิชาระบบสารสนเทศ และบทเรียนออนไลน์ที่ใช้เปิดเทียบโอน</p>
         </div>
-        <div class="bg-white/90 backdrop-blur px-6 py-4 rounded-2xl border border-white text-center shrink-0 shadow-sm">
+        <div class="bg-white/80 backdrop-blur px-6 py-4 rounded-2xl border border-white text-center shrink-0 shadow-sm">
             <span class="text-xs text-slate-500 block font-medium">จำนวนรายวิชาที่พบ</span>
             <span class="text-3xl font-black text-sky-600">{len(filtered_courses)}</span> <span class="text-xs text-slate-500">/ {len(IS_THAIMOOC_COURSES)} วิชา</span>
         </div>
@@ -753,7 +754,7 @@ def available_courses():
                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-magnifying-glass mr-1 text-sky-500"></i> ค้นหาด้วยรหัสวิชา / ชื่อวิชา / วิชา MOOC</label>
                 <div class="flex gap-2">
                     <input type="text" name="search" value="{search_query}" placeholder="พิมพ์ชื่อวิชา..." class="w-full px-4 py-3 border border-sky-100 rounded-2xl text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
-                    <button type="submit" class="bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-bold px-7 py-3 rounded-2xl text-sm transition shadow-md shadow-sky-400/20 shrink-0">ค้นหา</button>
+                    <button type="submit" class="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold px-7 py-3 rounded-2xl text-sm transition shadow-md shadow-sky-400/20 shrink-0">ค้นหา</button>
                 </div>
             </div>
         </div>
@@ -863,7 +864,7 @@ def submit_credit():
                 <td class="py-3.5 px-3 text-slate-700 leading-relaxed max-w-xs font-medium">{mooc_multiline}</td>
                 <td class="py-3.5 px-3 text-center font-bold text-slate-700">{item['hours']}</td>
                 <td class="py-3.5 px-3 text-center">
-                    <a href="/submit_credit?course={item['name']}&inst={item['provider']}&credits={item['credits']}&cat={item['group']}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm">
+                    <a href="/submit_credit?course={item['name']}&inst={item['provider']}&credits={item['credits']}&cat={item['group']}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm">
                         เลือกวิชานี้เพื่อยื่นเทียบโอน
                     </a>
                 </td>
@@ -963,7 +964,7 @@ def submit_credit():
                     <p class="text-[11px] text-slate-400 mt-1">รองรับไฟล์รูปภาพ PNG, JPG, JPEG หรือ PDF ขนาดไม่เกิน 16MB</p>
                 </div>
 
-                <button type="submit" class="w-full bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">
+                <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">
                     <i class="fa-solid fa-paper-plane mr-1 text-sky-100"></i> ยืนยันส่งคำร้องขอเทียบโอน
                 </button>
             </form>
@@ -1153,7 +1154,7 @@ def request_edit_profile():
                 <label class="block text-xs font-bold text-rose-600 uppercase tracking-wider mb-1.5">เหตุผลในการขอแก้ไข *</label>
                 <textarea name="reason" rows="3" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium"></textarea>
             </div>
-            <button type="submit" class="w-full bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">ส่งคำร้องให้เจ้าหน้าที่พิจารณา</button>
+            <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">ส่งคำร้องให้เจ้าหน้าที่พิจารณา</button>
         </form>
     </div>
     """
@@ -1174,7 +1175,7 @@ def admin_requests():
         
         if status_val == 'Pending':
             status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอการพิจารณา</span>'
-            action_col = f'<a href="/admin/review/{r.id}" class="bg-gradient-to-r from-sky-400 to-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-sky-500 hover:to-blue-600 inline-block shadow-sm">พิจารณาคำร้อง</a>'
+            action_col = f'<a href="/admin/review/{r.id}" class="bg-gradient-to-r from-sky-500 to-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-sky-600 hover:to-blue-700 inline-block shadow-sm">พิจารณาคำร้อง</a>'
         elif status_val == 'Approved':
             status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>'
             action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200"><i class="fa-solid fa-lock mr-1"></i>พิจารณาแล้ว</span>'
@@ -1458,7 +1459,7 @@ def register():
                 <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">รหัสผ่าน (Password) *</label><input type="password" name="password" required placeholder="กำหนดรหัสผ่าน" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium"></div>
             </div>
 
-            <button type="submit" class="w-full bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-4">
+            <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-4">
                 <i class="fa-solid fa-user-plus mr-1 text-sky-100"></i> ยืนยันการลงทะเบียน
             </button>
         </form>
@@ -1488,8 +1489,8 @@ def login():
     content = """
     <div class="max-w-md mx-auto my-12 bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
         <div class="text-center mb-8">
-            <div class="bg-sky-50/60 p-4 rounded-2xl border border-sky-100 mb-3 inline-block shadow-sm">
-                <img src="/static/images/logo.png" alt="IS RMUTTO Logo" class="h-16 mx-auto object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO';">
+            <div class="p-2 mb-3 inline-block">
+                <img src="/static/images/logo.png" alt="IS RMUTTO Logo" class="h-20 mx-auto object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO';">
             </div>
             <h2 class="text-2xl font-black text-slate-900">เข้าสู่ระบบ</h2>
             <p class="text-xs text-slate-500 mt-1">ธนาคารหน่วยกิต สาขาวิชาระบบสารสนเทศ มทร.ตะวันออก</p>
@@ -1503,7 +1504,7 @@ def login():
                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">รหัสผ่าน (Password)</label>
                 <input type="password" name="password" required placeholder="รหัสผ่านของคุณ" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium">
             </div>
-            <button type="submit" class="w-full bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">เข้าสู่ระบบ</button>
+            <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">เข้าสู่ระบบ</button>
             <div class="text-center text-xs pt-4 border-t border-sky-100">
                 <a href="/register" class="text-slate-500 hover:text-sky-600 font-medium">ยังไม่มีบัญชีนักศึกษา? <span class="font-bold text-sky-600 underline">ลงทะเบียนเข้าใช้งาน</span></a>
             </div>
@@ -1597,7 +1598,7 @@ def manage_admins():
                     </div>
                 </div>
 
-                <button type="submit" class="w-full bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">
+                <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">
                     <i class="fa-solid fa-plus mr-1 text-sky-100"></i> บันทึกเพิ่มเจ้าหน้าที่
                 </button>
             </form>
