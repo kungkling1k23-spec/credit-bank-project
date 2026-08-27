@@ -651,7 +651,8 @@ def home():
 
 @app.route('/available_courses')
 def available_courses():
-    if 'user_id' not in session: return redirect(url_for('login'))
+    if 'user_id' not in session: 
+        return redirect(url_for('login'))
 
     search_query = request.args.get('search', '').strip().lower()
     selected_group = request.args.get('group', '').strip()
