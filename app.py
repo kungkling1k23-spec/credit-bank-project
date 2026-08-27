@@ -83,7 +83,7 @@ class ProfileEditRequest(db.Model):
 # ==========================================
 # Database Auto-Reset & Migration
 # ==========================================
-RESET_DB_FOR_PRODUCTION = False
+RESET_DB_FOR_PRODUCTION = True
 
 with app.app_context():
     if RESET_DB_FOR_PRODUCTION:
