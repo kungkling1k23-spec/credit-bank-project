@@ -59,6 +59,8 @@ class CreditRequest(db.Model):
     major = db.Column(db.String(100), default="สาขาวิชาระบบสารสนเทศ")
     date_submitted = db.Column(db.String(20), default="2026-08-26")
     doc_img = db.Column(db.String(200), nullable=True)
+    doc_img2 = db.Column(db.String(200), nullable=True)  
+    doc_img3 = db.Column(db.String(200), nullable=True)  
     status = db.Column(db.String(20), default='Pending')
     reject_reason = db.Column(db.Text, nullable=True)
     approved_by = db.Column(db.String(100), nullable=True)
@@ -152,18 +154,14 @@ LAYOUT_TEMPLATE = """
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f0f9ff; }
-        .hero-sky { background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 50%, #38bdf8 100%); }
-        .sidebar-transition { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .card-hover { transition: all 0.25s ease-in-out; }
-        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -10px rgba(14, 165, 233, 0.2); }
-        .sidebar-expanded { width: 270px; }
-        .sidebar-collapsed { width: 85px; }
-        .sidebar-collapsed .nav-text { display: none; }
-        .sidebar-collapsed .logo-img-full { display: none; }
-        .sidebar-collapsed .logo-img-small { display: block !important; }
-        .sidebar-collapsed .section-title { display: none; }
-        .sidebar-collapsed .toggle-icon { transform: rotate(180deg); }
+    body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+    .hero-sky { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%); }
+    .sidebar-transition { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .sidebar-expanded { width: 270px; }
+    .sidebar-collapsed { width: 80px; }
+    .sidebar-collapsed .nav-text, .sidebar-collapsed .logo-img-full, .sidebar-collapsed .section-title { display: none !important; }
+    .sidebar-collapsed .logo-img-small { display: block !important; }
+    .sidebar-collapsed .toggle-icon { transform: rotate(180deg); }
     </style>
 </head>
 <body class="bg-sky-50 min-h-screen text-slate-800 antialiased flex flex-col md:flex-row">
@@ -177,25 +175,24 @@ LAYOUT_TEMPLATE = """
     </div>
 
     <!-- Collapsible Left Sidebar (ปรับเป็นสีฟ้าทึบแน่น bg-sky-200 / bg-sky-100 ป้องกันการซ้อนทับ 100%) -->
-    <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-200 text-slate-800 min-h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-2xl border-r-2 border-sky-300 hidden md:flex shrink-0 w-full md:w-auto">
-        
-        <!-- Header Logo Zone (ไม่มีโปร่งใส ทึบ 100%) -->
-        <div class="p-4 flex flex-col border-b-2 border-sky-300 bg-sky-300">
-            <a href="/" class="flex items-center justify-center overflow-hidden py-2 px-2 group">
-                <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="w-full max-h-20 object-contain logo-img-full transition-transform group-hover:scale-105" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO+Credit+Bank';">
-                <div class="logo-img-small hidden">
-                    <div class="w-11 h-11 bg-sky-600 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md">IS</div>
-                </div>
-            </a>
+    <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100/80 text-slate-800 h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-lg border-r border-sky-200 hidden md:flex shrink-0">
 
-            <!-- Toggle Button -->
-            <div class="mt-3 pt-2 border-t border-sky-400 hidden md:flex justify-center">
-                <button id="sidebar-toggle" class="w-full py-1.5 px-3 rounded-xl bg-sky-100 hover:bg-white text-sky-900 flex items-center justify-center gap-2 transition-all group border border-sky-300 font-bold">
-                    <i class="fa-solid fa-chevron-left text-xs toggle-icon transition-transform duration-300"></i>
-                    <span class="nav-text text-xs font-bold text-sky-900">ย่อแถบเมนู</span>
-                </button>
+    <div class="p-4 flex flex-col border-b border-sky-200 bg-sky-200/50 shrink-0">
+        <a href="/" class="flex items-center justify-center py-1 px-1">
+            <!-- แก้ max-h-14 เพื่อไม่ให้โลโก้ขาด -->
+            <img src="/static/images/logo.png" alt="IS RMUTTO Logo" class="w-auto max-h-14 object-contain logo-img-full" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x60?text=IS+RMUTTO';">
+            <div class="logo-img-small hidden">
+                <div class="w-10 h-10 bg-sky-600 text-white rounded-2xl flex items-center justify-center font-black text-lg shadow-sm">IS</div>
             </div>
+        </a>
+
+        <div class="mt-2 pt-2 border-t border-sky-300/60 flex justify-center">
+            <button id="sidebar-toggle" class="w-full py-1.5 px-3 rounded-xl bg-white/80 hover:bg-white text-sky-900 flex items-center justify-center gap-2 border border-sky-200 font-bold shadow-sm transition">
+                <i class="fa-solid fa-chevron-left text-xs toggle-icon transition-transform"></i>
+                <span class="nav-text text-xs">ย่อแถบเมนู</span>
+            </button>
         </div>
+    </div>
 
         <!-- Navigation Links (พื้นหลังสีทึบ) -->
         <div class="flex-grow p-4 space-y-1.5 overflow-y-auto bg-sky-200">
@@ -399,48 +396,37 @@ IS_THAIMOOC_COURSES = [
 @app.route('/')
 def home():
     if not session.get('user_id'):
-        content = """
-        <div class="max-w-5xl mx-auto py-10 md:py-16 grid md:grid-cols-2 gap-10 items-center">
+       content = f"""
+    <div class="mb-6">
+        <h2 class="text-3xl font-black text-slate-900">สวัสดีครับ, {user.fullname}</h2>
+        <p class="text-xs font-bold text-sky-700 mt-1">รหัสนักศึกษา: {user.member_id} (สาขาวิชาระบบสารสนเทศ)</p>
+    </div>
+
+    <!-- เหลือ 3 การ์ดสมดุลพอดี -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+        <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between card-hover">
             <div>
-                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-sky-200 text-sky-900 mb-5 border border-sky-300">
-                    <i class="fa-solid fa-laptop-code text-sky-600"></i> สาขาวิชาระบบสารสนเทศ (IS) มทร.ตะวันออก
-                </span>
-                
-                <div class="space-y-2 mb-6">
-                    <h1 class="text-4xl sm:text-5xl font-black text-slate-900 leading-relaxed tracking-normal">
-                        ธนาคารหน่วยกิต
-                    </h1>
-                    <p class="text-3xl sm:text-4xl font-extrabold text-sky-600 leading-relaxed">
-                        เทียบโอน Thai & Chula MOOC
-                    </p>
-                    <p class="text-3xl sm:text-4xl font-extrabold text-blue-600 leading-relaxed">
-                        สาขาวิชาระบบสารสนเทศ
-                    </p>
-                </div>
-
-                <p class="text-slate-600 mb-8 leading-relaxed text-base font-medium">
-                    ระบบสะสมและเทียบโอนหน่วยกิตดิจิทัล สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก เพื่อการเรียนรู้ผ่านระบบ ThaiMOOC และ ChulaMOOC
-                </p>
-                <div class="flex flex-wrap gap-4">
-                    <a href="/register" class="px-7 py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-2xl shadow-lg transition-all inline-flex items-center gap-2">
-                        <i class="fa-solid fa-user-plus text-sky-100"></i> สมัครสมาชิกนักศึกษา IS
-                    </a>
-                    <a href="/login" class="px-7 py-3.5 bg-white text-slate-800 border-2 border-sky-200 font-bold rounded-2xl hover:bg-sky-100 transition shadow-sm inline-flex items-center gap-2">
-                        เข้าสู่ระบบ
-                    </a>
-                </div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">หน่วยกิตสะสมที่อนุมัติแล้ว</p>
+                <h3 class="text-3xl font-black text-sky-600">{approved_credits} <span class="text-xs font-medium text-slate-400">หน่วยกิต</span></h3>
             </div>
-
-            <!-- Hero Zone -->
-            <div class="hero-sky p-8 rounded-3xl text-center shadow-lg relative overflow-hidden border-2 border-sky-300 flex flex-col items-center justify-center">
-                <div class="mb-4 w-full max-w-xs flex justify-center py-2">
-                    <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank Logo" class="w-full max-h-28 object-contain drop-shadow" onerror="this.onerror=null; this.src='https://via.placeholder.com/300x150?text=IS+RMUTTO+Credit+Bank';">
-                </div>
-                <h3 class="text-xl font-black text-slate-900 mb-1">Information Systems</h3>
-                <p class="text-slate-700 text-xs leading-relaxed max-w-sm mx-auto font-bold">ระบบคลังหน่วยกิตการเรียนรู้ผ่านสื่อออนไลน์ ThaiMOOC / ChulaMOOC สำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ</p>
-            </div>
+            <div class="w-12 h-12 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-graduation-cap"></i></div>
         </div>
-        """
+        <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between card-hover">
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">หน่วยกิตรออนุมัติเทียบโอน</p>
+                <h3 class="text-3xl font-black text-amber-500">{pending_credits} <span class="text-xs font-medium text-slate-400">หน่วยกิต</span></h3>
+            </div>
+            <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-hourglass-half"></i></div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between card-hover">
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">คำร้องขอเทียบโอนทั้งหมด</p>
+                <h3 class="text-3xl font-black text-slate-800">{len(user_requests)} <span class="text-xs font-medium text-slate-400">รายการ</span></h3>
+            </div>
+            <div class="w-12 h-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-list-check"></i></div>
+        </div>
+    </div>
+    """
         return render_template_string(LAYOUT_TEMPLATE, content=content)
 
     try:
@@ -772,203 +758,87 @@ def submit_credit():
     
     if request.method == 'POST':
         try:
-            credits_raw = request.form.get('credits', '3')
-            try:
-                credits_val = int(credits_raw)
-            except (ValueError, TypeError):
-                credits_val = 3
-
-            course_name = request.form.get('course_name', '').strip() or 'รายวิชาเทียบโอน'
-            institution = request.form.get('institution', '').strip() or 'ThaiMOOC'
+            credits_val = int(request.form.get('credits', 3))
+            course_name = request.form.get('course_name', '').strip()
+            institution = request.form.get('institution', 'ThaiMOOC')
             category = request.form.get('category', 'หมวดวิชาศึกษาทั่วไป')
-            faculty = "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ"
-            major = request.form.get('major', 'สาขาวิชาระบบสารสนเทศ')
-
-            doc_filename = "default_doc.png"
-            if 'cert_file' in request.files:
-                file = request.files['cert_file']
+            
+            # ดึงไฟล์ที่แนบมา (รองรับเลือกพร้อมกันหลายไฟล์)
+            files = request.files.getlist('cert_files')
+            uploaded_docs = []
+            
+            for file in files[:3]:  # วนลูปเซฟไฟล์ ไม่เกิน 3 รูป
                 if file and file.filename != '' and allowed_file(file.filename):
                     ext = file.filename.rsplit('.', 1)[1].lower()
-                    unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
-                    save_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_fn)
-                    file.save(save_path)
-                    doc_filename = unique_fn
+                    fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
+                    uploaded_docs.append(fn)
 
-            req_id_to_update = request.form.get('edit_req_id')
-            if req_id_to_update:
-                existing_req = CreditRequest.query.get(req_id_to_update)
-                if existing_req and existing_req.user_id == session['user_id']:
-                    existing_req.course_name = course_name
-                    existing_req.institution = institution
-                    existing_req.credits = credits_val
-                    existing_req.category = category
-                    if doc_filename != "default_doc.png":
-                        existing_req.doc_img = doc_filename
-                    existing_req.status = 'Pending'
-                    existing_req.reject_reason = None
-                    db.session.commit()
-                    flash('แก้ไขและยื่นเอกสารขอเทียบโอนอีกครั้งเรียบร้อยแล้ว!', 'success')
-                    return redirect(url_for('history'))
-
-            req_code = f"TR2569{uuid.uuid4().hex[:4].upper()}"
+            doc1 = uploaded_docs[0] if len(uploaded_docs) > 0 else "default_doc.png"
+            doc2 = uploaded_docs[1] if len(uploaded_docs) > 1 else None
+            doc3 = uploaded_docs[2] if len(uploaded_docs) > 2 else None
 
             req = CreditRequest(
-                req_code=req_code,
-                user_id=session['user_id'], 
-                course_name=course_name, 
-                institution=institution, 
+                req_code=f"TR2569{uuid.uuid4().hex[:4].upper()}",
+                user_id=session['user_id'],
+                course_name=course_name,
+                institution=institution,
                 credits=credits_val,
                 category=category,
-                faculty=faculty,
-                major=major,
                 date_submitted=datetime.now().strftime("%Y-%m-%d"),
-                doc_img=doc_filename,
+                doc_img=doc1,
+                doc_img2=doc2,
+                doc_img3=doc3,
                 status='Pending'
             )
             db.session.add(req)
             db.session.commit()
             flash('ยื่นคำขอเทียบโอนเรียบร้อยแล้ว!', 'success')
             return redirect(url_for('history'))
-
         except Exception as e:
             db.session.rollback()
-            flash(f'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง ({str(e)})', 'error')
-            return redirect(url_for('submit_credit'))
+            flash(f'เกิดข้อผิดพลาดในการบันทึกข้อมูล: {str(e)}', 'error')
 
+    # ส่วนของ HTML Form
     init_course = request.args.get('course', '')
     init_inst = request.args.get('inst', 'ThaiMOOC')
     init_credits = request.args.get('credits', '3')
-    init_cat = request.args.get('cat', 'หมวดวิชาศึกษาทั่วไป')
-    selected_major = request.args.get('major_select', '')
-    edit_req_id = request.args.get('edit_id', '')
-
-    if edit_req_id:
-        old_req = CreditRequest.query.get(edit_req_id)
-        if old_req and old_req.user_id == session['user_id']:
-            init_course = old_req.course_name
-            init_inst = old_req.institution
-            init_credits = str(old_req.credits)
-            init_cat = old_req.category
-            selected_major = "สาขาวิชาระบบสารสนเทศ"
-
-    is_subject_rows = ""
-    if selected_major == "สาขาวิชาระบบสารสนเทศ":
-        for item in IS_THAIMOOC_COURSES:
-            provider_badge = '<span class="bg-sky-200 text-sky-900 border border-sky-300 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ThaiMOOC</span>' if item['provider'] == 'ThaiMOOC' else '<span class="bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ChulaMOOC</span>'
-            mooc_multiline = "<br>".join([f"• {m}" for m in item['mooc_list']])
-
-            is_subject_rows += f"""
-            <tr class="border-b border-sky-100 text-xs hover:bg-sky-100 transition">
-                <td class="py-3.5 px-3 font-mono font-bold text-slate-600">{item['code']}</td>
-                <td class="py-3.5 px-3 font-extrabold text-slate-900">{item['name']}<br>{provider_badge}</td>
-                <td class="py-3.5 px-3 text-slate-700 leading-relaxed max-w-xs font-semibold">{mooc_multiline}</td>
-                <td class="py-3.5 px-3 text-center font-bold text-slate-800">{item['hours']}</td>
-                <td class="py-3.5 px-3 text-center">
-                    <a href="/submit_credit?course={item['name']}&inst={item['provider']}&credits={item['credits']}&cat={item['group']}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm">
-                        เลือกวิชานี้เพื่อยื่นเทียบโอน
-                    </a>
-                </td>
-            </tr>
-            """
 
     content = f"""
-    <div class="max-w-4xl mx-auto space-y-8">
-        <div class="bg-white p-8 rounded-3xl border-2 border-sky-100 shadow-xl">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0"><i class="fa-solid fa-graduation-cap"></i></div>
-                <div>
-                    <h3 class="text-xl font-black text-slate-900">เลือกสาขาวิชาเพื่อดูรายวิชาที่ต้องเรียนเพิ่ม</h3>
-                    <p class="text-xs text-slate-500 font-medium">เลือกสาขาวิชาเพื่อแสดงบทเรียนออนไลน์ ThaiMOOC / ChulaMOOC ทั้งหมดในหลักสูตร</p>
-                </div>
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
+        <h3 class="text-2xl font-black text-slate-900 mb-1">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
+        <p class="text-xs text-slate-500 mb-6 font-medium">กรอกรายละเอียดและแนบรูปภาพใบประกาศนียบัตร (แนบได้ 1 ถึง 3 รูป)</p>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ชื่อรายวิชาในหลักสูตร *</label>
+                <input type="text" name="course_name" value="{init_course}" required placeholder="เช่น คุณภาพการใช้ชีวิต" class="w-full border border-sky-200 rounded-2xl p-3 text-sm bg-sky-50/40 font-semibold focus:outline-none focus:ring-2 focus:ring-sky-400">
             </div>
-
-            <form method="GET" action="/submit_credit" class="mb-4">
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">เลือกสาขาวิชาของคุณ <span class="text-rose-500">*</span></label>
-                <div class="flex gap-3">
-                    <select name="major_select" onchange="this.form.submit()" class="w-full border-2 border-sky-100 rounded-2xl p-3.5 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-extrabold text-sky-900">
-                        <option value="" {'selected' if not selected_major else ''}>-- กรุณาเลือกสาขาวิชาเพื่อเริ่มใช้งาน --</option>
-                        <option value="สาขาวิชาระบบสารสนเทศ" {'selected' if selected_major=='สาขาวิชาระบบสารสนเทศ' else ''}>สาขาวิชาระบบสารสนเทศ (Information Systems - IS)</option>
-                    </select>
-                </div>
-            </form>
-
-            {'''
-            <div class="bg-amber-100 border border-amber-300 p-4 rounded-2xl mb-6 flex items-start gap-3 text-amber-950 text-xs leading-relaxed font-bold">
-                <i class="fa-solid fa-circle-info text-amber-600 text-base shrink-0 mt-0.5"></i>
+            <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <b>คำแนะนำสำหรับนักศึกษาสาขาวิชาระบบสารสนเทศ:</b> ตารางด้านล่างแสดงรายวิชาในหลักสูตรและบทเรียนออนไลน์ ThaiMOOC / ChulaMOOC ที่ต้องเรียนเพิ่ม คุณสามารถคลิกปุ่ม <b>"เลือกวิชานี้เพื่อยื่นเทียบโอน"</b> เพื่อดึงข้อมูลลงแบบฟอร์มด้านล่างได้ทันที
-                </div>
-            </div>
-
-            <div class="overflow-x-auto rounded-2xl border-2 border-sky-100">
-                <table class="w-full text-left min-w-[650px]">
-                    <thead class="bg-sky-200 text-sky-950 text-[11px] font-black uppercase tracking-wider border-b border-sky-300">
-                        <tr>
-                            <th class="py-3 px-3">รหัสวิชา</th>
-                            <th class="py-3 px-3">รายวิชาในหลักสูตร IS</th>
-                            <th class="py-3 px-3">บทเรียนออนไลน์ที่ต้องเรียนเพิ่ม</th>
-                            <th class="py-3 px-3 text-center">ชั่วโมงเรียน</th>
-                            <th class="py-3 px-3 text-center">การดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-sky-100">
-                        ''' + is_subject_rows + '''
-                    </tbody>
-                </table>
-            </div>
-            ''' if selected_major == 'สาขาวิชาระบบสารสนเทศ' else '''
-            <div class="text-center py-10 border-2 border-dashed border-sky-300 rounded-2xl bg-sky-50">
-                <i class="fa-solid fa-arrow-up text-sky-600 text-2xl mb-2"></i>
-                <p class="text-xs font-bold text-slate-600">กรุณาเลือก "สาขาวิชาระบบสารสนเทศ" จากช่องด้านบน เพื่อดูตารางวิชาที่ต้องเรียนเพิ่ม</p>
-            </div>
-            '''}
-        </div>
-
-        <div id="form_section" class="bg-white p-8 sm:p-10 rounded-3xl border-2 border-sky-100 shadow-xl scroll-mt-6">
-            <h3 class="text-2xl font-black text-slate-900 mb-2">แบบฟอร์มยื่นคำขอเทียบโอนหน่วยกิต</h3>
-            <p class="text-xs text-slate-500 mb-6 font-medium">กรอกรายละเอียดและแนบรูปภาพวุฒิบัตร/เกียรติบัตร ที่เรียนจบมาแล้ว</p>
-            
-            <form method="POST" enctype="multipart/form-data" class="space-y-4">
-                <input type="hidden" name="major" value="สาขาวิชาระบบสารสนเทศ">
-                <input type="hidden" name="edit_req_id" value="{edit_req_id}">
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อรายวิชาในหลักสูตร *</label>
-                    <input type="text" name="course_name" value="{init_course}" required placeholder="เช่น คุณภาพการใช้ชีวิต" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">แหล่งเรียนรู้ / ระบบออนไลน์ *</label>
-                    <select name="institution" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ระบบออนไลน์ *</label>
+                    <select name="institution" class="w-full border border-sky-200 rounded-2xl p-3 text-sm bg-sky-50/40 font-semibold focus:outline-none focus:ring-2 focus:ring-sky-400">
                         <option value="ThaiMOOC" {'selected' if init_inst=='ThaiMOOC' else ''}>ThaiMOOC</option>
                         <option value="ChulaMOOC" {'selected' if init_inst=='ChulaMOOC' else ''}>ChulaMOOC</option>
                     </select>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">จำนวนหน่วยกิต *</label>
-                        <input type="number" name="credits" value="{init_credits}" min="1" max="10" required class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">หมวดวิชาหลักสูตร</label>
-                        <select name="category" class="w-full border-2 border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50 font-semibold">
-                            <option value="หมวดวิชาศึกษาทั่วไป" {'selected' if init_cat=='หมวดวิชาศึกษาทั่วไป' else ''}>หมวดวิชาศึกษาทั่วไป</option>
-                            <option value="หมวดวิชาแกน" {'selected' if init_cat=='หมวดวิชาแกน' else ''}>หมวดวิชาแกน</option>
-                            <option value="หมวดวิชาเลือก" {'selected' if init_cat=='หมวดวิชาเลือก' else ''}>หมวดวิชาเลือก</option>
-                        </select>
-                    </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">จำนวนหน่วยกิต *</label>
+                    <input type="number" name="credits" value="{init_credits}" min="1" max="10" required class="w-full border border-sky-200 rounded-2xl p-3 text-sm bg-sky-50/40 font-semibold focus:outline-none focus:ring-2 focus:ring-sky-400">
                 </div>
+            </div>
 
-                <div class="border-t border-sky-100 pt-4">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-600"></i> แนบรูปภาพเกียรติบัตร / วุฒิบัตร *</label>
-                    <input type="file" name="cert_file" accept="image/*,.pdf" class="w-full border-2 border-sky-100 rounded-2xl p-2.5 text-xs bg-sky-50 font-semibold file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-600 file:text-white hover:file:bg-sky-700">
-                    <p class="text-[11px] text-slate-400 mt-1 font-medium">รองรับไฟล์รูปภาพ PNG, JPG, JPEG หรือ PDF ขนาดไม่เกิน 16MB</p>
-                </div>
+            <!-- Input แหล่งอัปโหลดรูป 1-3 รูป -->
+            <div class="border-t border-sky-100 pt-4">
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5"><i class="fa-solid fa-images mr-1 text-sky-600"></i> แนบรูปภาพใบประกาศ / เกียรติบัตร (1 - 3 รูป) *</label>
+                <input type="file" name="cert_files" accept="image/*,.pdf" multiple required class="w-full border border-sky-200 rounded-2xl p-2 text-xs bg-sky-50/40 font-semibold file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-600 file:text-white hover:file:bg-sky-700 transition">
+                <p class="text-[11px] text-slate-400 mt-1 font-medium">สามารถกดเลือกทีละหลายไฟล์ได้ไม่เกิน 3 รูป (PNG, JPG, PDF)</p>
+            </div>
 
-                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md text-sm mt-2">
-                    <i class="fa-solid fa-paper-plane mr-1 text-sky-100"></i> ยืนยันส่งคำร้องขอเทียบโอน
-                </button>
-            </form>
-        </div>
+            <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md text-sm mt-2">
+                <i class="fa-solid fa-paper-plane mr-1"></i> ยืนยันยื่นคำขอเทียบโอน
+            </button>
+        </form>
     </div>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
