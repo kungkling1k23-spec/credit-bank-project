@@ -81,7 +81,7 @@ class ProfileEditRequest(db.Model):
     user = db.relationship('User', backref=db.backref('edit_requests', lazy=True))
 
 # ==========================================
-# Database Auto-Reset & Migration
+# Database Auto-Reset & Migration (บังคับเพิ่มคอลัมน์ให้อัตโนมัติ)
 # ==========================================
 RESET_DB_FOR_PRODUCTION = False
 
@@ -93,6 +93,15 @@ with app.app_context():
             pass
 
     db.create_all()
+
+    # สั่งบีบเพิ่มคอลัมน์ doc_img2 และ doc_img3 เข้า PostgreSQL โดยตรง
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS doc_img2 VARCHAR(200);"))
+            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS doc_img3 VARCHAR(200);"))
+            conn.commit()
+    except Exception as e:
+        print("Migration Notice:", e)
 
     try:
         main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
