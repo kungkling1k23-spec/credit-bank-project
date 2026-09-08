@@ -3,6 +3,7 @@ import uuid
 import csv
 import io
 import urllib.request
+import re
 from datetime import datetime
 from flask import Flask, render_template_string, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -103,7 +104,7 @@ with app.app_context():
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS doc_img3 VARCHAR(200);"))
             conn.commit()
     except Exception as e:
-        print("Migration Notice:", e)
+        pass
 
     try:
         main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
@@ -148,50 +149,86 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
 # ==========================================
 # Google Sheets Integration
 # ==========================================
-# ลิงก์สำหรับดึงข้อมูลเป็น CSV อัตโนมัติจาก Google Sheets ที่แชร์ไว้
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/180MQL9RadQfhO0uN-L3hQGYiRhDPYvzJ/export?format=csv"
 
-# ข้อมูลสำรอง (Fallback) ในกรณีที่ Google Sheets ล่มหรือต่อเน็ตไม่ได้
 IS_THAIMOOC_COURSES = [
-    {"code": "15-02-002", "name": "คุณภาพการใช้ชีวิต", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["1. ชีวิตและการสร้างคุณค่า (2 ชม.)", "2. การคิดสร้างสรรค์เพื่อการพัฒนาตนเอง (5 ชม.)"], "hours": "7 ชม.", "credits": 3}
+    {"code": "15-02-002", "name": "คุณภาพการใช้ชีวิต", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["ชีวิตและการสร้างคุณค่า (2 ชม.)"], "hours": "2 ชม.", "credits": 3}
 ]
 
 def get_courses():
     try:
         req = urllib.request.Request(SHEET_CSV_URL, headers={'User-Agent': 'Mozilla/5.0'})
         response = urllib.request.urlopen(req, timeout=10)
-        csv_data = response.read().decode('utf-8')
+        csv_data = response.read().decode('utf-8-sig') 
         
         reader = csv.DictReader(io.StringIO(csv_data))
-        courses = []
+        courses_dict = {}
+        current_code = None
+        
         for row in reader:
             code = row.get('รหัสวิชา', '').strip()
-            if not code: continue # ข้ามบรรทัดที่ไม่มีรหัสวิชา
             
+            if code:
+                current_code = code
+                
+            if not current_code:
+                continue
+                
             name = row.get('ชื่อวิชา', '').strip()
             group = row.get('หมวดวิชา', '').strip()
-            provider = row.get('ระบบ', 'ThaiMOOC').strip()
-            hours = row.get('ชั่วโมงเรียน', '').strip()
+            provider = row.get('ระบบ', '').strip()
+            mooc_name = row.get('บทเรียนออนไลน์', '').strip()
+            hours_raw = row.get('ชั่วโมงเรียน', '').strip()
+            credits_raw = row.get('หน่วยกิต', '').strip()
             
-            credits_raw = row.get('หน่วยกิต', '3').strip()
-            try:
-                credits = int(credits_raw)
-            except:
-                credits = 3
+            if current_code not in courses_dict:
+                try:
+                    credits_val = int(credits_raw)
+                except:
+                    credits_val = 3
+                    
+                courses_dict[current_code] = {
+                    "code": current_code,
+                    "name": name,
+                    "group": group,
+                    "provider": provider if provider else "ThaiMOOC",
+                    "credits": credits_val,
+                    "mooc_list": [],
+                    "total_hours": 0.0
+                }
+            else:
+                if not courses_dict[current_code]["name"] and name:
+                    courses_dict[current_code]["name"] = name
+                if not courses_dict[current_code]["group"] and group:
+                    courses_dict[current_code]["group"] = group
+                if not courses_dict[current_code]["provider"] and provider:
+                    courses_dict[current_code]["provider"] = provider
+
+            if mooc_name or hours_raw:
+                nums = re.findall(r'\d+(?:\.\d+)?', hours_raw)
+                if nums:
+                    courses_dict[current_code]["total_hours"] += float(nums[0])
+                    
+                display_mooc = mooc_name
+                if hours_raw and hours_raw not in mooc_name:
+                    if nums and hours_raw == nums[0]:
+                        display_mooc += f" ({hours_raw} ชม.)" 
+                    else:
+                        display_mooc += f" ({hours_raw})"
+                        
+                for m in display_mooc.split('\n'):
+                    if m.strip():
+                        courses_dict[current_code]["mooc_list"].append(m.strip())
+
+        courses = []
+        for data in courses_dict.values():
+            th = data["total_hours"]
+            if th > 0:
+                data["hours"] = f"{int(th) if th.is_integer() else round(th, 2)} ชม."
+            else:
+                data["hours"] = "ไม่ระบุ"
+            courses.append(data)
             
-            mooc_raw = row.get('บทเรียนออนไลน์', '')
-            mooc_list = [m.strip() for m in mooc_raw.split('\n') if m.strip()]
-            
-            courses.append({
-                "code": code,
-                "name": name,
-                "group": group,
-                "provider": provider,
-                "hours": hours,
-                "credits": credits,
-                "mooc_list": mooc_list
-            })
-        
         if courses:
             return courses
         return IS_THAIMOOC_COURSES
@@ -200,7 +237,7 @@ def get_courses():
         return IS_THAIMOOC_COURSES
 
 # ==========================================
-# Layout Template
+# Layout Template (แก้ไข h-screen ทำให้โปรไฟล์อยู่ล่างซ้ายเสมอ)
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -237,8 +274,9 @@ LAYOUT_TEMPLATE = """
         <button id="mobile-toggle" class="p-2 text-sky-800 hover:text-sky-950 focus:outline-none"><i class="fa-solid fa-bars text-xl"></i></button>
     </div>
 
-    <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100 text-slate-700 min-h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-xl border-r border-sky-200 hidden md:flex shrink-0 w-full md:w-auto">
-        <div class="p-4 flex flex-col border-b border-sky-200 bg-sky-200/40">
+    <!-- เปลี่ยนตรงนี้เป็น h-screen เพื่อให้แถบล็อคความสูงพอดีจอ -->
+    <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100 text-slate-700 h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-xl border-r border-sky-200 hidden md:flex shrink-0 w-full md:w-auto">
+        <div class="p-4 flex flex-col border-b border-sky-200 bg-sky-200/40 shrink-0">
             <a href="/" class="flex items-center justify-center overflow-hidden py-2 px-2 group">
                 <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="w-full max-h-20 object-contain logo-img-full transition-transform group-hover:scale-105" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x80?text=IS+RMUTTO+Credit+Bank';">
                 <div class="logo-img-small hidden">
@@ -253,6 +291,7 @@ LAYOUT_TEMPLATE = """
             </div>
         </div>
 
+        <!-- ส่วนเมนูตรงนี้จะเลื่อนได้ถ้าจอสั้น -->
         <div class="flex-grow p-4 space-y-1.5 overflow-y-auto">
             <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-2">เมนูหลัก</p>
             <a href="/" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
@@ -273,7 +312,7 @@ LAYOUT_TEMPLATE = """
                         <i class="fa-solid fa-user-pen text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">คำร้องแก้ไขข้อมูล</span>
                     </a>
                     <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-book-open text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">รายวิชาทั้งหมด (Google Sheets)</span>
+                        <i class="fa-solid fa-book-open text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">รายวิชาทั้งหมด (Sheets)</span>
                     </a>
                     <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sky-900 bg-sky-200 border border-sky-300 hover:bg-sky-300 transition-all font-medium text-sm group mt-2">
                         <i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-600"></i><span class="nav-text font-bold">เพิ่ม/จัดการเจ้าหน้าที่</span>
@@ -308,8 +347,9 @@ LAYOUT_TEMPLATE = """
             {% endif %}
         </div>
 
+        <!-- ส่วนโปรไฟล์ถูกล็อคไว้ที่ขอบล่างเสมอเพราะ shrink-0 -->
         {% if session.get('user_id') %}
-            <div class="p-4 border-t border-sky-200 bg-sky-200/40">
+            <div class="p-4 border-t border-sky-200 bg-sky-200/40 shrink-0">
                 <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl hover:bg-sky-200/60 transition-all group border border-transparent">
                     <div class="w-9 h-9 rounded-xl bg-sky-200 text-sky-700 font-bold flex items-center justify-center shrink-0"><i class="fa-regular fa-user"></i></div>
                     <div class="flex flex-col min-w-0 nav-text">
@@ -558,9 +598,7 @@ def home():
 def available_courses():
     if 'user_id' not in session: return redirect(url_for('login'))
 
-    # ดึงข้อมูลจาก Google Sheets (สดๆ ทันที)
     course_data = get_courses()
-
     search_query = request.args.get('search', '').strip().lower()
     selected_group = request.args.get('group', '').strip()
     selected_provider = request.args.get('provider', '').strip()
@@ -599,7 +637,7 @@ def available_courses():
             </div>
             <div class="border-t border-sky-50 pt-4 mt-2">
                 <div class="flex justify-between items-center text-xs text-slate-600 mb-4">
-                    <span><i class="fa-regular fa-clock mr-1 text-slate-400"></i> รวมเวลาเรียน: <b>{c['hours']}</b></span>
+                    <span><i class="fa-regular fa-clock mr-1 text-slate-400"></i> รวมเวลาเรียน: <b class="text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg">{c['hours']}</b></span>
                     <span class="font-black text-sky-700 text-sm bg-sky-50 px-3 py-1 rounded-xl border border-sky-100">{c['credits']} หน่วยกิต</span>
                 </div>
                 {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['provider'] + '&credits=' + str(c['credits']) + '&cat=' + c['group'] + '&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="block text-center w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3 rounded-2xl text-sm transition shadow-md shadow-sky-400/20">ยื่นเทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
@@ -612,7 +650,7 @@ def available_courses():
         <div>
             <span class="bg-white/80 text-sky-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block border border-white">Live from Google Sheets</span>
             <h2 class="text-3xl font-extrabold text-slate-900">🔍 ค้นหารายวิชาเทียบโอนหลักสูตร</h2>
-            <p class="text-slate-600 text-xs mt-1.5 leading-relaxed">ข้อมูลอัปเดตแบบเรียลไทม์จากระบบ Google Sheets ของสาขาวิชา</p>
+            <p class="text-slate-600 text-xs mt-1.5 leading-relaxed">ข้อมูลอัปเดตแบบเรียลไทม์ และรวมเวลาเรียนอัตโนมัติจาก Google Sheets</p>
         </div>
         <div class="bg-white/80 backdrop-blur px-6 py-4 rounded-2xl border border-white text-center shrink-0 shadow-sm">
             <span class="text-xs text-slate-500 block font-medium">จำนวนรายวิชาที่พบ</span>
@@ -659,7 +697,6 @@ def available_courses():
 def all_courses():
     if 'user_id' not in session: return redirect(url_for('login'))
 
-    # ดึงข้อมูลจาก Google Sheets
     course_data = get_courses()
     rows = ""
     for idx, c in enumerate(course_data, 1):
@@ -672,7 +709,7 @@ def all_courses():
             <td class="py-3.5 px-4 font-mono font-bold text-sky-700">{c['code']}</td>
             <td class="py-3.5 px-4 font-extrabold text-slate-900">{c['name']}<br>{provider_badge}</td>
             <td class="py-3.5 px-4 font-bold text-slate-700">{c['group']}</td>
-            <td class="py-3.5 px-4 text-slate-700 leading-relaxed max-w-xs font-semibold">{mooc_multiline}</td>
+            <td class="py-3.5 px-4 text-slate-700 leading-relaxed max-w-xs font-semibold">{mooc_multiline}<br><span class="inline-block mt-1 text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">รวม: {c['hours']}</span></td>
             <td class="py-3.5 px-4 text-center font-black text-sky-600">{c['credits']}</td>
             <td class="py-3.5 px-4 text-center">
                 <a href="/submit_credit?course={c['name']}&inst={c['provider']}&credits={c['credits']}&cat={c['group']}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm">ยื่นเทียบโอน</a>
@@ -687,10 +724,10 @@ def all_courses():
                 <h2 class="text-2xl font-black text-slate-900 flex items-center gap-2">
                     <i class="fa-solid fa-book-open text-sky-600"></i> รายวิชาทั้งหมดในหลักสูตร (เชื่อมต่อ Google Sheets)
                 </h2>
-                <p class="text-xs text-slate-500 mt-1 font-medium">ตารางสรุปรายวิชาอัปเดตแบบเรียลไทม์จาก Google Sheets ของสาขาวิชาระบบสารสนเทศ</p>
+                <p class="text-xs text-slate-500 mt-1 font-medium">ตารางสรุปรายวิชาอัปเดตแบบเรียลไทม์จาก Google Sheets (รองรับการบวกรวมชั่วโมงอัตโนมัติ)</p>
             </div>
             <div class="bg-emerald-100 text-emerald-800 px-4 py-2 rounded-2xl border border-emerald-200 text-xs font-black shrink-0 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> โหลดข้อมูลแล้ว {len(course_data)} วิชา
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> จัดกลุ่มสำเร็จ {len(course_data)} วิชา
             </div>
         </div>
 
@@ -725,6 +762,7 @@ def submit_credit():
             faculty = "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ"
             major = request.form.get('major', 'สาขาวิชาระบบสารสนเทศ')
 
+            # จัดการไฟล์ที่ 1
             doc_filename = "default_doc.png"
             if 'cert_file' in request.files:
                 file = request.files['cert_file']
@@ -734,6 +772,17 @@ def submit_credit():
                     save_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_fn)
                     file.save(save_path)
                     doc_filename = unique_fn
+
+            # จัดการไฟล์ที่ 2
+            doc_filename2 = None
+            if 'cert_file2' in request.files:
+                file2 = request.files['cert_file2']
+                if file2 and file2.filename != '' and allowed_file(file2.filename):
+                    ext2 = file2.filename.rsplit('.', 1)[1].lower()
+                    unique_fn2 = f"cert2_{uuid.uuid4().hex[:8]}.{ext2}"
+                    save_path2 = os.path.join(app.config['UPLOAD_FOLDER'], unique_fn2)
+                    file2.save(save_path2)
+                    doc_filename2 = unique_fn2
 
             req_id_to_update = request.form.get('edit_req_id')
             if req_id_to_update:
@@ -745,6 +794,8 @@ def submit_credit():
                     existing_req.category = category
                     if doc_filename != "default_doc.png":
                         existing_req.doc_img = doc_filename
+                    if doc_filename2:
+                        existing_req.doc_img2 = doc_filename2
                     existing_req.status = 'Pending'
                     existing_req.reject_reason = None
                     db.session.commit()
@@ -764,6 +815,7 @@ def submit_credit():
                 major=major,
                 date_submitted=datetime.now().strftime("%Y-%m-%d"),
                 doc_img=doc_filename,
+                doc_img2=doc_filename2,
                 status='Pending'
             )
             db.session.add(req)
@@ -794,7 +846,6 @@ def submit_credit():
 
     is_subject_rows = ""
     if selected_major == "สาขาวิชาระบบสารสนเทศ":
-        # ดึงข้อมูลจาก Google Sheets แทนรายการเก่า
         course_data = get_courses()
         for item in course_data:
             provider_badge = '<span class="bg-sky-100 text-sky-800 border border-sky-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ThaiMOOC</span>' if item['provider'] == 'ThaiMOOC' else '<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ChulaMOOC</span>'
@@ -836,7 +887,7 @@ def submit_credit():
             <div class="overflow-x-auto rounded-2xl border border-sky-100">
                 <table class="w-full text-left min-w-[650px]">
                     <thead class="bg-sky-50 text-sky-800 text-[11px] font-bold uppercase tracking-wider border-b border-sky-100">
-                        <tr><th class="py-3 px-3">รหัสวิชา</th><th class="py-3 px-3">รายวิชาในหลักสูตร IS</th><th class="py-3 px-3">บทเรียนออนไลน์ที่ต้องเรียนเพิ่ม</th><th class="py-3 px-3 text-center">ชั่วโมงเรียน</th><th class="py-3 px-3 text-center">การดำเนินการ</th></tr>
+                        <tr><th class="py-3 px-3">รหัสวิชา</th><th class="py-3 px-3">รายวิชาในหลักสูตร IS</th><th class="py-3 px-3">บทเรียนออนไลน์ที่ต้องเรียนเพิ่ม</th><th class="py-3 px-3 text-center">ชั่วโมงเรียนรวม</th><th class="py-3 px-3 text-center">การดำเนินการ</th></tr>
                     </thead>
                     <tbody class="divide-y divide-sky-50">''' + is_subject_rows + '''</tbody>
                 </table>
@@ -870,11 +921,20 @@ def submit_credit():
                         </select>
                     </div>
                 </div>
-                <div class="border-t border-sky-100 pt-4">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-400"></i> แนบรูปภาพเกียรติบัตร / วุฒิบัตร *</label>
-                    <input type="file" name="cert_file" accept="image/*,.pdf" class="w-full border border-sky-100 rounded-2xl p-2.5 text-xs bg-sky-50/50 font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-500 file:text-white">
+                
+                <!-- แก้ไขให้สามารถอัปโหลดได้ 2 รูป -->
+                <div class="border-t border-sky-100 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-400"></i> รูปเกียรติบัตร / วุฒิบัตร (รูปที่ 1) *</label>
+                        <input type="file" name="cert_file" accept="image/*,.pdf" class="w-full border border-sky-100 rounded-2xl p-2.5 text-xs bg-sky-50/50 font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-500 file:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-400"></i> รูปเกียรติบัตร (รูปที่ 2) (ถ้ามี)</label>
+                        <input type="file" name="cert_file2" accept="image/*,.pdf" class="w-full border border-sky-100 rounded-2xl p-2.5 text-xs bg-sky-50/50 font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-300 file:text-slate-700 hover:file:bg-slate-400">
+                    </div>
                 </div>
-                <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-2">ยืนยันส่งคำร้องขอเทียบโอน</button>
+                
+                <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-sky-400/20 text-sm mt-4">ยืนยันส่งคำร้องขอเทียบโอน</button>
             </form>
         </div>
     </div>
@@ -900,18 +960,26 @@ def history():
         elif status == 'Approved':
             badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>'
             action_btn = '-'
-        else: # Rejected
+        else:
             badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ / ให้แก้ไข</span>'
             action_btn = f'<a href="/submit_credit?edit_id={r.id}#form_section" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold inline-block shadow-sm">แก้ไขเอกสารและยื่นใหม่</a>'
 
         approved_by = getattr(r, 'approved_by', '-') or '-'
         reason_box = f'<div class="mt-1 text-xs text-rose-600 font-medium"><b>เหตุผลที่ไม่ผ่าน:</b> {r.reject_reason}</div>' if getattr(r, 'reject_reason', None) else ''
-        img_preview = f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-xs text-sky-600 underline font-bold"><i class="fa-solid fa-image mr-1"></i>ดูรูปหลักฐาน</a>' if getattr(r, 'doc_img', None) and r.doc_img != 'default_doc.png' else '<span class="text-xs text-slate-400">ไม่มีแนบรูป</span>'
+        
+        # แสดงลิงก์รูปภาพ 1 และ 2
+        img_preview = ""
+        if getattr(r, 'doc_img', None) and r.doc_img != 'default_doc.png':
+            img_preview += f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-xs text-sky-600 underline font-bold whitespace-nowrap"><i class="fa-solid fa-image mr-1"></i>รูปที่ 1</a> '
+        if getattr(r, 'doc_img2', None):
+            img_preview += f'<a href="/static/uploads/{r.doc_img2}" target="_blank" class="text-xs text-sky-600 underline font-bold whitespace-nowrap ml-2"><i class="fa-solid fa-image mr-1"></i>รูปที่ 2</a>'
+        if not img_preview:
+            img_preview = '<span class="text-xs text-slate-400">ไม่มีแนบรูป</span>'
 
         rows += f"""
         <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
             <td class="py-4 px-4 font-mono font-bold text-slate-500">{getattr(r, 'req_code', 'TR001')}</td>
-            <td class="py-4 px-4 font-extrabold text-slate-900">{getattr(r, 'course_name', '-')}<br>{img_preview}{reason_box}</td>
+            <td class="py-4 px-4 font-extrabold text-slate-900">{getattr(r, 'course_name', '-')}<br><div class="mt-1">{img_preview}</div>{reason_box}</td>
             <td class="py-4 px-4 text-slate-600 font-medium">{getattr(r, 'institution', '-')}</td>
             <td class="py-4 px-4 font-black text-sky-600">{getattr(r, 'credits', 0)}</td>
             <td class="py-4 px-4 text-xs text-slate-500 font-medium">{approved_by}</td>
@@ -1139,10 +1207,18 @@ def admin_review(req_id):
     student_name = req.user.fullname if getattr(req, 'user', None) else '-'
     student_code = req.user.member_id if getattr(req, 'user', None) else '-'
 
-    img_html = f'<a href="/static/uploads/{req.doc_img}" target="_blank"><img src="/static/uploads/{req.doc_img}" class="max-h-64 rounded-2xl border border-sky-100 shadow-sm hover:opacity-90 transition"></a>' if getattr(req, 'doc_img', None) and req.doc_img != 'default_doc.png' else '<span class="text-xs text-slate-400">ไม่มีแนบรูปภาพหลักฐาน</span>'
+    # แสดงผลรูปภาพทั้ง 2 รูปในหน้าของแอดมิน
+    img_html = ""
+    if getattr(req, 'doc_img', None) and req.doc_img != 'default_doc.png':
+        img_html += f'<a href="/static/uploads/{req.doc_img}" target="_blank"><img src="/static/uploads/{req.doc_img}" class="max-h-64 rounded-2xl border border-sky-100 shadow-sm hover:opacity-90 transition inline-block mr-3 mb-3"></a>'
+    if getattr(req, 'doc_img2', None):
+        img_html += f'<a href="/static/uploads/{req.doc_img2}" target="_blank"><img src="/static/uploads/{req.doc_img2}" class="max-h-64 rounded-2xl border border-sky-100 shadow-sm hover:opacity-90 transition inline-block mb-3"></a>'
+    
+    if not img_html:
+        img_html = '<span class="text-xs text-slate-400">ไม่มีแนบรูปภาพหลักฐาน</span>'
 
     content = f"""
-    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
+    <div class="max-w-4xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
         <h3 class="text-2xl font-black text-slate-900 mb-6">พิจารณาคำร้องเทียบโอน #{getattr(req, 'req_code', 'TR001')}</h3>
         
         <div class="grid md:grid-cols-2 gap-5 text-sm mb-6 bg-sky-50/50 p-6 rounded-2xl border border-sky-100">
@@ -1150,7 +1226,7 @@ def admin_review(req_id):
             <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">หมวดวิชา</span><b class="text-slate-800">{getattr(req, 'category', 'หมวดวิชาศึกษาทั่วไป')}</b></div>
             <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">รายวิชา</span><b class="text-slate-800">{getattr(req, 'course_name', '-')}</b> ({getattr(req, 'credits', 0)} หน่วยกิต)</div>
             <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ระบบออนไลน์</span><b class="text-slate-800">{getattr(req, 'institution', '-')}</b></div>
-            <div class="md:col-span-2"><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-2">หลักฐานเกียรติบัตรที่แนบมา</span><div>{img_html}</div></div>
+            <div class="md:col-span-2"><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-3">หลักฐานเกียรติบัตรที่แนบมา</span><div>{img_html}</div></div>
         </div>
 
         <form method="POST" class="space-y-4 border-t border-sky-100 pt-6">
