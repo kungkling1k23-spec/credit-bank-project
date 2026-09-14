@@ -237,7 +237,7 @@ def get_courses():
         return IS_THAIMOOC_COURSES
 
 # ==========================================
-# Layout Template (แก้ไข h-screen ทำให้โปรไฟล์อยู่ล่างซ้ายเสมอ)
+# Layout Template
 # ==========================================
 LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
@@ -274,7 +274,6 @@ LAYOUT_TEMPLATE = """
         <button id="mobile-toggle" class="p-2 text-sky-800 hover:text-sky-950 focus:outline-none"><i class="fa-solid fa-bars text-xl"></i></button>
     </div>
 
-    <!-- เปลี่ยนตรงนี้เป็น h-screen เพื่อให้แถบล็อคความสูงพอดีจอ -->
     <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100 text-slate-700 h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-xl border-r border-sky-200 hidden md:flex shrink-0 w-full md:w-auto">
         <div class="p-4 flex flex-col border-b border-sky-200 bg-sky-200/40 shrink-0">
             <a href="/" class="flex items-center justify-center overflow-hidden py-2 px-2 group">
@@ -291,7 +290,6 @@ LAYOUT_TEMPLATE = """
             </div>
         </div>
 
-        <!-- ส่วนเมนูตรงนี้จะเลื่อนได้ถ้าจอสั้น -->
         <div class="flex-grow p-4 space-y-1.5 overflow-y-auto">
             <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-2">เมนูหลัก</p>
             <a href="/" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
@@ -312,7 +310,7 @@ LAYOUT_TEMPLATE = """
                         <i class="fa-solid fa-user-pen text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">คำร้องแก้ไขข้อมูล</span>
                     </a>
                     <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-book-open text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">รายวิชาทั้งหมด (Sheets)</span>
+                        <i class="fa-solid fa-book-open text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">รายวิชาทั้งหมด</span>
                     </a>
                     <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sky-900 bg-sky-200 border border-sky-300 hover:bg-sky-300 transition-all font-medium text-sm group mt-2">
                         <i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-600"></i><span class="nav-text font-bold">เพิ่ม/จัดการเจ้าหน้าที่</span>
@@ -347,7 +345,6 @@ LAYOUT_TEMPLATE = """
             {% endif %}
         </div>
 
-        <!-- ส่วนโปรไฟล์ถูกล็อคไว้ที่ขอบล่างเสมอเพราะ shrink-0 -->
         {% if session.get('user_id') %}
             <div class="p-4 border-t border-sky-200 bg-sky-200/40 shrink-0">
                 <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl hover:bg-sky-200/60 transition-all group border border-transparent">
@@ -534,7 +531,6 @@ def home():
         </a>
     </div>
 
-    <!-- Stat Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between card-hover">
             <div><p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">หน่วยกิตสะสมทั้งหมด</p><h3 class="text-3xl font-black text-sky-600">{approved_credits} <span class="text-xs font-medium text-slate-400">หน่วยกิต</span></h3></div>
@@ -554,7 +550,6 @@ def home():
         </div>
     </div>
 
-    <!-- Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div class="bg-white p-6 rounded-3xl border border-sky-100 shadow-sm">
             <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><i class="fa-solid fa-chart-pie text-sky-500"></i> ความก้าวหน้าหน่วยกิตสาขา IS</h3>
@@ -614,10 +609,24 @@ def available_courses():
     if search_query:
         filtered_courses = [c for c in filtered_courses if search_query in c['name'].lower() or search_query in c['code'].lower() or any(search_query in m.lower() for m in c['mooc_list'])]
 
+    # ดึงข้อมูลวิชาที่นักศึกษาคนนี้เทียบโอนผ่านแล้ว
+    try:
+        approved_reqs = CreditRequest.query.filter_by(user_id=session['user_id'], status='Approved').all()
+        approved_courses = [r.course_name for r in approved_reqs]
+    except:
+        approved_courses = []
+
     cards = ""
     for c in filtered_courses:
         badge_provider = "bg-sky-100 text-sky-800 border-sky-200" if c['provider'] == 'ThaiMOOC' else "bg-amber-100 text-amber-800 border-amber-200"
         mooc_items_html = "".join([f'<li class="flex items-start gap-1.5"><i class="fa-solid fa-angle-right text-sky-500 mt-1 shrink-0"></i><span>{m}</span></li>' for m in c['mooc_list']])
+
+        if c['name'] in approved_courses:
+            action_btn_html = '<div class="text-center w-full bg-emerald-100 text-emerald-800 font-bold py-3 rounded-2xl text-sm"><i class="fa-solid fa-circle-check"></i> เทียบโอนสำเร็จแล้ว</div>'
+        elif session.get('role') not in ['admin', 'superadmin']:
+            action_btn_html = f'<a href="/submit_credit?course={c["name"]}&inst={c["provider"]}&credits={c["credits"]}&cat={c["group"]}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="block text-center w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3 rounded-2xl text-sm transition shadow-md shadow-sky-400/20">ยื่นเทียบโอนวิชานี้</a>'
+        else:
+            action_btn_html = ''
 
         cards += f"""
         <div class="bg-white rounded-3xl border border-sky-100 p-6 shadow-sm flex flex-col justify-between card-hover">
@@ -640,7 +649,7 @@ def available_courses():
                     <span><i class="fa-regular fa-clock mr-1 text-slate-400"></i> รวมเวลาเรียน: <b class="text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg">{c['hours']}</b></span>
                     <span class="font-black text-sky-700 text-sm bg-sky-50 px-3 py-1 rounded-xl border border-sky-100">{c['credits']} หน่วยกิต</span>
                 </div>
-                {'<a href="/submit_credit?course=' + c['name'] + '&inst=' + c['provider'] + '&credits=' + str(c['credits']) + '&cat=' + c['group'] + '&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="block text-center w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3 rounded-2xl text-sm transition shadow-md shadow-sky-400/20">ยื่นเทียบโอนวิชานี้</a>' if session.get('role') not in ['admin', 'superadmin'] else ''}
+                {action_btn_html}
             </div>
         </div>
         """
@@ -648,7 +657,6 @@ def available_courses():
     content = f"""
     <div class="hero-sky text-slate-800 p-8 rounded-3xl shadow-sm mb-8 flex flex-col md:flex-row justify-between items-center gap-6 border border-sky-200">
         <div>
-            <span class="bg-white/80 text-sky-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block border border-white">Live from Google Sheets</span>
             <h2 class="text-3xl font-extrabold text-slate-900">🔍 ค้นหารายวิชาเทียบโอนหลักสูตร</h2>
             <p class="text-slate-600 text-xs mt-1.5 leading-relaxed">ข้อมูลอัปเดตแบบเรียลไทม์ และรวมเวลาเรียนอัตโนมัติจาก Google Sheets</p>
         </div>
@@ -697,11 +705,23 @@ def available_courses():
 def all_courses():
     if 'user_id' not in session: return redirect(url_for('login'))
 
+    # ดึงข้อมูลวิชาที่นักศึกษาคนนี้เทียบโอนผ่านแล้ว (เพื่อทำสถานะแจ้งเตือน)
+    try:
+        approved_reqs = CreditRequest.query.filter_by(user_id=session['user_id'], status='Approved').all()
+        approved_courses = [r.course_name for r in approved_reqs]
+    except:
+        approved_courses = []
+
     course_data = get_courses()
     rows = ""
     for idx, c in enumerate(course_data, 1):
         provider_badge = '<span class="bg-sky-100 text-sky-900 border border-sky-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ThaiMOOC</span>' if c['provider'] == 'ThaiMOOC' else '<span class="bg-amber-100 text-amber-900 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ChulaMOOC</span>'
         mooc_multiline = "<br>".join([f"• {m}" for m in c['mooc_list']])
+
+        if c['name'] in approved_courses:
+            action_btn = '<span class="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-xl text-[11px] font-bold border border-emerald-200 whitespace-nowrap"><i class="fa-solid fa-circle-check"></i> เทียบโอนสำเร็จ</span>'
+        else:
+            action_btn = f'<a href="/submit_credit?course={c["name"]}&inst={c["provider"]}&credits={c["credits"]}&cat={c["group"]}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm whitespace-nowrap">ยื่นเทียบโอน</a>'
 
         rows += f"""
         <tr class="border-b border-sky-100 text-xs hover:bg-sky-50/50 transition">
@@ -711,9 +731,7 @@ def all_courses():
             <td class="py-3.5 px-4 font-bold text-slate-700">{c['group']}</td>
             <td class="py-3.5 px-4 text-slate-700 leading-relaxed max-w-xs font-semibold">{mooc_multiline}<br><span class="inline-block mt-1 text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">รวม: {c['hours']}</span></td>
             <td class="py-3.5 px-4 text-center font-black text-sky-600">{c['credits']}</td>
-            <td class="py-3.5 px-4 text-center">
-                <a href="/submit_credit?course={c['name']}&inst={c['provider']}&credits={c['credits']}&cat={c['group']}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm">ยื่นเทียบโอน</a>
-            </td>
+            <td class="py-3.5 px-4 text-center">{action_btn}</td>
         </tr>
         """
 
@@ -722,9 +740,9 @@ def all_courses():
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-sky-100">
             <div>
                 <h2 class="text-2xl font-black text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-book-open text-sky-600"></i> รายวิชาทั้งหมดในหลักสูตร (เชื่อมต่อ Google Sheets)
+                    <i class="fa-solid fa-book-open text-sky-600"></i> รายวิชาทั้งหมดในหลักสูตร
                 </h2>
-                <p class="text-xs text-slate-500 mt-1 font-medium">ตารางสรุปรายวิชาอัปเดตแบบเรียลไทม์จาก Google Sheets (รองรับการบวกรวมชั่วโมงอัตโนมัติ)</p>
+                <p class="text-xs text-slate-500 mt-1 font-medium">ตารางสรุปรายวิชาทั้งหมด (รองรับการบวกรวมชั่วโมงอัตโนมัติ)</p>
             </div>
             <div class="bg-emerald-100 text-emerald-800 px-4 py-2 rounded-2xl border border-emerald-200 text-xs font-black shrink-0 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> จัดกลุ่มสำเร็จ {len(course_data)} วิชา
@@ -762,7 +780,6 @@ def submit_credit():
             faculty = "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ"
             major = request.form.get('major', 'สาขาวิชาระบบสารสนเทศ')
 
-            # จัดการไฟล์ที่ 1
             doc_filename = "default_doc.png"
             if 'cert_file' in request.files:
                 file = request.files['cert_file']
@@ -773,7 +790,6 @@ def submit_credit():
                     file.save(save_path)
                     doc_filename = unique_fn
 
-            # จัดการไฟล์ที่ 2
             doc_filename2 = None
             if 'cert_file2' in request.files:
                 file2 = request.files['cert_file2']
@@ -844,6 +860,13 @@ def submit_credit():
             init_cat = old_req.category
             selected_major = "สาขาวิชาระบบสารสนเทศ"
 
+    # เช็คว่าวิชาไหนเทียบโอนไปแล้วบ้าง
+    try:
+        approved_reqs = CreditRequest.query.filter_by(user_id=session['user_id'], status='Approved').all()
+        approved_courses = [r.course_name for r in approved_reqs]
+    except:
+        approved_courses = []
+
     is_subject_rows = ""
     if selected_major == "สาขาวิชาระบบสารสนเทศ":
         course_data = get_courses()
@@ -851,15 +874,23 @@ def submit_credit():
             provider_badge = '<span class="bg-sky-100 text-sky-800 border border-sky-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ThaiMOOC</span>' if item['provider'] == 'ThaiMOOC' else '<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">ChulaMOOC</span>'
             mooc_multiline = "<br>".join([f"• {m}" for m in item['mooc_list']])
 
+            if item['name'] in approved_courses:
+                action_col = '<span class="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-xl text-[11px] font-bold inline-flex items-center gap-1 border border-emerald-200"><i class="fa-solid fa-circle-check"></i> เทียบโอนสำเร็จ</span>'
+            else:
+                action_col = f'''
+                <div class="flex gap-1.5 justify-center">
+                    <a href="/submit_credit?course={item['name']}&inst={item['provider']}&credits={item['credits']}&cat={item['group']}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm">เลือกวิชา</a>
+                    <button type="button" onclick="this.closest('tr').style.display='none'" class="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm border border-rose-200" title="ลบรายวิชานี้ออกจากหน้าจอ (กรณีมีวิชานี้แล้ว)"><i class="fa-solid fa-xmark"></i> ลบ</button>
+                </div>
+                '''
+
             is_subject_rows += f"""
             <tr class="border-b border-sky-50 text-xs hover:bg-sky-50/50 transition">
                 <td class="py-3.5 px-3 font-mono font-bold text-slate-500">{item['code']}</td>
                 <td class="py-3.5 px-3 font-extrabold text-slate-900">{item['name']}<br>{provider_badge}</td>
                 <td class="py-3.5 px-3 text-slate-700 leading-relaxed max-w-xs font-medium">{mooc_multiline}</td>
                 <td class="py-3.5 px-3 text-center font-bold text-slate-700">{item['hours']}</td>
-                <td class="py-3.5 px-3 text-center">
-                    <a href="/submit_credit?course={item['name']}&inst={item['provider']}&credits={item['credits']}&cat={item['group']}&major_select=สาขาวิชาระบบสารสนเทศ#form_section" class="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] inline-block shadow-sm">เลือกวิชานี้</a>
-                </td>
+                <td class="py-3.5 px-3 text-center">{action_col}</td>
             </tr>
             """
 
@@ -869,7 +900,7 @@ def submit_credit():
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-10 h-10 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0"><i class="fa-solid fa-graduation-cap"></i></div>
                 <div>
-                    <h3 class="text-xl font-black text-slate-900">เลือกสาขาวิชาเพื่อดูรายวิชาที่ต้องเรียนเพิ่ม (ดึงจาก Google Sheets)</h3>
+                    <h3 class="text-xl font-black text-slate-900">เลือกสาขาวิชาเพื่อดูรายวิชาที่ต้องเรียนเพิ่ม</h3>
                 </div>
             </div>
 
@@ -885,12 +916,15 @@ def submit_credit():
 
             {'''
             <div class="overflow-x-auto rounded-2xl border border-sky-100">
-                <table class="w-full text-left min-w-[650px]">
+                <table class="w-full text-left min-w-[700px]">
                     <thead class="bg-sky-50 text-sky-800 text-[11px] font-bold uppercase tracking-wider border-b border-sky-100">
                         <tr><th class="py-3 px-3">รหัสวิชา</th><th class="py-3 px-3">รายวิชาในหลักสูตร IS</th><th class="py-3 px-3">บทเรียนออนไลน์ที่ต้องเรียนเพิ่ม</th><th class="py-3 px-3 text-center">ชั่วโมงเรียนรวม</th><th class="py-3 px-3 text-center">การดำเนินการ</th></tr>
                     </thead>
                     <tbody class="divide-y divide-sky-50">''' + is_subject_rows + '''</tbody>
                 </table>
+            </div>
+            <div class="mt-4 text-right">
+                <button type="button" onclick="document.getElementById('form_section').scrollIntoView({behavior: 'smooth'}); document.querySelector('[name=course_name]').value='';" class="text-sm font-bold text-sky-600 hover:text-sky-800 inline-flex items-center gap-1.5 bg-sky-50 px-4 py-2.5 rounded-xl border border-sky-100 transition shadow-sm"><i class="fa-solid fa-plus-circle"></i> เพิ่มรายวิชาด้วยตัวเอง (กรณีไม่พบในตาราง)</button>
             </div>
             ''' if selected_major == 'สาขาวิชาระบบสารสนเทศ' else '''<div class="text-center py-10 border border-dashed border-sky-200 rounded-2xl bg-sky-50/30"><p class="text-xs font-bold text-slate-500">เลือกสาขาก่อนครับ</p></div>'''}
         </div>
@@ -902,7 +936,7 @@ def submit_credit():
             <form method="POST" enctype="multipart/form-data" class="space-y-4">
                 <input type="hidden" name="major" value="สาขาวิชาระบบสารสนเทศ">
                 <input type="hidden" name="edit_req_id" value="{edit_req_id}">
-                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อรายวิชาในหลักสูตร *</label><input type="text" name="course_name" value="{init_course}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อรายวิชาในหลักสูตร *</label><input type="text" name="course_name" value="{init_course}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium" placeholder="เช่น คุณภาพการใช้ชีวิต"></div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">แหล่งเรียนรู้ / ระบบออนไลน์ *</label>
                     <select name="institution" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50 font-medium">
@@ -922,7 +956,6 @@ def submit_credit():
                     </div>
                 </div>
                 
-                <!-- แก้ไขให้สามารถอัปโหลดได้ 2 รูป -->
                 <div class="border-t border-sky-100 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-400"></i> รูปเกียรติบัตร / วุฒิบัตร (รูปที่ 1) *</label>
@@ -967,7 +1000,6 @@ def history():
         approved_by = getattr(r, 'approved_by', '-') or '-'
         reason_box = f'<div class="mt-1 text-xs text-rose-600 font-medium"><b>เหตุผลที่ไม่ผ่าน:</b> {r.reject_reason}</div>' if getattr(r, 'reject_reason', None) else ''
         
-        # แสดงลิงก์รูปภาพ 1 และ 2
         img_preview = ""
         if getattr(r, 'doc_img', None) and r.doc_img != 'default_doc.png':
             img_preview += f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-xs text-sky-600 underline font-bold whitespace-nowrap"><i class="fa-solid fa-image mr-1"></i>รูปที่ 1</a> '
@@ -1207,7 +1239,6 @@ def admin_review(req_id):
     student_name = req.user.fullname if getattr(req, 'user', None) else '-'
     student_code = req.user.member_id if getattr(req, 'user', None) else '-'
 
-    # แสดงผลรูปภาพทั้ง 2 รูปในหน้าของแอดมิน
     img_html = ""
     if getattr(req, 'doc_img', None) and req.doc_img != 'default_doc.png':
         img_html += f'<a href="/static/uploads/{req.doc_img}" target="_blank"><img src="/static/uploads/{req.doc_img}" class="max-h-64 rounded-2xl border border-sky-100 shadow-sm hover:opacity-90 transition inline-block mr-3 mb-3"></a>'
