@@ -6,7 +6,7 @@ import urllib.request
 import re
 import json
 from datetime import datetime
-from flask import Flask, render_template_string, request, redirect, url_for, session, flash
+from flask import Flask, request, redirect, url_for, session, flash, get_flashed_messages
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -66,7 +66,7 @@ class CreditRequest(db.Model):
     doc_img = db.Column(db.String(200), nullable=True)
     doc_img2 = db.Column(db.String(200), nullable=True)
     doc_img3 = db.Column(db.String(200), nullable=True)
-    status = db.Column(db.String(20), default='Pending') # Pending, Approved, Rejected, Needs_Revision
+    status = db.Column(db.String(20), default='Pending') 
     reject_reason = db.Column(db.Text, nullable=True)
     approved_by = db.Column(db.String(100), nullable=True)
     user = db.relationship('User', backref=db.backref('credits_list', lazy=True))
@@ -238,11 +238,29 @@ def get_courses():
         return IS_THAIMOOC_COURSES
 
 # ==========================================
-# Layout Template (With Active Sidebar Highlight)
+# Layout Template
 # ==========================================
 def render_layout(content, active_page=''):
     def is_active(page_name):
         return "bg-sky-200 text-sky-900 font-extrabold shadow-sm border border-sky-300" if active_page == page_name else "text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 font-medium"
+
+    messages = get_flashed_messages(with_categories=True)
+    flash_html = ""
+    if messages:
+        for category, message in messages:
+            is_error = category in ['error', 'danger']
+            bg_color = "bg-rose-50 text-rose-700 border-rose-200" if is_error else "bg-emerald-50 text-emerald-800 border-emerald-200"
+            icon_color = "text-rose-500" if is_error else "text-emerald-500"
+            icon_class = "fa-circle-exclamation" if is_error else "fa-circle-check"
+            flash_html += f'''
+            <div class="p-4 mb-4 text-sm rounded-2xl font-semibold shadow-sm flex items-center justify-between border transition-all {bg_color}">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid {icon_class} {icon_color} text-lg"></i>
+                    <span>{message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-xs font-bold px-2 py-1 hover:bg-black/5 rounded-lg">✕</button>
+            </div>
+            '''
 
     sidebar_html = f"""
     <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100 text-slate-700 h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-xl border-r border-sky-200 hidden md:flex shrink-0 w-full md:w-auto">
@@ -383,19 +401,7 @@ def render_layout(content, active_page=''):
 
         <div class="flex-grow flex flex-col min-h-screen min-w-0">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full mt-6">
-                {{% with messages = get_flashed_messages(with_categories=true) %}}
-                    {{% if messages %}}
-                        {{% for category, message in messages %}}
-                            <div class="p-4 mb-4 text-sm rounded-2xl font-semibold shadow-sm flex items-center justify-between border transition-all {{% if category == 'error' or category == 'danger' %}}bg-rose-50 text-rose-700 border-rose-200{{% else %}}bg-emerald-50 text-emerald-800 border-emerald-200{{% endif %}}">
-                                <div class="flex items-center gap-2">
-                                    <i class="fa-solid {{% if category == 'error' or category == 'danger' %}}fa-circle-exclamation text-rose-500{{% else %}}fa-circle-check text-emerald-500{{% endif %}} text-lg"></i>
-                                    <span>{{ message }}</span>
-                                </div>
-                                <button onclick="this.parentElement.remove()" class="text-xs font-bold px-2 py-1 hover:bg-black/5 rounded-lg">✕</button>
-                            </div>
-                        {{% endfor %}}
-                    {{% endif %}}
-                {{% endwith %}}
+                {flash_html}
             </div>
 
             <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -794,7 +800,6 @@ def submit_credit():
             req_id_to_edit = request.form.get('edit_request_id')
             
             if req_id_to_edit:
-                # กรณีแก้ไขคำร้องเดิม (ส่งแก้)
                 req_obj = CreditRequest.query.filter_by(id=req_id_to_edit, user_id=session['user_id']).first()
                 if req_obj:
                     if 'cert_file_edit' in request.files:
@@ -813,13 +818,12 @@ def submit_credit():
                             file2.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn2))
                             req_obj.doc_img2 = unique_fn2
 
-                    req_obj.status = 'Pending' # เปลี่ยนสถานะกลับมารอตรวจ
-                    req_obj.reject_reason = None # ล้างเหตุผลเดิมออก
+                    req_obj.status = 'Pending' 
+                    req_obj.reject_reason = None 
                     db.session.commit()
                     flash('แก้ไขและส่งหลักฐานใหม่ให้เจ้าหน้าที่ตรวจสอบเรียบร้อยแล้ว', 'success')
                     return redirect(url_for('history'))
 
-            # กรณีสร้างคำขอใหม่ปกติ
             course_codes = request.form.getlist('course_codes')
             if not course_codes:
                 flash('กรุณาเลือกอย่างน้อย 1 รายวิชาที่ต้องการเทียบโอน', 'error')
@@ -924,7 +928,6 @@ def submit_credit():
             flash(f'เกิดข้อผิดพลาดในการบันทึกข้อมูล: {str(e)}', 'error')
             return redirect(url_for('submit_credit'))
 
-    # หากเป็นการเข้ามาแก้ไขคำร้องเดิม (Needs_Revision)
     if edit_request_obj and edit_request_obj.status == 'Needs_Revision':
         content = f"""
         <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
@@ -999,6 +1002,9 @@ def submit_credit():
         """
 
     courses_json = json.dumps(course_data, ensure_ascii=False)
+    
+    # หากมีการแนบ URL parameter ให้ตั้งเป็น 'สาขาวิชาระบบสารสนเทศ' เพื่อเปิดตารางออโต้
+    pre_select_major = "สาขาวิชาระบบสารสนเทศ" if pre_selected_list else ""
 
     content = f"""
     <div class="max-w-5xl mx-auto space-y-8">
@@ -1007,7 +1013,7 @@ def submit_credit():
                 <div class="w-10 h-10 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0"><i class="fa-solid fa-graduation-cap"></i></div>
                 <div>
                     <h3 class="text-xl font-black text-slate-900">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">เลือกคณะ สาขาวิชา และรายวิชาที่ต้องการเทียบโอนในระบบธนาคารหน่วยกิต</p>
+                    <p class="text-xs text-slate-500 mt-0.5">เลือกสาขาวิชาเพื่อดูรายวิชาที่สามารถเทียบโอนในระบบธนาคารหน่วยกิต</p>
                 </div>
             </div>
 
@@ -1021,51 +1027,50 @@ def submit_credit():
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-graduation-cap mr-1 text-sky-500"></i> สาขาวิชา</label>
-                        <select name="major_select" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-white font-medium outline-none focus:ring-2 focus:ring-sky-400">
-                            <option value="สาขาวิชาระบบสารสนเทศ">สาขาวิชาระบบสารสนเทศ (Information Systems)</option>
-                            <option value="สาขาวิชาเทคโนโลยีสารสนเทศ">สาขาวิชาเทคโนโลยีสารสนเทศ (IT)</option>
-                            <option value="สาขาวิชาวิทยาการคอมพิวเตอร์">สาขาวิชาวิทยาการคอมพิวเตอร์ (CS)</option>
-                            <option value="สาขาวิชาคอมพิวเตอร์ธุรกิจ">สาขาวิชาคอมพิวเตอร์ธุรกิจ (BC)</option>
+                        <select name="major_select" id="major_select" onchange="toggleCourseTable()" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-white font-medium outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer">
+                            <option value="">-- กรุณาคลิกเลือกสาขาวิชา --</option>
+                            <option value="สาขาวิชาระบบสารสนเทศ" {'selected' if pre_select_major == 'สาขาวิชาระบบสารสนเทศ' else ''}>สาขาวิชาระบบสารสนเทศ (Information Systems)</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="overflow-x-auto rounded-2xl border border-sky-100">
-                    <table class="w-full text-left min-w-[750px]">
-                        <thead class="bg-sky-50 text-sky-800 text-[11px] font-bold uppercase tracking-wider border-b border-sky-100">
-                            <tr><th class="py-3 px-3 text-center w-20">เลือก</th><th class="py-3 px-3">รหัสวิชา</th><th class="py-3 px-3">รายวิชาในหลักสูตร IS</th><th class="py-3 px-3">บทเรียนออนไลน์ที่ต้องเรียนเพิ่ม</th><th class="py-3 px-3 text-center">ชั่วโมงเรียนรวม</th></tr>
-                        </thead>
-                        <tbody class="divide-y divide-sky-50">{is_subject_rows}</tbody>
-                    </table>
-                </div>
-
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-sky-50/60 p-6 rounded-2xl border border-sky-100">
-                    <div>
-                        <h4 class="text-sm font-extrabold text-slate-800"><i class="fa-solid fa-hand-pointer text-sky-500 mr-1"></i> ขั้นตอนต่อไปหลังเลือกวิชาเสร็จ</h4>
-                        <p class="text-xs text-slate-500 mt-0.5">กดปุ่มด้านขวาเพื่อให้ระบบสร้างช่องอัปโหลดเกียรติบัตรสำหรับวิชาที่เลือก</p>
+                <div id="course_selection_area" class="hidden space-y-6">
+                    <div class="overflow-x-auto rounded-2xl border border-sky-100">
+                        <table class="w-full text-left min-w-[750px]">
+                            <thead class="bg-sky-50 text-sky-800 text-[11px] font-bold uppercase tracking-wider border-b border-sky-100">
+                                <tr><th class="py-3 px-3 text-center w-20">เลือก</th><th class="py-3 px-3">รหัสวิชา</th><th class="py-3 px-3">รายวิชาในหลักสูตร IS</th><th class="py-3 px-3">บทเรียนออนไลน์ที่ต้องเรียนเพิ่ม</th><th class="py-3 px-3 text-center">ชั่วโมงเรียนรวม</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-sky-50">{is_subject_rows}</tbody>
+                        </table>
                     </div>
-                    <button type="button" onclick="generateUploadForms()" class="w-full sm:w-auto bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-black px-7 py-3.5 rounded-2xl text-sm transition shadow-lg shadow-sky-400/30 shrink-0 inline-flex items-center justify-center gap-2 pulse-btn">
-                        <i class="fa-solid fa-arrow-down text-sky-100"></i> 📥 ดึงรายวิชาที่เลือกมาแนบหลักฐาน
-                    </button>
-                </div>
 
-                <!-- ส่วนแสดงฟอร์มแนบรูปแยกรายวิชา (จะโผล่มาเมื่อกดปุ่ม) -->
-                <div id="upload_sections_container" class="space-y-6 hidden">
-                    <div class="border-t-2 border-dashed border-sky-200 pt-6">
-                        <h3 class="text-xl font-black text-slate-900 mb-1"><i class="fa-solid fa-file-image text-sky-500 mr-2"></i>แนบหลักฐานเกียรติบัตร / วุฒิบัตร (แยกตามรายวิชาที่เลือก)</h3>
-                        <p class="text-xs text-slate-500 mb-6">กรุณาแนบรูปภาพหลักฐานให้ครบถ้วนสำหรับแต่ละรายวิชา</p>
-                        <div id="dynamic_forms_wrapper" class="space-y-4"></div>
-                        
-                        <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black py-4 rounded-2xl transition shadow-xl shadow-emerald-500/20 text-base mt-6">
-                            <i class="fa-solid fa-circle-check mr-2"></i> ยืนยันส่งคำร้องขอเทียบโอนทั้งหมด
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-sky-50/60 p-6 rounded-2xl border border-sky-100">
+                        <div>
+                            <h4 class="text-sm font-extrabold text-slate-800"><i class="fa-solid fa-hand-pointer text-sky-500 mr-1"></i> ขั้นตอนต่อไปหลังเลือกวิชาเสร็จ</h4>
+                            <p class="text-xs text-slate-500 mt-0.5">กดปุ่มด้านขวาเพื่อให้ระบบสร้างช่องอัปโหลดเกียรติบัตรสำหรับวิชาที่เลือก</p>
+                        </div>
+                        <button type="button" onclick="generateUploadForms()" class="w-full sm:w-auto bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-black px-7 py-3.5 rounded-2xl text-sm transition shadow-lg shadow-sky-400/30 shrink-0 inline-flex items-center justify-center gap-2 pulse-btn">
+                            <i class="fa-solid fa-arrow-down text-sky-100"></i> 📥 ดึงรายวิชาที่เลือกมาแนบหลักฐาน
                         </button>
+                    </div>
+
+                    <div id="upload_sections_container" class="space-y-6 hidden">
+                        <div class="border-t-2 border-dashed border-sky-200 pt-6">
+                            <h3 class="text-xl font-black text-slate-900 mb-1"><i class="fa-solid fa-file-image text-sky-500 mr-2"></i>แนบหลักฐานเกียรติบัตร / วุฒิบัตร (แยกตามรายวิชาที่เลือก)</h3>
+                            <p class="text-xs text-slate-500 mb-6">กรุณาแนบรูปภาพหลักฐานให้ครบถ้วนสำหรับแต่ละรายวิชา</p>
+                            <div id="dynamic_forms_wrapper" class="space-y-4"></div>
+                            
+                            <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black py-4 rounded-2xl transition shadow-xl shadow-emerald-500/20 text-base mt-6">
+                                <i class="fa-solid fa-circle-check mr-2"></i> ยืนยันส่งคำร้องขอเทียบโอนทั้งหมด
+                            </button>
+                        </div>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ปุ่มเพิ่มวิชาด้วยตัวเองแบบเด่นชัด กระพริบสะดุดตา -->
+    <!-- ปุ่มเพิ่มวิชาด้วยตัวเอง -->
     <div class="max-w-5xl mx-auto mt-6 mb-12 text-center">
         <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 p-1 rounded-3xl shadow-xl pulse-btn">
             <div class="bg-white p-6 rounded-[22px] flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -1081,7 +1086,7 @@ def submit_credit():
         </div>
     </div>
 
-    <!-- ฟอร์มเพิ่มเองแบบซ่อนไว้ก่อน หรือเลื่อนมาโชว์ -->
+    <!-- ฟอร์มเพิ่มเอง -->
     <div id="manual_form_section" class="max-w-5xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl mb-12">
         <h3 class="text-2xl font-black text-slate-900 mb-2">แบบฟอร์มเพิ่มและยื่นเทียบโอนรายวิชาด้วยตัวเอง</h3>
         <p class="text-xs text-slate-500 mb-6">สำหรับรายวิชาอื่นๆ ที่ไม่อยู่ในตารางหลักสูตรด้านบน</p>
@@ -1126,6 +1131,22 @@ def submit_credit():
     const allCoursesData = {{}};
     allCoursesDataArray.forEach(c => {{
         allCoursesData[c.code] = c;
+    }});
+
+    function toggleCourseTable() {{
+        const majorSelect = document.getElementById('major_select');
+        const courseArea = document.getElementById('course_selection_area');
+        if (majorSelect && courseArea) {{
+            if (majorSelect.value === 'สาขาวิชาระบบสารสนเทศ') {{
+                courseArea.classList.remove('hidden');
+            }} else {{
+                courseArea.classList.add('hidden');
+            }}
+        }}
+    }}
+
+    document.addEventListener("DOMContentLoaded", function() {{
+        toggleCourseTable();
     }});
 
     function generateUploadForms() {{
@@ -1442,7 +1463,6 @@ def admin_review(req_id):
             return redirect(url_for('admin_requests'))
         
         elif action == 'reject':
-            # ปุ่มไม่อนุมัติ: ปิดคำร้อง นักศึกษาต้องไปยื่นใหม่เท่านั้น
             if not reject_reason:
                 flash('กรุณาระบุเหตุผลในการไม่อนุมัติด้วยครับ', 'error')
                 return redirect(url_for('admin_review', req_id=req_id))
@@ -1455,7 +1475,6 @@ def admin_review(req_id):
             return redirect(url_for('admin_requests'))
 
         elif action == 'request_revision':
-            # ปุ่มส่งให้แก้ไข: นักศึกษากดแก้ไขคำร้องเดิมได้ทันที
             if not reject_reason:
                 flash('กรุณาระบุสิ่งที่ต้องการให้นักศึกษาแก้ไขด้วยครับ', 'error')
                 return redirect(url_for('admin_review', req_id=req_id))
