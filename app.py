@@ -66,7 +66,7 @@ class CreditRequest(db.Model):
     doc_img = db.Column(db.String(200), nullable=True)
     doc_img2 = db.Column(db.String(200), nullable=True)
     doc_img3 = db.Column(db.String(200), nullable=True)
-    status = db.Column(db.String(20), default='Pending')
+    status = db.Column(db.String(20), default='Pending') # Pending, Approved, Rejected, Needs_Revision
     reject_reason = db.Column(db.Text, nullable=True)
     approved_by = db.Column(db.String(100), nullable=True)
     user = db.relationship('User', backref=db.backref('credits_list', lazy=True))
@@ -537,7 +537,7 @@ def home():
 
     approved_reqs = [r for r in user_requests if getattr(r, 'status', '') == 'Approved']
     approved_credits = sum(getattr(r, 'credits', 0) for r in approved_reqs)
-    pending_credits = sum(getattr(r, 'credits', 0) for r in user_requests if getattr(r, 'status', '') == 'Pending')
+    pending_credits = sum(getattr(r, 'credits', 0) for r in user_requests if getattr(r, 'status', '') in ['Pending', 'Needs_Revision'])
     remaining_credits = max(0, 120 - approved_credits - pending_credits)
 
     content = f"""
@@ -557,7 +557,7 @@ def home():
             <div class="w-12 h-12 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-graduation-cap"></i></div>
         </div>
         <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between card-hover">
-            <div><p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">รออนุมัติเทียบโอน</p><h3 class="text-3xl font-black text-amber-500">{pending_credits} <span class="text-xs font-medium text-slate-400">หน่วยกิต</span></h3></div>
+            <div><p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">รออนุมัติ / แก้ไข</p><h3 class="text-3xl font-black text-amber-500">{pending_credits} <span class="text-xs font-medium text-slate-400">หน่วยกิต</span></h3></div>
             <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-hourglass-half"></i></div>
         </div>
         <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between card-hover">
@@ -586,7 +586,7 @@ def home():
         new Chart(ctxDoughnut, {{
             type: 'doughnut',
             data: {{
-                labels: ['อนุมัติแล้ว', 'รอพิจารณา', 'คงเหลือถึงเป้าหมาย'],
+                labels: ['อนุมัติแล้ว', 'รอพิจารณา/แก้ไข', 'คงเหลือถึงเป้าหมาย'],
                 datasets: [{{
                     data: [{approved_credits}, {pending_credits}, {remaining_credits}],
                     backgroundColor: ['#0284c7', '#f59e0b', '#e2e8f0'],
@@ -784,10 +784,43 @@ def all_courses():
 def submit_credit():
     if 'user_id' not in session: return redirect(url_for('login'))
     
+    edit_req_id = request.args.get('edit_id')
+    edit_request_obj = None
+    if edit_req_id:
+        edit_request_obj = CreditRequest.query.filter_by(id=edit_req_id, user_id=session['user_id']).first()
+
     if request.method == 'POST':
         try:
-            course_codes = request.form.getlist('course_codes')
+            req_id_to_edit = request.form.get('edit_request_id')
             
+            if req_id_to_edit:
+                # กรณีแก้ไขคำร้องเดิม (ส่งแก้)
+                req_obj = CreditRequest.query.filter_by(id=req_id_to_edit, user_id=session['user_id']).first()
+                if req_obj:
+                    if 'cert_file_edit' in request.files:
+                        file = request.files['cert_file_edit']
+                        if file and file.filename != '' and allowed_file(file.filename):
+                            ext = file.filename.rsplit('.', 1)[1].lower()
+                            unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
+                            file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
+                            req_obj.doc_img = unique_fn
+
+                    if 'cert_file2_edit' in request.files:
+                        file2 = request.files['cert_file2_edit']
+                        if file2 and file2.filename != '' and allowed_file(file2.filename):
+                            ext2 = file2.filename.rsplit('.', 1)[1].lower()
+                            unique_fn2 = f"cert2_{uuid.uuid4().hex[:8]}.{ext2}"
+                            file2.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn2))
+                            req_obj.doc_img2 = unique_fn2
+
+                    req_obj.status = 'Pending' # เปลี่ยนสถานะกลับมารอตรวจ
+                    req_obj.reject_reason = None # ล้างเหตุผลเดิมออก
+                    db.session.commit()
+                    flash('แก้ไขและส่งหลักฐานใหม่ให้เจ้าหน้าที่ตรวจสอบเรียบร้อยแล้ว', 'success')
+                    return redirect(url_for('history'))
+
+            # กรณีสร้างคำขอใหม่ปกติ
+            course_codes = request.form.getlist('course_codes')
             if not course_codes:
                 flash('กรุณาเลือกอย่างน้อย 1 รายวิชาที่ต้องการเทียบโอน', 'error')
                 return redirect(url_for('submit_credit'))
@@ -891,6 +924,43 @@ def submit_credit():
             flash(f'เกิดข้อผิดพลาดในการบันทึกข้อมูล: {str(e)}', 'error')
             return redirect(url_for('submit_credit'))
 
+    # หากเป็นการเข้ามาแก้ไขคำร้องเดิม (Needs_Revision)
+    if edit_request_obj and edit_request_obj.status == 'Needs_Revision':
+        content = f"""
+        <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0"><i class="fa-solid fa-pen-to-square"></i></div>
+                <div>
+                    <h3 class="text-xl font-black text-slate-900">แก้ไขคำร้องขอเทียบโอน #{edit_request_obj.req_code}</h3>
+                    <p class="text-xs text-rose-600 font-semibold mt-0.5">เหตุผลจากเจ้าหน้าที่: {edit_request_obj.reject_reason or 'กรุณาแก้ไขหลักฐาน'}</p>
+                </div>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                <input type="hidden" name="edit_request_id" value="{edit_request_obj.id}">
+                <div class="bg-sky-50/50 p-6 rounded-2xl border border-sky-200 space-y-4">
+                    <h4 class="text-base font-extrabold text-slate-900">{edit_request_obj.course_name} <span class="text-xs text-sky-600 font-normal">({edit_request_obj.credits} หน่วยกิต)</span></h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-400"></i> อัปโหลดรูปเกียรติบัตร (รูปที่ 1) ใหม่ *</label>
+                            <input type="file" name="cert_file_edit" accept="image/*,.pdf" required class="w-full border border-sky-100 rounded-2xl p-2.5 text-xs bg-white font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-500 file:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-400"></i> อัปโหลดรูปเกียรติบัตร (รูปที่ 2) (ถ้ามี)</label>
+                            <input type="file" name="cert_file2_edit" accept="image/*,.pdf" class="w-full border border-sky-100 rounded-2xl p-2.5 text-xs bg-white font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-300 file:text-slate-700 hover:file:bg-slate-400">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black py-4 rounded-2xl transition shadow-xl shadow-emerald-500/20 text-base">
+                    <i class="fa-solid fa-circle-check mr-2"></i> บันทึกและส่งให้เจ้าหน้าที่ตรวจสอบอีกครั้ง
+                </button>
+            </form>
+        </div>
+        """
+        return render_layout(content, active_page='submit_credit')
+
     url_selected_code = request.args.get('selected_courses', '')
     pre_selected_list = [url_selected_code] if url_selected_code else []
 
@@ -942,7 +1012,6 @@ def submit_credit():
             </div>
 
             <form method="POST" enctype="multipart/form-data" id="multi_form_section" class="scroll-mt-6 space-y-6">
-                <!-- ส่วนเลือกคณะและสาขาตามที่ต้องการ -->
                 <div class="bg-sky-50/60 p-6 rounded-2xl border border-sky-100 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-building-columns mr-1 text-sky-500"></i> คณะ</label>
@@ -1135,12 +1204,15 @@ def history():
         elif status == 'Approved':
             badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>'
             action_btn = '-'
+        elif status == 'Needs_Revision':
+            badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">ให้แก้ไขข้อมูล</span>'
+            action_btn = f'<a href="/submit_credit?edit_id={r.id}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold inline-block shadow-sm">แก้ไขและส่งใหม่</a>'
         else:
-            badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ / ให้แก้ไข</span>'
-            action_btn = f'<a href="/submit_credit" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold inline-block shadow-sm">ไปยื่นใหม่</a>'
+            badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ (ยื่นใหม่เท่านั้น)</span>'
+            action_btn = f'<a href="/submit_credit" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold inline-block shadow-sm">ไปยื่นคำขอใหม่</a>'
 
         approved_by = getattr(r, 'approved_by', '-') or '-'
-        reason_box = f'<div class="mt-1 text-xs text-rose-600 font-medium"><b>เหตุผลที่ไม่ผ่าน:</b> {r.reject_reason}</div>' if getattr(r, 'reject_reason', None) else ''
+        reason_box = f'<div class="mt-1 text-xs text-rose-600 font-medium"><b>เหตุผลจากเจ้าหน้าที่:</b> {r.reject_reason}</div>' if getattr(r, 'reject_reason', None) else ''
         
         img_preview = ""
         if getattr(r, 'doc_img', None) and r.doc_img != 'default_doc.png':
@@ -1315,9 +1387,12 @@ def admin_requests():
         elif status_val == 'Approved':
             status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>'
             action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200"><i class="fa-solid fa-lock mr-1"></i>พิจารณาแล้ว</span>'
+        elif status_val == 'Needs_Revision':
+            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">ส่งให้นักศึกษาแก้ไข</span>'
+            action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200"><i class="fa-solid fa-lock mr-1"></i>รอแก้ไข</span>'
         else:
-            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ / ให้แก้ไข</span>'
-            action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200"><i class="fa-solid fa-lock mr-1"></i>พิจารณาแล้ว</span>'
+            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ (ยื่นใหม่)</span>'
+            action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200"><i class="fa-solid fa-lock mr-1"></i>สิ้นสุดคำร้อง</span>'
 
         student_name = r.user.fullname if getattr(r, 'user', None) else '-'
         student_code = r.user.member_id if getattr(r, 'user', None) else '-'
@@ -1350,8 +1425,8 @@ def admin_review(req_id):
     if session.get('role') not in ['admin', 'superadmin']: return redirect(url_for('login'))
     req = CreditRequest.query.get_or_404(req_id)
 
-    if req.status != 'Pending':
-        flash('คำร้องนี้ได้รับการพิจารณาไปแล้ว ไม่สามารถแก้ไขได้อีก', 'error')
+    if req.status not in ['Pending', 'Needs_Revision']:
+        flash('คำร้องนี้ได้รับการพิจารณาเสร็จสิ้นไปแล้ว ไม่สามารถแก้ไขได้อีก', 'error')
         return redirect(url_for('admin_requests'))
 
     if request.method == 'POST':
@@ -1367,15 +1442,29 @@ def admin_review(req_id):
             return redirect(url_for('admin_requests'))
         
         elif action == 'reject':
+            # ปุ่มไม่อนุมัติ: ปิดคำร้อง นักศึกษาต้องไปยื่นใหม่เท่านั้น
             if not reject_reason:
-                flash('กรุณาระบุเหตุผลหรือสิ่งที่ต้องแก้ไขก่อนส่งตีกลับให้นักศึกษาด้วยครับ', 'error')
+                flash('กรุณาระบุเหตุผลในการไม่อนุมัติด้วยครับ', 'error')
                 return redirect(url_for('admin_review', req_id=req_id))
             
             req.status = 'Rejected'
             req.reject_reason = reject_reason
             req.approved_by = admin_user.fullname if admin_user else "เจ้าหน้าที่"
             db.session.commit()
-            flash('ปฏิเสธ/ส่งเรื่องกลับให้นักศึกษาแก้ไขเรียบร้อยแล้ว', 'success')
+            flash('ปฏิเสธคำร้องเรียบร้อยแล้ว (นักศึกษาต้องยื่นคำขอใหม่)', 'success')
+            return redirect(url_for('admin_requests'))
+
+        elif action == 'request_revision':
+            # ปุ่มส่งให้แก้ไข: นักศึกษากดแก้ไขคำร้องเดิมได้ทันที
+            if not reject_reason:
+                flash('กรุณาระบุสิ่งที่ต้องการให้นักศึกษาแก้ไขด้วยครับ', 'error')
+                return redirect(url_for('admin_review', req_id=req_id))
+            
+            req.status = 'Needs_Revision'
+            req.reject_reason = reject_reason
+            req.approved_by = admin_user.fullname if admin_user else "เจ้าหน้าที่"
+            db.session.commit()
+            flash('ส่งเรื่องให้นักศึกษาแก้ไขหลักฐานเรียบร้อยแล้ว', 'success')
             return redirect(url_for('admin_requests'))
 
     student_name = req.user.fullname if getattr(req, 'user', None) else '-'
@@ -1404,12 +1493,13 @@ def admin_review(req_id):
 
         <form method="POST" class="space-y-4 border-t border-sky-100 pt-6">
             <div>
-                <label class="block text-xs font-bold text-rose-600 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-triangle-exclamation mr-1"></i> กรณีไม่ผ่านการพิจารณา: ระบุเหตุผล / สิ่งที่ให้นักศึกษาแก้ไข</label>
-                <textarea name="reject_reason" rows="3" placeholder="ระบุข้อความเพื่อแจ้งเตือนนักศึกษา..." class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></textarea>
+                <label class="block text-xs font-bold text-rose-600 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ระบุเหตุผล (กรณีไม่อนุมัติ หรือส่งให้แก้ไข)</label>
+                <textarea name="reject_reason" rows="3" placeholder="ระบุข้อความแจ้งนักศึกษา..." class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></textarea>
             </div>
-            <div class="flex justify-end gap-3 pt-2">
-                <button type="submit" name="action" value="reject" class="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs transition shadow-md">ไม่ผ่านการพิจารณา / ส่งกลับแก้ไข</button>
-                <button type="submit" name="action" value="approve" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs transition shadow-md">อนุมัติผ่านการเทียบโอน</button>
+            <div class="flex flex-wrap justify-end gap-3 pt-2">
+                <button type="submit" name="action" value="reject" class="px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs transition shadow-md">❌ ไม่อนุมัติ (ยื่นใหม่เท่านั้น)</button>
+                <button type="submit" name="action" value="request_revision" class="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-xs transition shadow-md">✏️ ส่งให้แก้ไข (ไม่ต้องยื่นใหม่)</button>
+                <button type="submit" name="action" value="approve" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs transition shadow-md">✅ อนุมัติผ่านการเทียบโอน</button>
             </div>
         </form>
     </div>
