@@ -4,6 +4,7 @@ import csv
 import io
 import urllib.request
 import re
+import json
 from datetime import datetime
 from flask import Flask, render_template_string, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -919,8 +920,6 @@ def submit_credit():
         </tr>
         """
 
-    # แปลงรายชื่อวิชาเป็น JSON ปลอดภัยสำหรับใส่ใน JavaScript
-    import json
     courses_json = json.dumps(course_data, ensure_ascii=False)
 
     content = f"""
@@ -1028,23 +1027,23 @@ def submit_credit():
 
     <script>
     const allCoursesDataArray = {courses_json};
-    const allCoursesData = {};
+    const allCoursesData = {{}};
     allCoursesDataArray.forEach(c => {{
         allCoursesData[c.code] = c;
     }});
 
-    function generateUploadForms() {
+    function generateUploadForms() {{
         const checkboxes = document.querySelectorAll('.course-checkbox:checked');
         const container = document.getElementById('upload_sections_container');
         const wrapper = document.getElementById('dynamic_forms_wrapper');
         
-        if (checkboxes.length === 0) {
+        if (checkboxes.length === 0) {{
             alert('กรุณาติ๊กเลือกอย่างน้อย 1 รายวิชาก่อนครับ!');
             return;
-        }
+        }}
 
         wrapper.innerHTML = '';
-        checkboxes.forEach(cb => {
+        checkboxes.forEach(cb => {{
             const code = cb.value;
             const course = allCoursesData[code];
             if (!course) return;
@@ -1072,20 +1071,20 @@ def submit_credit():
                 </div>
             `;
             wrapper.insertAdjacentHTML('beforeend', html);
-        });
+        }});
 
         container.classList.remove('hidden');
-        container.scrollIntoView({ behavior: 'smooth' });
-    }
+        container.scrollIntoView({{ behavior: 'smooth' }});
+    }}
 
-    function scrollToManualForm() {
+    function scrollToManualForm() {{
         const manualSection = document.getElementById('manual_form_section');
-        manualSection.scrollIntoView({ behavior: 'smooth' });
+        manualSection.scrollIntoView({{ behavior: 'smooth' }});
         manualSection.classList.add('highlight-target');
-        setTimeout(() => {
+        setTimeout(() => {{
             manualSection.classList.remove('highlight-target');
-        }, 1500);
-    }
+        }}, 1500);
+    }}
     </script>
     """
     return render_template_string(LAYOUT_TEMPLATE, content=content)
