@@ -71,6 +71,7 @@ class CreditRequest(db.Model):
     approved_by = db.Column(db.String(100), nullable=True)
     user = db.relationship('User', backref=db.backref('credits_list', lazy=True))
 
+# (เก็บโมเดลไว้เผื่อข้อมูลเก่าพัง แต่ไม่ได้ใช้แล้วในระบบใหม่)
 class ProfileEditRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -295,9 +296,6 @@ def render_layout(content, active_page=''):
                     <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_requests')}">
                         <i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">คำร้องเทียบโอน</span>
                     </a>
-                    <a href="/admin/profile_requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_profile_requests')}">
-                        <i class="fa-solid fa-user-pen text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">คำร้องแก้ไขข้อมูล</span>
-                    </a>
                     <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('all_courses')}">
                         <i class="fa-solid fa-book-open text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายวิชาทั้งหมด</span>
                     </a>
@@ -487,11 +485,10 @@ def home():
     if user.role in ['admin', 'superadmin']:
         try:
             pending_credits = CreditRequest.query.filter_by(status='Pending').count()
-            pending_edits = ProfileEditRequest.query.filter_by(status='Pending').count()
             total_members = User.query.filter_by(role='student').count()
             total_admins = User.query.filter(User.role.in_(['admin', 'superadmin'])).count()
         except:
-            pending_credits, pending_edits, total_members, total_admins = 0, 0, 0, 1
+            pending_credits, total_members, total_admins = 0, 0, 1
 
         content = f"""
         <div class="mb-8">
@@ -510,7 +507,7 @@ def home():
                 <div class="w-14 h-14 bg-white/20 text-white rounded-2xl flex items-center justify-center text-2xl shrink-0 backdrop-blur"><i class="fa-solid fa-user-plus"></i></div>
             </a>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <a href="/admin/students" class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between hover:border-sky-400 transition card-hover">
                 <div>
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">นักศึกษาสาขา IS ในระบบ</p>
@@ -524,13 +521,6 @@ def home():
                     <h3 class="text-3xl font-black text-amber-500">{pending_credits} <span class="text-xs text-slate-400 font-normal">รายการ</span></h3>
                 </div>
                 <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-file-signature"></i></div>
-            </a>
-            <a href="/admin/profile_requests" class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between hover:border-indigo-400 transition card-hover">
-                <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">คำร้องแก้ไขข้อมูลค้างพิจารณา</p>
-                    <h3 class="text-3xl font-black text-indigo-500">{pending_edits} <span class="text-xs text-slate-400 font-normal">รายการ</span></h3>
-                </div>
-                <div class="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-user-pen"></i></div>
             </a>
         </div>
         """
@@ -1003,7 +993,6 @@ def submit_credit():
 
     courses_json = json.dumps(course_data, ensure_ascii=False)
     
-    # หากมีการแนบ URL parameter ให้ตั้งเป็น 'สาขาวิชาระบบสารสนเทศ' เพื่อเปิดตารางออโต้
     pre_select_major = "สาขาวิชาระบบสารสนเทศ" if pre_selected_list else ""
 
     content = f"""
@@ -1306,8 +1295,14 @@ def profile():
     if not user: return redirect(url_for('login'))
     display_title = "เจ้าหน้าที่" if user.role in ['admin', 'superadmin'] else f"{user.prefix or ''} {user.fullname}"
     
+    # เพิ่มปุ่มกดแก้ไขข้อมูล
+    edit_btn_html = ""
+    if user.role not in ['admin', 'superadmin']:
+        edit_btn_html = '<a href="/request_edit_profile" class="absolute top-6 right-6 bg-sky-100 hover:bg-sky-200 text-sky-700 px-4 py-2 rounded-xl text-xs font-bold transition-all"><i class="fa-solid fa-pen mr-1"></i> แก้ไขข้อมูล</a>'
+
     content = f"""
-    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
+    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl relative">
+        {edit_btn_html}
         <h3 class="text-2xl font-black text-slate-900 mb-1">{display_title}</h3>
         <p class="text-sm font-bold text-sky-600 mb-1">รหัสนักศึกษา: {user.member_id or '-'}</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 bg-sky-50/50 p-6 rounded-2xl border border-sky-100 text-sm mt-6">
@@ -1327,63 +1322,43 @@ def request_edit_profile():
     user = User.query.get(session['user_id'])
 
     if request.method == 'POST':
-        prefix = request.form.get('prefix')
-        fullname = request.form.get('fullname')
-        phone = request.form.get('phone')
-        email = request.form.get('email')
+        # อัปเดตข้อมูลลงฐานข้อมูลโดยตรง ไม่ต้องสร้างคำร้องแล้ว
+        user.prefix = request.form.get('prefix')
+        user.fullname = request.form.get('fullname')
+        user.phone = request.form.get('phone')
+        user.email = request.form.get('email')
         
-        house_no = request.form.get('house_no', '')
-        moo = request.form.get('moo', '')
-        soi = request.form.get('soi', '')
-        subdistrict = request.form.get('subdistrict', '')
-        district = request.form.get('district', '')
-        province = request.form.get('province', '')
-        postal_code = request.form.get('postal_code', '')
-
-        full_addr = format_address(house_no, moo, soi, subdistrict, district, province, postal_code)
-        reason = request.form.get('reason', '').strip()
-
-        if not reason:
-            flash('กรุณาระบุรายละเอียดและเหตุผลในการขอแก้ไขข้อมูลให้ครบถ้วนด้วยครับ', 'error')
-            return redirect(url_for('request_edit_profile'))
-
-        edit_req = ProfileEditRequest(
-            user_id=user.id,
-            new_prefix=prefix,
-            new_fullname=fullname,
-            new_phone=phone,
-            new_email=email,
-            new_address=full_addr,
-            reason=reason
-        )
-        db.session.add(edit_req)
+        # กรณีมีการรับค่าที่อยู่เข้ามา (แต่อินเตอร์เฟซด้านล่างซ่อนไว้ก่อนให้แก้แค่ข้อมูลพื้นฐาน)
+        # หากต้องการให้แก้ที่อยู่ได้ด้วย ก็ใส่ input ลงในฟอร์ม HTML ด้านล่างได้เลยครับ
+        
         db.session.commit()
 
-        flash('ส่งคำร้องขอแก้ไขข้อมูลส่วนตัวสำเร็จแล้ว รอเจ้าหน้าที่พิจารณาตรวจสอบ', 'success')
+        flash('✅ บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว', 'success')
         return redirect(url_for('profile'))
 
     content = f"""
     <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
-        <h3 class="text-2xl font-black text-slate-900 mb-2">ส่งคำร้องขอแก้ไขข้อมูลส่วนตัว</h3>
+        <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขข้อมูลส่วนตัว</h3>
+        <p class="text-xs text-slate-500 mb-6">คุณสามารถแก้ไขข้อมูลเบื้องต้นและบันทึกเข้าระบบได้ทันที</p>
+        
         <form method="POST" class="space-y-4">
             <div class="grid grid-cols-3 gap-3">
-                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">คำนำหน้าใหม่</label>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">คำนำหน้า</label>
                 <select name="prefix" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50">
                     <option value="นาย" {'selected' if user.prefix=='นาย' else ''}>นาย</option>
                     <option value="นาง" {'selected' if user.prefix=='นาง' else ''}>นาง</option>
                     <option value="นางสาว" {'selected' if user.prefix=='นางสาว' else ''}>นางสาว</option>
                 </select></div>
-                <div class="col-span-2"><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อ-นามสกุลใหม่</label><input type="text" name="fullname" value="{user.fullname}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                <div class="col-span-2"><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อ-นามสกุล</label><input type="text" name="fullname" value="{user.fullname}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
             </div>
             <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์ใหม่</label><input type="tel" name="phone" value="{user.phone or ''}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
-                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมลใหม่</label><input type="email" name="email" value="{user.email or ''}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์</label><input type="tel" name="phone" value="{user.phone or ''}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมล</label><input type="email" name="email" value="{user.email or ''}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-rose-600 uppercase tracking-wider mb-1.5">เหตุผลในการขอแก้ไข *</label>
-                <textarea name="reason" rows="3" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></textarea>
+            <div class="pt-4 flex gap-3">
+                <a href="/profile" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-center font-bold py-3.5 rounded-2xl shadow-sm text-sm transition">ยกเลิก</a>
+                <button type="submit" class="w-2/3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm transition">บันทึกข้อมูล</button>
             </div>
-            <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm mt-2">ส่งคำร้องให้เจ้าหน้าที่พิจารณา</button>
         </form>
     </div>
     """
@@ -1714,57 +1689,6 @@ def manage_admins():
     </div>
     """
     return render_layout(content, active_page='manage_admins')
-
-@app.route('/admin/profile_requests')
-def admin_profile_requests():
-    if session.get('role') not in ['admin', 'superadmin']: return redirect(url_for('login'))
-    
-    try:
-        requests_list = ProfileEditRequest.query.order_by(ProfileEditRequest.id.desc()).all()
-    except Exception:
-        requests_list = []
-
-    rows = ""
-    for r in requests_list:
-        status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอพิจารณา</span>' if getattr(r, 'status', 'Pending') == 'Pending' else ('<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>' if getattr(r, 'status', '') == 'Approved' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">ไม่อนุมัติ</span>')
-        actions = f'<a href="/admin/approve_profile/{r.id}" class="bg-emerald-600 text-white px-3 py-1 rounded-xl text-xs">อนุมัติ</a> <a href="/admin/reject_profile/{r.id}" class="bg-rose-600 text-white px-3 py-1 rounded-xl text-xs">ไม่อนุมัติ</a>' if getattr(r, 'status', 'Pending') == 'Pending' else '-'
-        student_name = r.user.fullname if getattr(r, 'user', None) else '-'
-
-        rows += f'<tr class="border-b border-sky-50 text-sm"><td class="py-4 px-4 font-bold">{student_name}</td><td class="py-4 px-4">{status_badge}</td><td class="py-4 px-4">{actions}</td></tr>'
-
-    content = f'<div class="bg-white p-8 rounded-3xl shadow-sm"><table class="w-full text-left"><tbody>{rows}</tbody></table></div>'
-    return render_layout(content, active_page='admin_profile_requests')
-
-@app.route('/admin/approve_profile/<int:req_id>')
-def approve_profile(req_id):
-    if session.get('role') in ['admin', 'superadmin']:
-        admin_user = User.query.get(session['user_id'])
-        req = ProfileEditRequest.query.get(req_id)
-        if req and req.status == 'Pending':
-            user = User.query.get(req.user_id)
-            if user:
-                user.prefix = req.new_prefix
-                user.fullname = req.new_fullname
-                user.phone = req.new_phone
-                user.email = req.new_email
-                if req.new_address: user.address = req.new_address
-            req.status = 'Approved'
-            req.approved_by = admin_user.fullname if admin_user else "เจ้าหน้าที่"
-            db.session.commit()
-            flash('อนุมัติการแก้ไขข้อมูลส่วนตัวเรียบร้อยแล้ว', 'success')
-    return redirect(url_for('admin_profile_requests'))
-
-@app.route('/admin/reject_profile/<int:req_id>')
-def reject_profile(req_id):
-    if session.get('role') in ['admin', 'superadmin']:
-        admin_user = User.query.get(session['user_id'])
-        req = ProfileEditRequest.query.get(req_id)
-        if req and req.status == 'Pending':
-            req.status = 'Rejected'
-            req.approved_by = admin_user.fullname if admin_user else "เจ้าหน้าที่"
-            db.session.commit()
-            flash('ปฏิเสธคำร้องขอแก้ไขข้อมูลเรียบร้อยแล้ว', 'error')
-    return redirect(url_for('admin_profile_requests'))
 
 @app.route('/logout')
 def logout():
