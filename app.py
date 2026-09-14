@@ -238,54 +238,13 @@ def get_courses():
         return IS_THAIMOOC_COURSES
 
 # ==========================================
-# Layout Template
+# Layout Template (With Active Sidebar Highlight)
 # ==========================================
-LAYOUT_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ธนาคารหน่วยกิต IS RMUTTO</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f0f9ff; }
-        .hero-sky { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%); }
-        .sidebar-transition { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .card-hover { transition: all 0.25s ease-in-out; }
-        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -10px rgba(14, 165, 233, 0.15); }
-        .sidebar-expanded { width: 270px; }
-        .sidebar-collapsed { width: 85px; }
-        .sidebar-collapsed .nav-text { display: none; }
-        .sidebar-collapsed .logo-img-full { display: none; }
-        .sidebar-collapsed .logo-img-small { display: block !important; }
-        .sidebar-collapsed .section-title { display: none; }
-        .sidebar-collapsed .toggle-icon { transform: rotate(180deg); }
-        @keyframes pulse-glow {
-            0% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.5); }
-            70% { box-shadow: 0 0 0 15px rgba(14, 165, 233, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
-        }
-        .pulse-btn { animation: pulse-glow 2s infinite; }
-        @keyframes highlight-flash {
-            0% { background-color: #e0f2fe; transform: scale(1.02); }
-            100% { background-color: #ffffff; transform: scale(1); }
-        }
-        .highlight-target { animation: highlight-flash 1.5s ease-in-out; }
-    </style>
-</head>
-<body class="bg-sky-50/50 min-h-screen text-slate-800 antialiased flex flex-col md:flex-row">
+def render_layout(content, active_page=''):
+    def is_active(page_name):
+        return "bg-sky-200 text-sky-900 font-extrabold shadow-sm border border-sky-300" if active_page == page_name else "text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 font-medium"
 
-    <div class="md:hidden bg-sky-100 text-slate-800 p-3 flex justify-between items-center sticky top-0 z-50 border-b border-sky-200 shadow-md">
-        <a href="/" class="flex items-center gap-2 px-2 py-1">
-            <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="h-10 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50?text=IS+RMUTTO';">
-        </a>
-        <button id="mobile-toggle" class="p-2 text-sky-800 hover:text-sky-950 focus:outline-none"><i class="fa-solid fa-bars text-xl"></i></button>
-    </div>
-
+    sidebar_html = f"""
     <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100 text-slate-700 h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-xl border-r border-sky-200 hidden md:flex shrink-0 w-full md:w-auto">
         <div class="p-4 flex flex-col border-b border-sky-200 bg-sky-200/40 shrink-0">
             <a href="/" class="flex items-center justify-center overflow-hidden py-2 px-2 group">
@@ -304,132 +263,181 @@ LAYOUT_TEMPLATE = """
 
         <div class="flex-grow p-4 space-y-1.5 overflow-y-auto">
             <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-2">เมนูหลัก</p>
-            <a href="/" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
+            <a href="/" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('home')}">
                 <i class="fa-solid fa-house text-lg w-6 text-center text-sky-500 group-hover:text-sky-700 transition-colors"></i>
-                <span class="nav-text font-semibold">หน้าแรก</span>
+                <span class="nav-text">หน้าแรก</span>
             </a>
 
-            {% if session.get('user_id') %}
-                {% if session.get('role') in ['admin', 'superadmin'] %}
+            {f'''
+                {f"""
                     <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
-                    <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-users text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">รายชื่อนักศึกษา</span>
+                    <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_students')}">
+                        <i class="fa-solid fa-users text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายชื่อนักศึกษา</span>
                     </a>
-                    <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">คำร้องเทียบโอน</span>
+                    <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_requests')}">
+                        <i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">คำร้องเทียบโอน</span>
                     </a>
-                    <a href="/admin/profile_requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-user-pen text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">คำร้องแก้ไขข้อมูล</span>
+                    <a href="/admin/profile_requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_profile_requests')}">
+                        <i class="fa-solid fa-user-pen text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">คำร้องแก้ไขข้อมูล</span>
                     </a>
-                    <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-book-open text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">รายวิชาทั้งหมด</span>
+                    <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('all_courses')}">
+                        <i class="fa-solid fa-book-open text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายวิชาทั้งหมด</span>
                     </a>
-                    <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sky-900 bg-sky-200 border border-sky-300 hover:bg-sky-300 transition-all font-medium text-sm group mt-2">
+                    <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group mt-2 {is_active('manage_admins')}">
                         <i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-600"></i><span class="nav-text font-bold">เพิ่ม/จัดการเจ้าหน้าที่</span>
                     </a>
-                {% else %}
+                """ if session.get('role') in ['admin', 'superadmin'] else f"""
                     <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา IS</p>
-                    <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-magnifying-glass text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">ค้นหารายวิชา</span>
+                    <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('available_courses')}">
+                        <i class="fa-solid fa-magnifying-glass text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ค้นหารายวิชา</span>
                     </a>
-                    <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-book-open text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">รายวิชาทั้งหมด</span>
+                    <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('all_courses')}">
+                        <i class="fa-solid fa-book-open text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายวิชาทั้งหมด</span>
                     </a>
-                    <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">ยื่นคำขอเทียบโอน</span>
+                    <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('submit_credit')}">
+                        <i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ยื่นคำขอเทียบโอน</span>
                     </a>
-                    <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-graduation-cap text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">หน่วยกิตสะสม</span>
+                    <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('credits')}">
+                        <i class="fa-solid fa-graduation-cap text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หน่วยกิตสะสม</span>
                     </a>
-                    <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group">
-                        <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">ประวัติคำขอ</span>
+                    <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('history')}">
+                        <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ประวัติคำขอ</span>
                     </a>
-                {% endif %}
-            {% else %}
+                """}
+            ''' if session.get('user_id') else f"""
                 <div class="pt-4 space-y-2">
-                    <a href="/login" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 transition-all font-medium text-sm group border border-sky-200">
-                        <i class="fa-solid fa-right-to-bracket text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text font-semibold">เข้าสู่ระบบ</span>
+                    <a href="/login" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group border border-sky-200 {is_active('login')}">
+                        <i class="fa-solid fa-right-to-bracket text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">เข้าสู่ระบบ</span>
                     </a>
                     <a href="/register" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold transition-all text-sm group shadow-md shadow-sky-400/30">
                         <i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-100"></i><span class="nav-text">ลงทะเบียนนักศึกษา</span>
                     </a>
                 </div>
-            {% endif %}
+            """}
         </div>
 
-        {% if session.get('user_id') %}
+        {f'''
             <div class="p-4 border-t border-sky-200 bg-sky-200/40 shrink-0">
-                <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl hover:bg-sky-200/60 transition-all group border border-transparent">
+                <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl transition-all group border {'border-sky-300 bg-sky-200/80' if active_page == 'profile' else 'border-transparent hover:bg-sky-200/60'}">
                     <div class="w-9 h-9 rounded-xl bg-sky-200 text-sky-700 font-bold flex items-center justify-center shrink-0"><i class="fa-regular fa-user"></i></div>
                     <div class="flex flex-col min-w-0 nav-text">
-                        <span class="text-xs font-bold text-slate-800 truncate">{{ session.get('fullname', 'ผู้ใช้งาน') }}</span>
-                        <span class="text-[10px] text-sky-700 capitalize font-medium">{% if session.get('role') in ['admin', 'superadmin'] %}เจ้าหน้าที่{% else %}นักศึกษาสาขา IS{% endif %}</span>
+                        <span class="text-xs font-bold text-slate-800 truncate">{session.get('fullname', 'ผู้ใช้งาน')}</span>
+                        <span class="text-[10px] text-sky-700 capitalize font-medium">{'เจ้าหน้าที่' if session.get('role') in ['admin', 'superadmin'] else 'นักศึกษาสาขา IS'}</span>
                     </div>
                 </a>
                 <a href="/logout" class="mt-2 flex items-center gap-3 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all">
                     <i class="fa-solid fa-arrow-right-from-bracket text-sm w-6 text-center"></i><span class="nav-text">ออกจากระบบ</span>
                 </a>
             </div>
-        {% endif %}
+        ''' if session.get('user_id') else ''}
     </aside>
+    """
 
-    <div class="flex-grow flex flex-col min-h-screen min-w-0">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full mt-6">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="p-4 mb-4 text-sm rounded-2xl font-semibold shadow-sm flex items-center justify-between border transition-all {% if category == 'error' or category == 'danger' %}bg-rose-50 text-rose-700 border-rose-200{% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}">
-                            <div class="flex items-center gap-2">
-                                <i class="fa-solid {% if category == 'error' or category == 'danger' %}fa-circle-exclamation text-rose-500{% else %}fa-circle-check text-emerald-500{% endif %} text-lg"></i>
-                                <span>{{ message }}</span>
-                            </div>
-                            <button onclick="this.parentElement.remove()" class="text-xs font-bold px-2 py-1 hover:bg-black/5 rounded-lg">✕</button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+    return f"""
+    <!DOCTYPE html>
+    <html lang="th">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ธนาคารหน่วยกิต IS RMUTTO</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <style>
+            body {{ font-family: 'Sarabun', sans-serif; background-color: #f0f9ff; }}
+            .hero-sky {{ background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%); }}
+            .sidebar-transition {{ transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }}
+            .card-hover {{ transition: all 0.25s ease-in-out; }}
+            .card-hover:hover {{ transform: translateY(-3px); box-shadow: 0 12px 24px -10px rgba(14, 165, 233, 0.15); }}
+            .sidebar-expanded {{ width: 270px; }}
+            .sidebar-collapsed {{ width: 85px; }}
+            .sidebar-collapsed .nav-text {{ display: none; }}
+            .sidebar-collapsed .logo-img-full {{ display: none; }}
+            .sidebar-collapsed .logo-img-small {{ display: block !important; }}
+            .sidebar-collapsed .section-title {{ display: none; }}
+            .sidebar-collapsed .toggle-icon {{ transform: rotate(180deg); }}
+            @keyframes pulse-glow {{
+                0% {{ box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.5); }}
+                70% {{ box-shadow: 0 0 0 15px rgba(14, 165, 233, 0); }}
+                100% {{ box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }}
+            }}
+            .pulse-btn {{ animation: pulse-glow 2s infinite; }}
+            @keyframes highlight-flash {{
+                0% {{ background-color: #e0f2fe; transform: scale(1.02); }}
+                100% {{ background-color: #ffffff; transform: scale(1); }}
+            }}
+            .highlight-target {{ animation: highlight-flash 1.5s ease-in-out; }}
+        </style>
+    </head>
+    <body class="bg-sky-50/50 min-h-screen text-slate-800 antialiased flex flex-col md:flex-row">
+
+        <div class="md:hidden bg-sky-100 text-slate-800 p-3 flex justify-between items-center sticky top-0 z-50 border-b border-sky-200 shadow-md">
+            <a href="/" class="flex items-center gap-2 px-2 py-1">
+                <img src="/static/images/logo.png" alt="IS RMUTTO Credit Bank" class="h-10 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50?text=IS+RMUTTO';">
+            </a>
+            <button id="mobile-toggle" class="p-2 text-sky-800 hover:text-sky-950 focus:outline-none"><i class="fa-solid fa-bars text-xl"></i></button>
         </div>
 
-        <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {{ content | safe }}
-        </main>
+        {sidebar_html}
 
-        <footer class="bg-sky-100 text-slate-600 mt-auto border-t border-sky-200">
-            <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-center md:text-left">
-                    <div class="flex items-center gap-3">
-                        <img src="/static/images/logo.png" alt="IS RMUTTO Logo" class="h-10 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50?text=IS+RMUTTO';">
-                        <div>
-                            <p class="text-sky-900 font-bold text-sm">สาขาวิชาระบบสารสนเทศ (Information Systems)</p>
-                            <p class="text-slate-600 mt-0.5">คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก</p>
-                        </div>
-                    </div>
-                    <div class="text-slate-500 leading-relaxed font-semibold">© 2026 Credit Bank System</div>
-                </div>
+        <div class="flex-grow flex flex-col min-h-screen min-w-0">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full mt-6">
+                {{% with messages = get_flashed_messages(with_categories=true) %}}
+                    {{% if messages %}}
+                        {{% for category, message in messages %}}
+                            <div class="p-4 mb-4 text-sm rounded-2xl font-semibold shadow-sm flex items-center justify-between border transition-all {{% if category == 'error' or category == 'danger' %}}bg-rose-50 text-rose-700 border-rose-200{{% else %}}bg-emerald-50 text-emerald-800 border-emerald-200{{% endif %}}">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid {{% if category == 'error' or category == 'danger' %}}fa-circle-exclamation text-rose-500{{% else %}}fa-circle-check text-emerald-500{{% endif %}} text-lg"></i>
+                                    <span>{{ message }}</span>
+                                </div>
+                                <button onclick="this.parentElement.remove()" class="text-xs font-bold px-2 py-1 hover:bg-black/5 rounded-lg">✕</button>
+                            </div>
+                        {{% endfor %}}
+                    {{% endif %}}
+                {{% endwith %}}
             </div>
-        </footer>
-    </div>
 
-    <script>
-        const sidebar = document.getElementById('sidebar');
-        const sidebarToggle = document.getElementById('sidebar-toggle');
-        const mobileToggle = document.getElementById('mobile-toggle');
+            <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {content}
+            </main>
 
-        if (sidebarToggle && sidebar) {
-            sidebarToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('sidebar-expanded');
-                sidebar.classList.toggle('sidebar-collapsed');
-            });
-        }
-        if (mobileToggle && sidebar) {
-            mobileToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('hidden');
-            });
-        }
-    </script>
-</body>
-</html>
-"""
+            <footer class="bg-sky-100 text-slate-600 mt-auto border-t border-sky-200">
+                <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-center md:text-left">
+                        <div class="flex items-center gap-3">
+                            <img src="/static/images/logo.png" alt="IS RMUTTO Logo" class="h-10 object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50?text=IS+RMUTTO';">
+                            <div>
+                                <p class="text-sky-900 font-bold text-sm">สาขาวิชาระบบสารสนเทศ (Information Systems)</p>
+                                <p class="text-slate-600 mt-0.5">คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก</p>
+                            </div>
+                        </div>
+                        <div class="text-slate-500 leading-relaxed font-semibold">© 2026 Credit Bank System</div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+
+        <script>
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const mobileToggle = document.getElementById('mobile-toggle');
+
+            if (sidebarToggle && sidebar) {{
+                sidebarToggle.addEventListener('click', () => {{
+                    sidebar.classList.toggle('sidebar-expanded');
+                    sidebar.classList.toggle('sidebar-collapsed');
+                }});
+            }}
+            if (mobileToggle && sidebar) {{
+                mobileToggle.addEventListener('click', () => {{
+                    sidebar.classList.toggle('hidden');
+                }});
+            }}
+        </script>
+    </body>
+    </html>
+    """
 
 # ==========================================
 # Routes & Controllers
@@ -463,7 +471,7 @@ def home():
             </div>
         </div>
         """
-        return render_template_string(LAYOUT_TEMPLATE, content=content)
+        return render_layout(content, active_page='home')
 
     user = User.query.get(session['user_id'])
     if not user:
@@ -520,7 +528,7 @@ def home():
             </a>
         </div>
         """
-        return render_template_string(LAYOUT_TEMPLATE, content=content)
+        return render_layout(content, active_page='home')
 
     try:
         user_requests = CreditRequest.query.filter_by(user_id=user.id).all()
@@ -599,7 +607,7 @@ def home():
         }});
     </script>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='home')
 
 @app.route('/available_courses')
 def available_courses():
@@ -710,7 +718,7 @@ def available_courses():
         {cards if cards else '<div class="col-span-3 text-center py-16 text-slate-400 bg-white rounded-3xl border border-sky-100">ไม่พบรายวิชาที่ตรงกับเงื่อนไขการค้นหา</div>'}
     </div>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='available_courses')
 
 @app.route('/all_courses')
 def all_courses():
@@ -769,7 +777,7 @@ def all_courses():
         </div>
     </div>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='all_courses')
 
 
 @app.route('/submit_credit', methods=['GET', 'POST'])
@@ -798,8 +806,8 @@ def submit_credit():
                     except:
                         credits_val = 3
                     category = request.form.get('category', 'หมวดวิชาศึกษาทั่วไป')
-                    faculty = "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ"
-                    major = "สาขาวิชาระบบสารสนเทศ"
+                    faculty = request.form.get('faculty_select', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ')
+                    major = request.form.get('major_select', 'สาขาวิชาระบบสารสนเทศ')
 
                     doc_filename = "default_doc.png"
                     if 'cert_file_MANUAL_CUSTOM' in request.files:
@@ -837,8 +845,8 @@ def submit_credit():
                     institution = matched_course['provider']
                     credits_val = matched_course['credits']
                     category = matched_course['group']
-                    faculty = "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ"
-                    major = "สาขาวิชาระบบสารสนเทศ"
+                    faculty = request.form.get('faculty_select', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ')
+                    major = request.form.get('major_select', 'สาขาวิชาระบบสารสนเทศ')
 
                     doc_filename = "default_doc.png"
                     file_key = f"cert_file_{code}"
@@ -928,13 +936,32 @@ def submit_credit():
             <div class="flex items-center gap-3 mb-6">
                 <div class="w-10 h-10 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0"><i class="fa-solid fa-graduation-cap"></i></div>
                 <div>
-                    <h3 class="text-xl font-black text-slate-900">เลือกรายวิชาในหลักสูตรที่ต้องการเทียบโอน</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">ติ๊กเลือกวิชาที่ต้องการ แล้วกดปุ่มดึงข้อมูลด้านล่างเพื่อแนบหลักฐาน</p>
+                    <h3 class="text-xl font-black text-slate-900">ยื่นคำขอเทียบโอนหน่วยกิต</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">เลือกคณะ สาขาวิชา และรายวิชาที่ต้องการเทียบโอนในระบบธนาคารหน่วยกิต</p>
                 </div>
             </div>
 
-            <form method="POST" enctype="multipart/form-data" id="multi_form_section" class="scroll-mt-6">
-                <div class="overflow-x-auto rounded-2xl border border-sky-100 mb-6">
+            <form method="POST" enctype="multipart/form-data" id="multi_form_section" class="scroll-mt-6 space-y-6">
+                <!-- ส่วนเลือกคณะและสาขาตามที่ต้องการ -->
+                <div class="bg-sky-50/60 p-6 rounded-2xl border border-sky-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-building-columns mr-1 text-sky-500"></i> คณะ</label>
+                        <select name="faculty_select" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-white font-medium outline-none focus:ring-2 focus:ring-sky-400">
+                            <option value="คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ">คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-graduation-cap mr-1 text-sky-500"></i> สาขาวิชา</label>
+                        <select name="major_select" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-white font-medium outline-none focus:ring-2 focus:ring-sky-400">
+                            <option value="สาขาวิชาระบบสารสนเทศ">สาขาวิชาระบบสารสนเทศ (Information Systems)</option>
+                            <option value="สาขาวิชาเทคโนโลยีสารสนเทศ">สาขาวิชาเทคโนโลยีสารสนเทศ (IT)</option>
+                            <option value="สาขาวิชาวิทยาการคอมพิวเตอร์">สาขาวิชาวิทยาการคอมพิวเตอร์ (CS)</option>
+                            <option value="สาขาวิชาคอมพิวเตอร์ธุรกิจ">สาขาวิชาคอมพิวเตอร์ธุรกิจ (BC)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-2xl border border-sky-100">
                     <table class="w-full text-left min-w-[750px]">
                         <thead class="bg-sky-50 text-sky-800 text-[11px] font-bold uppercase tracking-wider border-b border-sky-100">
                             <tr><th class="py-3 px-3 text-center w-20">เลือก</th><th class="py-3 px-3">รหัสวิชา</th><th class="py-3 px-3">รายวิชาในหลักสูตร IS</th><th class="py-3 px-3">บทเรียนออนไลน์ที่ต้องเรียนเพิ่ม</th><th class="py-3 px-3 text-center">ชั่วโมงเรียนรวม</th></tr>
@@ -943,7 +970,7 @@ def submit_credit():
                     </table>
                 </div>
 
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-sky-50/60 p-6 rounded-2xl border border-sky-100 mb-6">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-sky-50/60 p-6 rounded-2xl border border-sky-100">
                     <div>
                         <h4 class="text-sm font-extrabold text-slate-800"><i class="fa-solid fa-hand-pointer text-sky-500 mr-1"></i> ขั้นตอนต่อไปหลังเลือกวิชาเสร็จ</h4>
                         <p class="text-xs text-slate-500 mt-0.5">กดปุ่มด้านขวาเพื่อให้ระบบสร้างช่องอัปโหลดเกียรติบัตรสำหรับวิชาที่เลือก</p>
@@ -1087,7 +1114,7 @@ def submit_credit():
     }}
     </script>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='submit_credit')
 
 @app.route('/history')
 def history():
@@ -1145,7 +1172,7 @@ def history():
         </table>
     </div>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='history')
 
 @app.route('/credits')
 def credits():
@@ -1177,7 +1204,7 @@ def credits():
         </table>
     </div>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='credits')
 
 @app.route('/profile')
 def profile():
@@ -1199,7 +1226,7 @@ def profile():
         </div>
     </div>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='profile')
 
 @app.route('/request_edit_profile', methods=['GET', 'POST'])
 def request_edit_profile():
@@ -1267,7 +1294,7 @@ def request_edit_profile():
         </form>
     </div>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='profile')
 
 @app.route('/admin/requests')
 def admin_requests():
@@ -1316,7 +1343,7 @@ def admin_requests():
         </table>
     </div>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='admin_requests')
 
 @app.route('/admin/review/<int:req_id>', methods=['GET', 'POST'])
 def admin_review(req_id):
@@ -1387,7 +1414,7 @@ def admin_review(req_id):
         </form>
     </div>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='admin_requests')
 
 @app.route('/admin/students')
 def admin_students():
@@ -1427,7 +1454,7 @@ def admin_students():
         </table>
     </div>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='admin_students')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -1500,7 +1527,7 @@ def register():
         </form>
     </div>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='register')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -1531,7 +1558,7 @@ def login():
         </form>
     </div>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='login')
 
 @app.route('/admin/manage_admins', methods=['GET', 'POST'])
 def manage_admins():
@@ -1577,7 +1604,7 @@ def manage_admins():
         </div>
     </div>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='manage_admins')
 
 @app.route('/admin/profile_requests')
 def admin_profile_requests():
@@ -1597,7 +1624,7 @@ def admin_profile_requests():
         rows += f'<tr class="border-b border-sky-50 text-sm"><td class="py-4 px-4 font-bold">{student_name}</td><td class="py-4 px-4">{status_badge}</td><td class="py-4 px-4">{actions}</td></tr>'
 
     content = f'<div class="bg-white p-8 rounded-3xl shadow-sm"><table class="w-full text-left"><tbody>{rows}</tbody></table></div>'
-    return render_template_string(LAYOUT_TEMPLATE, content=content)
+    return render_layout(content, active_page='admin_profile_requests')
 
 @app.route('/admin/approve_profile/<int:req_id>')
 def approve_profile(req_id):
