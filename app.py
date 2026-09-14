@@ -71,7 +71,6 @@ class CreditRequest(db.Model):
     approved_by = db.Column(db.String(100), nullable=True)
     user = db.relationship('User', backref=db.backref('credits_list', lazy=True))
 
-# (เก็บโมเดลไว้เผื่อข้อมูลเก่าพัง แต่ไม่ได้ใช้แล้วในระบบใหม่)
 class ProfileEditRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -487,8 +486,11 @@ def home():
             pending_credits = CreditRequest.query.filter_by(status='Pending').count()
             total_members = User.query.filter_by(role='student').count()
             total_admins = User.query.filter(User.role.in_(['admin', 'superadmin'])).count()
+            # คำนวณรวมหน่วยกิตที่ได้รับการอนุมัติแล้วทั้งหมดในระบบ
+            approved_all_reqs = CreditRequest.query.filter_by(status='Approved').all()
+            total_approved_credits = sum(r.credits for r in approved_all_reqs)
         except:
-            pending_credits, total_members, total_admins = 0, 0, 1
+            pending_credits, total_members, total_admins, total_approved_credits = 0, 0, 1, 0
 
         content = f"""
         <div class="mb-8">
@@ -507,7 +509,7 @@ def home():
                 <div class="w-14 h-14 bg-white/20 text-white rounded-2xl flex items-center justify-center text-2xl shrink-0 backdrop-blur"><i class="fa-solid fa-user-plus"></i></div>
             </a>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <a href="/admin/students" class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between hover:border-sky-400 transition card-hover">
                 <div>
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">นักศึกษาสาขา IS ในระบบ</p>
@@ -522,6 +524,13 @@ def home():
                 </div>
                 <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-file-signature"></i></div>
             </a>
+            <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex items-center justify-between card-hover">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">หน่วยกิตอนุมัติรวมทั้งหมด</p>
+                    <h3 class="text-3xl font-black text-emerald-600">{total_approved_credits} <span class="text-xs text-slate-400 font-normal">หน่วยกิต</span></h3>
+                </div>
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-graduation-cap"></i></div>
+            </div>
         </div>
         """
         return render_layout(content, active_page='home')
@@ -1295,7 +1304,6 @@ def profile():
     if not user: return redirect(url_for('login'))
     display_title = "เจ้าหน้าที่" if user.role in ['admin', 'superadmin'] else f"{user.prefix or ''} {user.fullname}"
     
-    # เพิ่มปุ่มกดแก้ไขข้อมูล
     edit_btn_html = ""
     if user.role not in ['admin', 'superadmin']:
         edit_btn_html = '<a href="/request_edit_profile" class="absolute top-6 right-6 bg-sky-100 hover:bg-sky-200 text-sky-700 px-4 py-2 rounded-xl text-xs font-bold transition-all"><i class="fa-solid fa-pen mr-1"></i> แก้ไขข้อมูล</a>'
@@ -1322,24 +1330,33 @@ def request_edit_profile():
     user = User.query.get(session['user_id'])
 
     if request.method == 'POST':
-        # อัปเดตข้อมูลลงฐานข้อมูลโดยตรง ไม่ต้องสร้างคำร้องแล้ว
         user.prefix = request.form.get('prefix')
         user.fullname = request.form.get('fullname')
         user.phone = request.form.get('phone')
         user.email = request.form.get('email')
         
-        # กรณีมีการรับค่าที่อยู่เข้ามา (แต่อินเตอร์เฟซด้านล่างซ่อนไว้ก่อนให้แก้แค่ข้อมูลพื้นฐาน)
-        # หากต้องการให้แก้ที่อยู่ได้ด้วย ก็ใส่ input ลงในฟอร์ม HTML ด้านล่างได้เลยครับ
+        # รับค่าและจัดรูปแบบที่อยู่ใหม่
+        house_no = request.form.get('house_no', '')
+        moo = request.form.get('moo', '')
+        soi = request.form.get('soi', '')
+        subdistrict = request.form.get('subdistrict', '')
+        district = request.form.get('district', '')
+        province = request.form.get('province', '')
+        postal_code = request.form.get('postal_code', '')
+
+        new_addr = format_address(house_no, moo, soi, subdistrict, district, province, postal_code)
+        if new_addr:
+            user.address = new_addr
         
         db.session.commit()
 
-        flash('✅ บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว', 'success')
+        flash('✅ บันทึกข้อมูลส่วนตัวและที่อยู่เรียบร้อยแล้ว', 'success')
         return redirect(url_for('profile'))
 
     content = f"""
     <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
-        <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขข้อมูลส่วนตัว</h3>
-        <p class="text-xs text-slate-500 mb-6">คุณสามารถแก้ไขข้อมูลเบื้องต้นและบันทึกเข้าระบบได้ทันที</p>
+        <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขข้อมูลส่วนตัวและที่อยู่</h3>
+        <p class="text-xs text-slate-500 mb-6">คุณสามารถแก้ไขข้อมูลเบื้องต้นและที่อยู่แล้วบันทึกเข้าระบบได้ทันที</p>
         
         <form method="POST" class="space-y-4">
             <div class="grid grid-cols-3 gap-3">
@@ -1355,9 +1372,25 @@ def request_edit_profile():
                 <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์</label><input type="tel" name="phone" value="{user.phone or ''}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
                 <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมล</label><input type="email" name="email" value="{user.email or ''}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
             </div>
+
+            <div class="border-t border-sky-100 pt-4">
+                <label class="block text-xs font-bold text-sky-700 uppercase tracking-wider mb-3"><i class="fa-solid fa-house-user mr-1 text-sky-400"></i> แก้ไขข้อมูลที่อยู่</label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">บ้านเลขที่</label><input type="text" name="house_no" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50" placeholder="เช่น 123/4"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">หมู่ที่</label><input type="text" name="moo" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50" placeholder="เช่น 2"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">ซอย / ถนน</label><input type="text" name="soi" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50" placeholder="เช่น -"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">ตำบล/แขวง</label><input type="text" name="subdistrict" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">อำเภอ/เขต</label><input type="text" name="district" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">จังหวัด</label><input type="text" name="province" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">รหัสไปรษณีย์</label><input type="text" name="postal_code" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                </div>
+            </div>
+
             <div class="pt-4 flex gap-3">
                 <a href="/profile" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-center font-bold py-3.5 rounded-2xl shadow-sm text-sm transition">ยกเลิก</a>
-                <button type="submit" class="w-2/3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm transition">บันทึกข้อมูล</button>
+                <button type="submit" class="w-2/3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm transition">บันทึกการเปลี่ยนแปลง</button>
             </div>
         </form>
     </div>
