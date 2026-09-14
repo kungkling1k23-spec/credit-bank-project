@@ -787,59 +787,87 @@ def submit_credit():
             success_count = 0
 
             for code in course_codes:
-                matched_course = next((c for c in course_data_list if c['code'] == code), None)
-                if not matched_course:
-                    continue
+                if code == 'MANUAL_CUSTOM':
+                    course_name = request.form.get('manual_course_name', '').strip()
+                    if not course_name:
+                        continue
+                    institution = request.form.get('institution', 'ThaiMOOC')
+                    try:
+                        credits_val = int(request.form.get('credits', '3'))
+                    except:
+                        credits_val = 3
+                    category = request.form.get('category', 'หมวดวิชาศึกษาทั่วไป')
+                    faculty = "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ"
+                    major = "สาขาวิชาระบบสารสนเทศ"
 
-                course_name = matched_course['name']
-                institution = matched_course['provider']
-                credits_val = matched_course['credits']
-                category = matched_course['group']
-                faculty = "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ"
-                major = "สาขาวิชาระบบสารสนเทศ"
+                    doc_filename = "default_doc.png"
+                    if 'cert_file_MANUAL_CUSTOM' in request.files:
+                        file = request.files['cert_file_MANUAL_CUSTOM']
+                        if file and file.filename != '' and allowed_file(file.filename):
+                            ext = file.filename.rsplit('.', 1)[1].lower()
+                            unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
+                            file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
+                            doc_filename = unique_fn
 
-                # รับไฟล์รูปที่ 1 ของวิชานี้
-                doc_filename = "default_doc.png"
-                file_key = f"cert_file_{code}"
-                if file_key in request.files:
-                    file = request.files[file_key]
-                    if file and file.filename != '' and allowed_file(file.filename):
-                        ext = file.filename.rsplit('.', 1)[1].lower()
-                        unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
-                        save_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_fn)
-                        file.save(save_path)
-                        doc_filename = unique_fn
+                    doc_filename2 = None
+                    if 'cert_file2_MANUAL_CUSTOM' in request.files:
+                        file2 = request.files['cert_file2_MANUAL_CUSTOM']
+                        if file2 and file2.filename != '' and allowed_file(file2.filename):
+                            ext2 = file2.filename.rsplit('.', 1)[1].lower()
+                            unique_fn2 = f"cert2_{uuid.uuid4().hex[:8]}.{ext2}"
+                            file2.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn2))
+                            doc_filename2 = unique_fn2
 
-                # รับไฟล์รูปที่ 2 ของวิชานี้ (ถ้ามี)
-                doc_filename2 = None
-                file_key2 = f"cert_file2_{code}"
-                if file_key2 in request.files:
-                    file2 = request.files[file_key2]
-                    if file2 and file2.filename != '' and allowed_file(file2.filename):
-                        ext2 = file2.filename.rsplit('.', 1)[1].lower()
-                        unique_fn2 = f"cert2_{uuid.uuid4().hex[:8]}.{ext2}"
-                        save_path2 = os.path.join(app.config['UPLOAD_FOLDER'], unique_fn2)
-                        file2.save(save_path2)
-                        doc_filename2 = unique_fn2
+                    req_code = f"TR2569{uuid.uuid4().hex[:4].upper()}"
+                    req = CreditRequest(
+                        req_code=req_code, user_id=session['user_id'], course_name=course_name, 
+                        institution=institution, credits=credits_val, category=category,
+                        faculty=faculty, major=major, date_submitted=datetime.now().strftime("%Y-%m-%d"),
+                        doc_img=doc_filename, doc_img2=doc_filename2, status='Pending'
+                    )
+                    db.session.add(req)
+                    success_count += 1
+                else:
+                    matched_course = next((c for c in course_data_list if c['code'] == code), None)
+                    if not matched_course:
+                        continue
 
-                req_code = f"TR2569{uuid.uuid4().hex[:4].upper()}"
+                    course_name = matched_course['name']
+                    institution = matched_course['provider']
+                    credits_val = matched_course['credits']
+                    category = matched_course['group']
+                    faculty = "คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ"
+                    major = "สาขาวิชาระบบสารสนเทศ"
 
-                req = CreditRequest(
-                    req_code=req_code,
-                    user_id=session['user_id'], 
-                    course_name=course_name, 
-                    institution=institution, 
-                    credits=credits_val,
-                    category=category,
-                    faculty=faculty,
-                    major=major,
-                    date_submitted=datetime.now().strftime("%Y-%m-%d"),
-                    doc_img=doc_filename,
-                    doc_img2=doc_filename2,
-                    status='Pending'
-                )
-                db.session.add(req)
-                success_count += 1
+                    doc_filename = "default_doc.png"
+                    file_key = f"cert_file_{code}"
+                    if file_key in request.files:
+                        file = request.files[file_key]
+                        if file and file.filename != '' and allowed_file(file.filename):
+                            ext = file.filename.rsplit('.', 1)[1].lower()
+                            unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
+                            file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
+                            doc_filename = unique_fn
+
+                    doc_filename2 = None
+                    file_key2 = f"cert_file2_{code}"
+                    if file_key2 in request.files:
+                        file2 = request.files[file_key2]
+                        if file2 and file2.filename != '' and allowed_file(file2.filename):
+                            ext2 = file2.filename.rsplit('.', 1)[1].lower()
+                            unique_fn2 = f"cert2_{uuid.uuid4().hex[:8]}.{ext2}"
+                            file2.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn2))
+                            doc_filename2 = unique_fn2
+
+                    req_code = f"TR2569{uuid.uuid4().hex[:4].upper()}"
+                    req = CreditRequest(
+                        req_code=req_code, user_id=session['user_id'], course_name=course_name, 
+                        institution=institution, credits=credits_val, category=category,
+                        faculty=faculty, major=major, date_submitted=datetime.now().strftime("%Y-%m-%d"),
+                        doc_img=doc_filename, doc_img2=doc_filename2, status='Pending'
+                    )
+                    db.session.add(req)
+                    success_count += 1
 
             db.session.commit()
             if success_count > 0:
@@ -854,7 +882,6 @@ def submit_credit():
             flash(f'เกิดข้อผิดพลาดในการบันทึกข้อมูล: {str(e)}', 'error')
             return redirect(url_for('submit_credit'))
 
-    selected_major = request.args.get('major_select', 'สาขาวิชาระบบสารสนเทศ')
     url_selected_code = request.args.get('selected_courses', '')
     pre_selected_list = [url_selected_code] if url_selected_code else []
 
@@ -892,6 +919,10 @@ def submit_credit():
         </tr>
         """
 
+    # แปลงรายชื่อวิชาเป็น JSON ปลอดภัยสำหรับใส่ใน JavaScript
+    import json
+    courses_json = json.dumps(course_data, ensure_ascii=False)
+
     content = f"""
     <div class="max-w-5xl mx-auto space-y-8">
         <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
@@ -902,10 +933,6 @@ def submit_credit():
                     <p class="text-xs text-slate-500 mt-0.5">ติ๊กเลือกวิชาที่ต้องการ แล้วกดปุ่มดึงข้อมูลด้านล่างเพื่อแนบหลักฐาน</p>
                 </div>
             </div>
-
-            <form method="GET" action="/submit_credit" class="mb-4">
-                <input type="hidden" name="major_select" value="สาขาวิชาระบบสารสนเทศ">
-            </form>
 
             <form method="POST" enctype="multipart/form-data" id="multi_form_section" class="scroll-mt-6">
                 <div class="overflow-x-auto rounded-2xl border border-sky-100 mb-6">
@@ -966,7 +993,7 @@ def submit_credit():
         
         <form method="POST" enctype="multipart/form-data" class="space-y-4">
             <input type="hidden" name="course_codes" value="MANUAL_CUSTOM">
-            <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อรายวิชา *</label><input type="text" name="manual_course_name" placeholder="เช่น การวิเคราะห์ระบบสารสนเทศ" class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium"></div>
+            <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อรายวิชา *</label><input type="text" name="manual_course_name" placeholder="เช่น การวิเคราะห์ระบบสารสนเทศ" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-sky-400 outline-none bg-sky-50/50 font-medium"></div>
             <div>
                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">แหล่งเรียนรู้ / ระบบออนไลน์ *</label>
                 <select name="institution" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50 font-medium">
@@ -988,7 +1015,7 @@ def submit_credit():
             <div class="border-t border-sky-100 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-400"></i> รูปเกียรติบัตร (รูปที่ 1) *</label>
-                    <input type="file" name="cert_file_MANUAL_CUSTOM" accept="image/*,.pdf" class="w-full border border-sky-100 rounded-2xl p-2.5 text-xs bg-sky-50/50 font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-500 file:text-white">
+                    <input type="file" name="cert_file_MANUAL_CUSTOM" accept="image/*,.pdf" required class="w-full border border-sky-100 rounded-2xl p-2.5 text-xs bg-sky-50/50 font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-500 file:text-white">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-400"></i> รูปเกียรติบัตร (รูปที่ 2) (ถ้ามี)</label>
@@ -1000,11 +1027,11 @@ def submit_credit():
     </div>
 
     <script>
-    const allCoursesData = {
-        {% for item in course_data %}
-        "{{ item['code'] }}": {{ item | tojson }},
-        {% endfor %}
-    };
+    const allCoursesDataArray = {courses_json};
+    const allCoursesData = {};
+    allCoursesDataArray.forEach(c => {{
+        allCoursesData[c.code] = c;
+    }});
 
     function generateUploadForms() {
         const checkboxes = document.querySelectorAll('.course-checkbox:checked');
@@ -1026,20 +1053,20 @@ def submit_credit():
                 <div class="bg-sky-50/50 p-6 rounded-2xl border border-sky-200 shadow-sm space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-sky-100 pb-3">
                         <div>
-                            <span class="font-mono text-xs font-bold bg-white text-sky-700 px-3 py-1 rounded-xl border border-sky-200">${course.code}</span>
-                            <h4 class="text-base font-black text-slate-900 mt-1">${course.name}</h4>
+                            <span class="font-mono text-xs font-bold bg-white text-sky-700 px-3 py-1 rounded-xl border border-sky-200">${{course.code}}</span>
+                            <h4 class="text-base font-black text-slate-900 mt-1">${{course.name}}</h4>
                         </div>
-                        <span class="bg-sky-100 text-sky-800 text-xs font-bold px-3 py-1 rounded-xl">${course.credits} หน่วยกิต (${course.provider})</span>
+                        <span class="bg-sky-100 text-sky-800 text-xs font-bold px-3 py-1 rounded-xl">${{course.credits}} หน่วยกิต (${{course.provider}})</span>
                     </div>
-                    <input type="hidden" name="course_codes" value="${course.code}">
+                    <input type="hidden" name="course_codes" value="${{course.code}}">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-400"></i> รูปเกียรติบัตร (รูปที่ 1) ของ ${course.name} *</label>
-                            <input type="file" name="cert_file_${course.code}" accept="image/*,.pdf" required class="w-full border border-sky-100 rounded-2xl p-2.5 text-xs bg-white font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-500 file:text-white">
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-400"></i> รูปเกียรติบัตร (รูปที่ 1) ของ ${{course.name}} *</label>
+                            <input type="file" name="cert_file_${{course.code}}" accept="image/*,.pdf" required class="w-full border border-sky-100 rounded-2xl p-2.5 text-xs bg-white font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-500 file:text-white">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"><i class="fa-solid fa-file-image mr-1 text-sky-400"></i> รูปเกียรติบัตร (รูปที่ 2) (ถ้ามี)</label>
-                            <input type="file" name="cert_file2_${course.code}" accept="image/*,.pdf" class="w-full border border-sky-100 rounded-2xl p-2.5 text-xs bg-white font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-300 file:text-slate-700 hover:file:bg-slate-400">
+                            <input type="file" name="cert_file2_${{course.code}}" accept="image/*,.pdf" class="w-full border border-sky-100 rounded-2xl p-2.5 text-xs bg-white font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-300 file:text-slate-700 hover:file:bg-slate-400">
                         </div>
                     </div>
                 </div>
@@ -1061,7 +1088,7 @@ def submit_credit():
     }
     </script>
     """
-    return render_template_string(LAYOUT_TEMPLATE, content=content, course_data=course_data)
+    return render_template_string(LAYOUT_TEMPLATE, content=content)
 
 @app.route('/history')
 def history():
