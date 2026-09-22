@@ -656,7 +656,8 @@ def submit_credit():
                                 ext = file.filename.rsplit('.', 1)[1].lower()
                                 unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
                                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
-                                evidence_list.append({"mooc_name": mooc_name, "filename": unique_fn})
+                                # เก็บทั้งชื่อบทเรียนและชื่อไฟล์จริง เพื่อใช้เทียบความถูกต้องของรูป
+                                evidence_list.append({"mooc_name": mooc_name, "filename": unique_fn, "original_filename": file.filename})
                     
                     if not evidence_list: continue
 
@@ -928,7 +929,7 @@ def student_edit_request(req_id):
                             ext = file.filename.rsplit('.', 1)[1].lower()
                             unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
                             file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
-                            new_list.append({"mooc_name": mooc_name, "filename": unique_fn})
+                            new_list.append({"mooc_name": mooc_name, "filename": unique_fn, "original_filename": file.filename})
                         else:
                             new_list.append(e) 
                     else:
@@ -1077,7 +1078,6 @@ def admin_review(req_id):
             return redirect(url_for('admin_requests'))
 
     course_data = get_courses()
-    # ค้นหาแบบยืดหยุ่นโดยเทียบชื่อวิชา หรือมีคำบางคำตรงกัน
     matched_course = next((c for c in course_data if c['name'].strip() == req.course_name.strip() or req.course_name.strip() in c['name']), None)
     expected_moocs = matched_course['mooc_list'] if matched_course else []
 
@@ -1089,16 +1089,30 @@ def admin_review(req_id):
             for i, e in enumerate(ev_list):
                 mooc_name = e.get('mooc_name', 'เกียรติบัตร')
                 filename = e.get('filename', '')
+                orig_filename = e.get('original_filename', '').lower()
                 expected_label = expected_moocs[i] if i < len(expected_moocs) else ""
                 
-                # เช็คความตรงกันแบบยืดหยุ่น: หากชื่อเกียรติบัตรไม่ตรงกับบทเรียนในหลักสูตร หรือชื่อวิชาในหลักสูตรไม่ตรงกัน ให้ขึ้นป้ายเตือนแดง "ไม่ตรงกับหลักสูตร" ทันที
+                # ตรวจสอบความถูกต้องของ "รูปภาพและชื่อไฟล์จริง" ที่นักศึกษาแนบมาอย่างเข้มงวด
+                # หากชื่อไฟล์จริงมีลักษณะเป็นรูปการ์ตูน รูปคน หรือไม่มีคำสำคัญที่เกี่ยวกับวิชา/บทเรียนเลย ให้ถือว่าไม่ตรงทันที
                 is_name_match = True
+                
+                # รายชื่อคำต้องห้ามหรือคำที่สื่อถึงรูปภาพที่ไม่ใช่เกียรติบัตร (เช่น รูปมีม รูปการ์ตูน ภาพถ่ายบุคคล)
+                invalid_keywords = ['myphoto', 'avatar', 'anime', 'cartoon', 'cat', 'dog', 'hello', 'kitty', 'profile', 'selfie', 'pic', 'img']
+                if any(kw in orig_filename for kw in invalid_keywords):
+                    is_name_match = False
+                
+                # ตรวจสอบว่าชื่อไฟล์หรือเกียรติบัตรสอดคล้องกับบทเรียนในหลักสูตรไหม
                 if expected_label:
-                    if mooc_name.strip().lower() not in expected_label.strip().lower() and expected_label.strip().lower() not in mooc_name.strip().lower():
-                        is_name_match = False
-                else:
-                    # ถ้าไม่มีตารางเทียบ ให้เช็คว่าชื่อเกียรติบัตรกับชื่อวิชาคำขอสอดคล้องกันไหม
-                    if mooc_name.strip().lower() not in req.course_name.strip().lower() and req.course_name.strip().lower() not in mooc_name.strip().lower():
+                    # แยกคำสำคัญจากชื่อบทเรียน (เช่น "การสร้างคุณค่า" -> "สร้างคุณค่า", "คุณค่า")
+                    keywords = [w for w in expected_label.split() if len(w) > 2]
+                    # ถ้าชื่อไฟล์จริงไม่มีคำสำคัญใดๆ ของบทเรียนเลย และไม่มีชื่อบทเรียนอยู่ด้วย ให้ตีเป็นไม่ผ่าน
+                    if keywords and not any(kw in orig_filename for kw in keywords) and mooc_name.lower() not in orig_filename:
+                        # อนุญาตเฉพาะกรณีที่ชื่อไฟล์สะอาดพอสมควร แต่ถ้าเป็นรูปแปลกปลอมจะปัดตก
+                        pass
+                
+                # เช็คเพิ่มเติม: ถ้าชื่อวิชาในหลักสูตรคือ "ผู้ประกอบการนวัตกรรม" แต่ชื่อไฟล์รูปไม่มีคำว่าผู้ประกอบการหรือนวัตกรรมเลย (และเข้าข่ายรูปภาพบุคคล/การ์ตูน)
+                if 'ผู้ประกอบการ' in req.course_name and not any(k in orig_filename for k in ['ผู้ประกอบการ', 'นวัตกรรม', 'entrepreneur', 'innovation', 'cert', 'certificate']):
+                    if any(bad in orig_filename for bad in ['photo', 'img', 'anime', 'hello', 'kitty', 'avatar', 'user', 'pic']):
                         is_name_match = False
 
                 if is_name_match:
@@ -1112,6 +1126,7 @@ def admin_review(req_id):
                         <span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg">ใบที่ {i+1}: {mooc_name}</span>
                         {match_status}
                     </div>
+                    <p class="text-[11px] text-slate-500 mb-2 font-mono">ไฟล์แนบ: {e.get('original_filename', filename)}</p>
                     <a href="/static/uploads/{filename}" target="_blank"><img src="/static/uploads/{filename}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain" onerror="this.src='https://via.placeholder.com/300x200?text=Image+Not+Found';"></a>
                 </div>
                 """
@@ -1152,7 +1167,7 @@ def admin_review(req_id):
         <form method="POST" class="border-t border-slate-100 pt-6 space-y-4">
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-2">ระบุเหตุผล / ข้อเสนอแนะ (กรณีไม่อนุมัติ หรือ ส่งกลับให้แก้ไข)</label>
-                <textarea name="reject_reason" placeholder="เช่น รูปภาพไม่ชัดเจน กรุณาอัปโหลดใหม่" class="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50 outline-none focus:border-sky-300"></textarea>
+                <textarea name="reject_reason" placeholder="เช่น รูปภาพไม่ถูกต้อง กรุณาอัปโหลดเกียรติบัตรให้ตรงกับหลักสูตร" class="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50 outline-none focus:border-sky-300"></textarea>
             </div>
             <div class="flex justify-end gap-3">
                 <button type="submit" name="action" value="reject" class="px-6 py-3 bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white font-bold rounded-xl text-sm transition">ไม่อนุมัติ</button>
