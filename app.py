@@ -46,7 +46,7 @@ class User(db.Model):
     profile_img = db.Column(db.String(200), default="default_profile.png")
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(20), default='student') # student, admin, superadmin
+    role = db.Column(db.String(20), default='student')
 
 class CreditRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -65,7 +65,7 @@ class CreditRequest(db.Model):
     status = db.Column(db.String(20), default='Pending') 
     reject_reason = db.Column(db.Text, nullable=True)
     approved_by = db.Column(db.String(100), nullable=True)
-    system_precheck = db.Column(db.Text, nullable=True) # ผลตรวจอัตโนมัติสเต็ปแรก
+    system_precheck = db.Column(db.Text, nullable=True)
     user = db.relationship('User', backref=db.backref('credits_list', lazy=True))
 
 with app.app_context():
@@ -560,7 +560,6 @@ def all_courses():
         if c['name'] in approved_courses: btn = '<span class="text-[10px] font-bold text-emerald-600"><i class="fa-solid fa-check mr-1"></i>โอนแล้ว</span>'
         else: btn = f'<a href="/submit_credit?selected_courses={c["code"]}" class="text-[11px] font-bold bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-sky-600 transition shadow-sm whitespace-nowrap">เลือกเทียบโอน</a>'
 
-        # แก้ไขให้คำว่ารวมชั่วโมงอยู่บรรทัดเดียวกันกับตัวเลขชั่วโมงรวมโดยไม่มีเลข 7 เกิน
         rows += f"""
         <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs align-top">
             <td class="py-3 px-4 font-mono font-bold text-slate-400">{idx}</td>
@@ -630,8 +629,7 @@ def submit_credit():
                     
                     if not evidence_list: continue
                     
-                    # ตรวจสอบสเต็ปแรกอัตโนมัติ
-                    precheck_text = "ผ่านการตรวจสอบอัตโนมัติ (สเต็ปแรก): พบหลักฐานครบถ้วน รอเจ้าหน้าที่ตรวจสอบยืนยันขั้นสุดท้าย"
+                    precheck_text = "ผ่านการตรวจสอบอัตโนมัติ: ครบถ้วน รอเจ้าหน้าที่ตรวจสอบยืนยันขั้นสุดท้าย"
 
                     req = CreditRequest(
                         req_code=req_code, user_id=session['user_id'], course_name=course_name, 
@@ -662,8 +660,7 @@ def submit_credit():
                     
                     if not evidence_list: continue
 
-                    # ตรวจสอบสเต็ปแรกอัตโนมัติ
-                    precheck_text = f"ผ่านการตรวจสอบอัตโนมัติ (สเต็ปแรก): อัปโหลดครบ {len(evidence_list)}/{len(mooc_list)} ใบ ตรงตามเงื่อนไขรายวิชา"
+                    precheck_text = f"ผ่านการตรวจสอบอัตโนมัติ: อัปโหลดครบ {len(evidence_list)}/{len(mooc_list)} ใบ"
 
                     req = CreditRequest(
                         req_code=req_code, user_id=session['user_id'], course_name=matched_course['name'], 
@@ -677,7 +674,7 @@ def submit_credit():
 
             db.session.commit()
             if success_count > 0:
-                flash(f'ยื่นคำขอสำเร็จ {success_count} รายวิชา (ระบบตรวจสอบสเต็ปแรกผ่านแล้ว รอเจ้าหน้าที่ตรวจสอบอนุมัติ)', 'success')
+                flash(f'ยื่นคำขอสำเร็จ {success_count} รายวิชา (รอเจ้าหน้าที่ตรวจสอบ)', 'success')
                 return redirect(url_for('history'))
             else:
                 flash('ไม่พบไฟล์หลักฐาน หรือข้อมูลไม่ครบถ้วน', 'error')
@@ -872,7 +869,7 @@ def history():
     rows = ""
     for r in user_requests:
         status = getattr(r, 'status', 'Pending')
-        if status == 'Pending': badge = '<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-700">รอตรวจ (ผ่านสเต็ปแรกแล้ว)</span>'
+        if status == 'Pending': badge = '<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-700">รอตรวจ</span>'
         elif status == 'Approved': badge = '<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-700">อนุมัติแล้ว</span>'
         elif status == 'Needs_Revision': badge = f'<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-100 text-indigo-700">ให้แก้ไข: {r.reject_reason or "-"}</span> <a href="/student/edit_request/{r.id}" class="ml-2 bg-indigo-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-indigo-700"><i class="fa-solid fa-pen-to-square"></i> แก้ไขรูปหลักฐาน</a>'
         else: badge = f'<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-100 text-rose-700">ไม่อนุมัติ ({r.reject_reason or "-"})</span>'
@@ -941,7 +938,7 @@ def student_edit_request(req_id):
 
         req.status = 'Pending' 
         req.reject_reason = None
-        req.system_precheck = "ผ่านการตรวจสอบอัตโนมัติ (แก้ไขใหม่): ตรวจสอบความถูกต้องและส่งให้เจ้าหน้าที่ตรวจสอบอีกรอบ"
+        req.system_precheck = "ผ่านการตรวจสอบอัตโนมัติ (แก้ไขใหม่)"
         db.session.commit()
         flash('อัปเดตหลักฐานและส่งให้เจ้าหน้าที่ตรวจสอบเรียบร้อยแล้ว', 'success')
         return redirect(url_for('history'))
@@ -1012,7 +1009,8 @@ def admin_requests():
     for r in all_requests:
         status_val = getattr(r, 'status', 'Pending')
         if status_val == 'Pending':
-            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอตรวจ (ผ่านสเต็ปแรกแล้ว)</span>'
+            # ลบคำว่า (ผ่านสเต็ปแรกแล้ว) ออกตามสั่ง
+            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอตรวจ</span>'
             action_col = f'<a href="/admin/review/{r.id}" class="bg-gradient-to-r from-sky-500 to-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-sky-600 hover:to-blue-700 inline-block shadow-sm">พิจารณาคำร้อง</a>'
         elif status_val == 'Approved':
             status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>'
@@ -1039,7 +1037,7 @@ def admin_requests():
         """
     content = f"""
     <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
-        <h3 class="text-xl font-black text-slate-900 mb-6">รายการคำร้องเทียบโอนทั้งหมด (ผ่านสเต็ปแรกโดยระบบอัตโนมัติแล้ว)</h3>
+        <h3 class="text-xl font-black text-slate-900 mb-6">รายการคำร้องเทียบโอนทั้งหมด (สาขาวิชาระบบสารสนเทศ)</h3>
         <table class="w-full text-left min-w-[650px]">
             <thead class="bg-sky-50 border-b border-sky-100 text-xs font-bold text-sky-700 uppercase tracking-wider">
                 <tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">ชื่อนักศึกษา</th><th class="py-3 px-4">วิชาที่ขอเทียบโอน</th><th class="py-3 px-4">วันที่ยื่น</th><th class="py-3 px-4">สถานะ</th><th class="py-3 px-4">จัดการ</th></tr>
@@ -1093,7 +1091,11 @@ def admin_review(req_id):
                 filename = e.get('filename', '')
                 expected_label = expected_moocs[i] if i < len(expected_moocs) else "บทเรียนตามหลักสูตร"
                 
-                match_status = '<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-check"></i> ตรงกับหลักสูตร</span>' if mooc_name == expected_label else f'<span class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-bold">เทียบเคียง: {expected_label}</span>'
+                # ตรวจสอบชื่อให้ตรงกัน ถ้าไม่ตรงให้แสดงป้ายเตือน "ไม่ตรงกับหลักสูตร" อย่างชัดเจนตามภาพตัวอย่างของอาจารย์
+                if mooc_name == expected_label:
+                    match_status = '<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-check"></i> ตรงกับหลักสูตร</span>'
+                else:
+                    match_status = '<span class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-triangle-exclamation"></i> ไม่ตรงกับหลักสูตร</span>'
 
                 evidence_html += f"""
                 <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
@@ -1112,7 +1114,7 @@ def admin_review(req_id):
 
     precheck_box = f"""
     <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl mb-6">
-        <p class="text-xs font-bold text-emerald-800 mb-1"><i class="fa-solid fa-robot mr-1"></i> ผลการตรวจสอบอัตโนมัติ (สเต็ปแรกโดยระบบ):</p>
+        <p class="text-xs font-bold text-emerald-800 mb-1"><i class="fa-solid fa-robot mr-1"></i> ผลการตรวจสอบอัตโนมัติ (สเต็ปแรก):</p>
         <p class="text-xs text-emerald-700 font-medium">{getattr(req, 'system_precheck', 'ผ่านการตรวจสอบสเต็ปแรกเรียบร้อย')}</p>
     </div>
     """
@@ -1262,7 +1264,6 @@ def admin_students():
 
 @app.route('/admin/manage_admins', methods=['GET', 'POST'])
 def manage_admins():
-    # ข้อ 2 ฝั่งเจ้าหน้าที่: ถ้าไม่ใช่ผู้ดูแลหลัก (superadmin) จะไม่มีสิทธิ์เข้าถึงหน้านี้
     if session.get('role') != 'superadmin':
         flash('คุณไม่มีสิทธิ์เข้าถึงหน้าจัดการเจ้าหน้าที่ (เฉพาะผู้ดูแลหลักเท่านั้น)', 'error')
         return redirect(url_for('home'))
@@ -1281,7 +1282,6 @@ def manage_admins():
     admin_list = User.query.filter(User.role.in_(['admin', 'superadmin'])).all()
     rows = ""
     for a in admin_list:
-        # ข้อ 1 ฝั่งเจ้าหน้าที่: เมื่อผู้ดูแลหลักกดตรงชื่อ จะสามารถดูรายละเอียดได้
         rows += f"""
         <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
             <td class="py-4 px-4 font-bold"><a href="/admin/manage_admin_detail/{a.id}" class="text-sky-600 hover:underline">{a.fullname}</a></td>
