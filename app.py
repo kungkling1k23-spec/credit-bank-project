@@ -1077,7 +1077,8 @@ def admin_review(req_id):
             return redirect(url_for('admin_requests'))
 
     course_data = get_courses()
-    matched_course = next((c for c in course_data if c['name'] == req.course_name), None)
+    # ค้นหาแบบยืดหยุ่นโดยเทียบชื่อวิชา หรือมีคำบางคำตรงกัน
+    matched_course = next((c for c in course_data if c['name'].strip() == req.course_name.strip() or req.course_name.strip() in c['name']), None)
     expected_moocs = matched_course['mooc_list'] if matched_course else []
 
     evidence_html = ""
@@ -1090,8 +1091,17 @@ def admin_review(req_id):
                 filename = e.get('filename', '')
                 expected_label = expected_moocs[i] if i < len(expected_moocs) else ""
                 
-                # เช็คความถูกต้องอย่างแม่นยำ: ชื่อที่นักศึกษาแนบมากับชื่อในหลักสูตรต้องตรงกันจริงๆ
-                if expected_label and mooc_name.strip() == expected_label.strip():
+                # เช็คความตรงกันแบบยืดหยุ่น: หากชื่อเกียรติบัตรไม่ตรงกับบทเรียนในหลักสูตร หรือชื่อวิชาในหลักสูตรไม่ตรงกัน ให้ขึ้นป้ายเตือนแดง "ไม่ตรงกับหลักสูตร" ทันที
+                is_name_match = True
+                if expected_label:
+                    if mooc_name.strip().lower() not in expected_label.strip().lower() and expected_label.strip().lower() not in mooc_name.strip().lower():
+                        is_name_match = False
+                else:
+                    # ถ้าไม่มีตารางเทียบ ให้เช็คว่าชื่อเกียรติบัตรกับชื่อวิชาคำขอสอดคล้องกันไหม
+                    if mooc_name.strip().lower() not in req.course_name.strip().lower() and req.course_name.strip().lower() not in mooc_name.strip().lower():
+                        is_name_match = False
+
+                if is_name_match:
                     match_status = '<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-check"></i> ตรงกับหลักสูตร</span>'
                 else:
                     match_status = '<span class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-triangle-exclamation"></i> ไม่ตรงกับหลักสูตร</span>'
