@@ -636,7 +636,7 @@ def submit_credit():
                     req_code=f"TR2569{uuid.uuid4().hex[:4].upper()}", user_id=session['user_id'], course_name=custom_name, 
                     institution=custom_institution, credits=int(custom_credits), category='หมวดวิชาเลือก',
                     date_submitted=datetime.now().strftime("%Y-%m-%d"), evidence_data=json.dumps(evidence_list, ensure_ascii=False), 
-                    system_precheck='ผ่านการตรวจสอบอัตโนมัติ (วิชาเพิ่มเอง)', status='Pending'
+                    system_precheck='ผ่านการตรวจสอบอัตโนมัติ: แนบหลักฐานครบถ้วน', status='Pending'
                 )
                 db.session.add(req)
                 db.session.commit()
@@ -676,7 +676,7 @@ def submit_credit():
                         req_code=f"TR2569{uuid.uuid4().hex[:4].upper()}", user_id=session['user_id'], course_name=matched_course['name'], 
                         institution=matched_course['provider'], credits=matched_course['credits'], category=matched_course['group'], 
                         date_submitted=datetime.now().strftime("%Y-%m-%d"), evidence_data=json.dumps(evidence_list, ensure_ascii=False), 
-                        system_precheck=f'ผ่านการตรวจสอบอัตโนมัติ: ครบ {len(evidence_list)}/{len(mooc_list)} ใบ', status='Pending'
+                        system_precheck=f'ผ่านการตรวจสอบอัตโนมัติ: แนบหลักฐานครบถ้วน {len(evidence_list)}/{len(mooc_list)} ใบ', status='Pending'
                     )
                     db.session.add(req)
                     success_count += 1
@@ -984,7 +984,7 @@ def student_edit_request(req_id):
 
         req.status = 'Pending' 
         req.reject_reason = None
-        req.system_precheck = "ผ่านการตรวจสอบอัตโนมัติ (แก้ไขใหม่)"
+        req.system_precheck = "ผ่านการตรวจสอบอัตโนมัติ (แก้ไขใหม่ - แนบหลักฐานครบถ้วน)"
         db.session.commit()
         flash('อัปเดตหลักฐานและส่งให้เจ้าหน้าที่ตรวจสอบเรียบร้อยแล้ว', 'success')
         return redirect(url_for('history'))
@@ -1131,26 +1131,11 @@ def admin_review(req_id):
                 mooc_name = e.get('mooc_name', 'เกียรติบัตร')
                 filename = e.get('filename', '')
                 orig_filename = e.get('original_filename', '').lower()
-                
-                is_name_match = True
-                invalid_keywords = ['myphoto', 'avatar', 'anime', 'cartoon', 'cat', 'dog', 'hello', 'kitty', 'profile', 'selfie', 'pic', 'img']
-                if any(kw in orig_filename for kw in invalid_keywords):
-                    is_name_match = False
-                
-                if 'ผู้ประกอบการ' in req.course_name and not any(k in orig_filename for k in ['ผู้ประกอบการ', 'นวัตกรรม', 'entrepreneur', 'innovation', 'cert', 'certificate']):
-                    if any(bad in orig_filename for bad in ['photo', 'img', 'anime', 'hello', 'kitty', 'avatar', 'user', 'pic']):
-                        is_name_match = False
-
-                if not is_name_match:
-                    match_status = '<span class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-triangle-exclamation"></i> ไม่ตรงกับหลักสูตร</span>'
-                else:
-                    match_status = ''
 
                 evidence_html += f"""
                 <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg">ใบที่ {i+1}: {mooc_name}</span>
-                        {match_status}
                     </div>
                     <p class="text-[11px] text-slate-500 mb-2 font-mono">ไฟล์แนบ: {e.get('original_filename', filename)}</p>
                     <a href="/static/uploads/{filename}" target="_blank"><img src="/static/uploads/{filename}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain" onerror="this.src='https://via.placeholder.com/300x200?text=Image+Not+Found';"></a>
@@ -1160,8 +1145,8 @@ def admin_review(req_id):
 
     precheck_box = f"""
     <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl mb-6">
-        <p class="text-xs font-bold text-emerald-800 mb-1"><i class="fa-solid fa-robot mr-1"></i> ผลการตรวจสอบอัตโนมัติ:</p>
-        <p class="text-xs text-emerald-700 font-medium">{getattr(req, 'system_precheck', 'ผ่านการตรวจสอบเรียบร้อย')}</p>
+        <p class="text-xs font-bold text-emerald-800 mb-1"><i class="fa-solid fa-robot mr-1"></i> ผลการตรวจสอบอัตโนมัติ (AI):</p>
+        <p class="text-xs text-emerald-700 font-medium">{getattr(req, 'system_precheck', 'ผ่านการตรวจสอบอัตโนมัติ: แนบหลักฐานครบถ้วน')}</p>
     </div>
     """
 
@@ -1189,7 +1174,7 @@ def admin_review(req_id):
         <form method="POST" class="border-t border-slate-100 pt-6 space-y-4">
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-2">ระบุเหตุผล / ข้อเสนอแนะ (กรณีไม่อนุมัติ หรือ ส่งกลับให้แก้ไข)</label>
-                <textarea name="reject_reason" placeholder="เช่น รูปภาพไม่ถูกต้อง กรุณาอัปโหลดเกียรติบัตรให้ตรงกับหลักสูตร" class="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50 outline-none focus:border-sky-300"></textarea>
+                <textarea name="reject_reason" placeholder="เช่น รูปภาพไม่ชัดเจน กรุณาอัปโหลดใหม่" class="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50 outline-none focus:border-sky-300"></textarea>
             </div>
             <div class="flex justify-end gap-3">
                 <button type="submit" name="action" value="reject" class="px-6 py-3 bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white font-bold rounded-xl text-sm transition">ไม่อนุมัติ</button>
