@@ -179,7 +179,10 @@ def render_layout(content, active_page=''):
     user_role = session.get('role', '')
     manage_admin_menu = ""
     if user_role == 'superadmin':
-        manage_admin_menu = f'<a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group mt-2 {is_active("manage_admins")}"><i class="fa-solid fa-user-shield text-lg w-6 text-center text-sky-600"></i><span class="nav-text font-bold">จัดการเจ้าหน้าที่</span></a>'
+        manage_admin_menu = f"""
+        <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group mt-2 {is_active('manage_admins')}"><i class="fa-solid fa-user-shield text-lg w-6 text-center text-sky-600"></i><span class="nav-text font-bold">จัดการเจ้าหน้าที่</span></a>
+        <a href="/admin/reset_requests" onclick="return confirm('คำเตือน: คุณต้องการรีเซ็ตข้อมูลคำร้องเทียบโอนของนักศึกษาทุกคนจริงหรือไม่?')" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group mt-1 text-rose-600 hover:bg-rose-50"><i class="fa-solid fa-triangle-exclamation text-lg w-6 text-center text-rose-500"></i><span class="nav-text font-bold">รีเซ็ตคำร้องทั้งหมด</span></a>
+        """
 
     sidebar_html = f"""
     <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100 text-slate-700 h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-xl border-r border-sky-200 hidden md:flex shrink-0 w-full md:w-auto">
@@ -598,55 +601,61 @@ def submit_credit():
     
     if request.method == 'POST':
         try:
-            course_codes = request.form.getlist('course_codes')
-            if not course_codes:
-                flash('กรุณาเลือกอย่างน้อย 1 รายวิชา', 'error')
-                return redirect(url_for('submit_credit'))
-
-            course_data_list = get_courses()
-            success_count = 0
-
-            # ดึงคำขอที่มีอยู่แล้วของนักศึกษา เพื่อป้องกันการยื่นซ้ำในวิชาเดิมทุกสถานะ
+            form_type = request.form.get('form_type', 'standard')
             existing_reqs = CreditRequest.query.filter_by(user_id=session['user_id']).all()
             existing_course_names = [r.course_name.strip() for r in existing_reqs]
-
-            for code in course_codes:
-                req_code = f"TR2569{uuid.uuid4().hex[:4].upper()}"
+            
+            if form_type == 'custom':
+                custom_name = request.form.get('custom_course_name', '').strip()
+                custom_credits = request.form.get('custom_credits', '3')
+                custom_institution = request.form.get('custom_institution', 'ThaiMOOC')
                 
-                if code == 'MANUAL_CUSTOM':
-                    course_name = request.form.get('manual_course_name', '').strip()
-                    if not course_name: continue
-                    if course_name in existing_course_names: continue # ป้องกันซ้ำ
-                    
-                    evidence_list = []
-                    for i in range(1, 4):
-                        file_key = f"cert_file_MANUAL_{i}"
-                        if file_key in request.files:
-                            file = request.files[file_key]
-                            if file and file.filename != '' and allowed_file(file.filename):
-                                ext = file.filename.rsplit('.', 1)[1].lower()
-                                unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
-                                file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
-                                evidence_list.append({"mooc_name": f"เกียรติบัตรใบที่ {i}", "filename": unique_fn, "original_filename": file.filename})
-                    
-                    if not evidence_list: continue
-                    
-                    precheck_text = "ผ่านการตรวจสอบอัตโนมัติ: ครบถ้วน รอเจ้าหน้าที่ตรวจสอบยืนยันขั้นสุดท้าย"
+                if not custom_name:
+                    flash('กรุณาระบุชื่อรายวิชาที่ต้องการเพิ่มเอง', 'error')
+                    return redirect(url_for('submit_credit'))
+                if custom_name in existing_course_names:
+                    flash('คุณเคยยื่นคำขอรายวิชานี้ไปแล้ว ไม่สามารถยื่นซ้ำได้', 'error')
+                    return redirect(url_for('submit_credit'))
+                
+                evidence_list = []
+                for i in range(1, 4):
+                    file_key = f"custom_cert_{i}"
+                    if file_key in request.files:
+                        file = request.files[file_key]
+                        if file and file.filename != '' and allowed_file(file.filename):
+                            ext = file.filename.rsplit('.', 1)[1].lower()
+                            unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
+                            file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
+                            evidence_list.append({"mooc_name": f"เกียรติบัตรใบที่ {i}", "filename": unique_fn, "original_filename": file.filename})
+                
+                if not evidence_list:
+                    flash('กรุณาแนบไฟล์เกียรติบัตรหลักฐานอย่างน้อย 1 ไฟล์', 'error')
+                    return redirect(url_for('submit_credit'))
+                
+                req = CreditRequest(
+                    req_code=f"TR2569{uuid.uuid4().hex[:4].upper()}", user_id=session['user_id'], course_name=custom_name, 
+                    institution=custom_institution, credits=int(custom_credits), category='หมวดวิชาเลือก',
+                    date_submitted=datetime.now().strftime("%Y-%m-%d"), evidence_data=json.dumps(evidence_list, ensure_ascii=False), 
+                    system_precheck='ผ่านการตรวจสอบอัตโนมัติ (วิชาเพิ่มเอง)', status='Pending'
+                )
+                db.session.add(req)
+                db.session.commit()
+                flash('ยื่นคำขอรายวิชาเพิ่มเติมสำเร็จ', 'success')
+                return redirect(url_for('history'))
 
-                    req = CreditRequest(
-                        req_code=req_code, user_id=session['user_id'], course_name=course_name, 
-                        institution=request.form.get('institution', 'ThaiMOOC'), credits=int(request.form.get('credits', 3)), 
-                        category=request.form.get('category', 'หมวดวิชาเลือก'),
-                        date_submitted=datetime.now().strftime("%Y-%m-%d"),
-                        evidence_data=json.dumps(evidence_list, ensure_ascii=False), 
-                        system_precheck=precheck_text, status='Pending'
-                    )
-                    db.session.add(req)
-                    success_count += 1
-                else:
+            else:
+                course_codes = request.form.getlist('course_codes')
+                if not course_codes:
+                    flash('กรุณาเลือกอย่างน้อย 1 รายวิชา', 'error')
+                    return redirect(url_for('submit_credit'))
+
+                course_data_list = get_courses()
+                success_count = 0
+
+                for code in course_codes:
                     matched_course = next((c for c in course_data_list if c['code'] == code), None)
                     if not matched_course: continue
-                    if matched_course['name'].strip() in existing_course_names: continue # ป้องกันซ้ำ
+                    if matched_course['name'].strip() in existing_course_names: continue
 
                     evidence_list = []
                     mooc_list = matched_course['mooc_list']
@@ -663,25 +672,22 @@ def submit_credit():
                     
                     if not evidence_list: continue
 
-                    precheck_text = f"ผ่านการตรวจสอบอัตโนมัติ: อัปโหลดครบ {len(evidence_list)}/{len(mooc_list)} ใบ"
-
                     req = CreditRequest(
-                        req_code=req_code, user_id=session['user_id'], course_name=matched_course['name'], 
-                        institution=matched_course['provider'], credits=matched_course['credits'], 
-                        category=matched_course['group'], date_submitted=datetime.now().strftime("%Y-%m-%d"),
-                        evidence_data=json.dumps(evidence_list, ensure_ascii=False), 
-                        system_precheck=precheck_text, status='Pending'
+                        req_code=f"TR2569{uuid.uuid4().hex[:4].upper()}", user_id=session['user_id'], course_name=matched_course['name'], 
+                        institution=matched_course['provider'], credits=matched_course['credits'], category=matched_course['group'], 
+                        date_submitted=datetime.now().strftime("%Y-%m-%d"), evidence_data=json.dumps(evidence_list, ensure_ascii=False), 
+                        system_precheck=f'ผ่านการตรวจสอบอัตโนมัติ: ครบ {len(evidence_list)}/{len(mooc_list)} ใบ', status='Pending'
                     )
                     db.session.add(req)
                     success_count += 1
 
-            db.session.commit()
-            if success_count > 0:
-                flash(f'ยื่นคำขอสำเร็จ {success_count} รายวิชา (รอเจ้าหน้าที่ตรวจสอบ)', 'success')
-                return redirect(url_for('history'))
-            else:
-                flash('ไม่สามารถยื่นซ้ำได้ หรือไม่พบไฟล์หลักฐานที่ถูกต้อง', 'error')
-                return redirect(url_for('submit_credit'))
+                db.session.commit()
+                if success_count > 0:
+                    flash(f'ยื่นคำขอสำเร็จ {success_count} รายวิชา', 'success')
+                    return redirect(url_for('history'))
+                else:
+                    flash('ไม่สามารถยื่นซ้ำได้ หรือไม่พบไฟล์หลักฐานที่ถูกต้อง', 'error')
+                    return redirect(url_for('submit_credit'))
 
         except Exception as e:
             db.session.rollback()
@@ -702,7 +708,7 @@ def submit_credit():
             action_col = '<span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200"><i class="fa-solid fa-lock"></i> เคยยื่นแล้ว</span>'
         else:
             is_checked = "checked" if item['code'] == url_selected_code else ""
-            action_col = f'<input type="checkbox" name="course_codes" value="{item["code"]}" {is_checked} class="w-5 h-5 accent-slate-900 rounded cursor-pointer course-checkbox" onchange="toggleSubjectRow(this)">'
+            action_col = f'<input type="checkbox" name="course_codes" value="{item["code"]}" {is_checked} class="w-5 h-5 accent-slate-900 rounded cursor-pointer course-checkbox">'
 
         mooc_str = "<br>".join([f"- {m}" for m in item['mooc_list']])
         is_subject_rows += f"""
@@ -711,36 +717,37 @@ def submit_credit():
             <td class="py-3 px-3 font-mono font-bold text-sky-600">{item['code']}</td>
             <td class="py-3 px-3 font-extrabold text-slate-800">{item['name']}</td>
             <td class="py-3 px-3 text-slate-600 font-medium">{mooc_str}</td>
-            <td class="py-3 px-3 text-center"><button type="button" onclick="removeSubjectRow(this)" class="text-rose-500 hover:text-rose-700 text-xs font-bold bg-rose-50 px-2 py-1 rounded"><i class="fa-solid fa-trash"></i> ลบ</button></td>
         </tr>
         """
 
     courses_json = json.dumps(course_data, ensure_ascii=False)
     
     content = f"""
-    <div class="max-w-4xl mx-auto mb-10">
+    <div class="max-w-4xl mx-auto mb-8">
         <h2 class="text-3xl font-black text-slate-900 mb-2">ยื่นคำขอเทียบโอน</h2>
-        <p class="text-slate-500 text-sm font-medium">กรุณาเลือกสาขาวิชาด้านล่างเพื่อแสดงรายวิชา และสามารถเพิ่ม/ลบรายวิชาได้ตามต้องการ</p>
+        <p class="text-slate-500 text-sm font-medium">กรุณาเลือกสาขาวิชาด้านล่างเพื่อแสดงรายวิชาในหลักสูตร หรือเลือกเมนูเพิ่มรายวิชาเองแยกต่างหาก</p>
     </div>
 
     <div class="max-w-4xl mx-auto bg-white p-6 rounded-3xl border border-sky-100 shadow-sm mb-6">
         <label class="block text-xs font-bold text-slate-700 uppercase mb-2">เลือกสาขาวิชาเพื่อเริ่มยื่นคำขอ</label>
         <select id="branch_selector" onchange="filterBranch()" class="w-full border border-sky-200 rounded-xl p-3 text-sm font-bold text-sky-900 bg-sky-50/50 outline-none">
-            <option value="">-- กรุณาเลือกสาขาวิชา --</option>
-            <option value="IS">สาขาวิชาระบบสารสนเทศ (Information Systems)</option>
+            <option value="">-- กรุณาเลือกสาขาวิชา หรือประเภทการยื่น --</option>
+            <option value="IS">สาขาวิชาระบบสารสนเทศ (Information Systems - ตามหลักสูตร)</option>
+            <option value="CUSTOM">เพิ่มรายวิชาเอง (นอกหลักสูตร / อิสระ)</option>
         </select>
     </div>
 
-    <form method="POST" enctype="multipart/form-data" class="max-w-4xl mx-auto space-y-8">
-        <div id="subject_selection_box" class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm hidden">
+    <!-- ฟอร์มเลือกจากหลักสูตรปกติ -->
+    <form method="POST" enctype="multipart/form-data" id="standard_form" class="max-w-4xl mx-auto space-y-8 hidden">
+        <input type="hidden" name="form_type" value="standard">
+        <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
-                <h3 class="text-lg font-black text-slate-800">1. เลือกวิชาที่ต้องการเทียบโอน</h3>
-                <button type="button" onclick="addCustomSubjectRow()" class="text-xs font-bold bg-sky-100 text-sky-700 px-3 py-1.5 rounded-xl hover:bg-sky-200"><i class="fa-solid fa-plus mr-1"></i> เพิ่มรายวิชาเอง</button>
+                <h3 class="text-lg font-black text-slate-800">เลือกวิชาในหลักสูตรที่ต้องการเทียบโอน</h3>
             </div>
             <div class="overflow-x-auto border border-slate-100 rounded-xl mb-6">
                 <table class="w-full text-left" id="subject_table">
                     <thead class="bg-slate-50 text-slate-500 text-[11px] font-black uppercase tracking-wider">
-                        <tr><th class="py-3 px-3 text-center w-16">เลือก</th><th class="py-3 px-3">รหัส</th><th class="py-3 px-3">วิชา IS</th><th class="py-3 px-3">MOOC ที่ต้องใช้แนบหลักฐาน</th><th class="py-3 px-3 text-center">จัดการ</th></tr>
+                        <tr><th class="py-3 px-3 text-center w-16">เลือก</th><th class="py-3 px-3">รหัส</th><th class="py-3 px-3">วิชา IS</th><th class="py-3 px-3">MOOC ที่ต้องใช้แนบหลักฐาน</th></tr>
                     </thead>
                     <tbody>{is_subject_rows}</tbody>
                 </table>
@@ -754,7 +761,7 @@ def submit_credit():
         </div>
 
         <div id="dynamic_upload_container" class="hidden space-y-6 bg-sky-50/50 p-8 rounded-3xl border border-sky-200 shadow-inner">
-            <h3 class="text-xl font-black text-slate-900 mb-1">2. แนบหลักฐานเกียรติบัตร</h3>
+            <h3 class="text-xl font-black text-slate-900 mb-1">แนบหลักฐานเกียรติบัตร</h3>
             <p class="text-xs text-slate-500 mb-4">กรุณาแนบไฟล์รูปให้ตรงกับชื่อวิชาที่ระบุไว้เหนือปุ่มอัปโหลด</p>
             
             <div id="upload_forms_wrapper" class="space-y-6"></div>
@@ -765,6 +772,51 @@ def submit_credit():
         </div>
     </form>
 
+    <!-- ฟอร์มเพิ่มรายวิชาเอง (แยกออกมาต่างหาก) -->
+    <form method="POST" enctype="multipart/form-data" id="custom_form" class="max-w-4xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-sm space-y-6 hidden">
+        <input type="hidden" name="form_type" value="custom">
+        <div class="border-b border-slate-100 pb-3">
+            <h3 class="text-xl font-black text-slate-900">เพิ่มรายวิชาเอง (อิสระ / นอกหลักสูตร)</h3>
+            <p class="text-xs text-slate-500 mt-1">กรอกรายละเอียดรายวิชาและแนบเกียรติบัตรหลักฐาน 1-3 ไฟล์</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ชื่อรายวิชา</label>
+                <input type="text" name="custom_course_name" placeholder="ระบุชื่อวิชา" required class="w-full border border-sky-200 rounded-xl p-3 text-sm bg-sky-50/50 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ระบบ / แหล่งที่เรียน</label>
+                <select name="custom_institution" class="w-full border border-sky-200 rounded-xl p-3 text-sm bg-sky-50/50 outline-none">
+                    <option value="ThaiMOOC">ThaiMOOC</option>
+                    <option value="ChulaMOOC">ChulaMOOC</option>
+                    <option value="อื่นๆ">อื่นๆ</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">จำนวนหน่วยกิต</label>
+                <select name="custom_credits" class="w-full border border-sky-200 rounded-xl p-3 text-sm bg-sky-50/50 outline-none">
+                    <option value="3">3 หน่วยกิต</option>
+                    <option value="2">2 หน่วยกิต</option>
+                    <option value="1">1 หน่วยกิต</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="space-y-4 pt-2">
+            <label class="block text-xs font-bold text-slate-700 uppercase">แนบไฟล์เกียรติบัตร (อย่างน้อย 1 ไฟล์)</label>
+            <div class="p-4 bg-sky-50/50 rounded-2xl border border-sky-100 space-y-3">
+                <div><span class="text-xs font-bold text-sky-700 block mb-1">เกียรติบัตรใบที่ 1</span><input type="file" name="custom_cert_1" accept="image/*,.pdf" required class="w-full text-xs font-medium file:py-2 file:px-4 file:rounded-lg file:bg-sky-600 file:text-white file:font-bold"></div>
+                <div><span class="text-xs font-bold text-sky-700 block mb-1">เกียรติบัตรใบที่ 2 (ถ้ามี)</span><input type="file" name="custom_cert_2" accept="image/*,.pdf" class="w-full text-xs font-medium file:py-2 file:px-4 file:rounded-lg file:bg-sky-600 file:text-white file:font-bold"></div>
+                <div><span class="text-xs font-bold text-sky-700 block mb-1">เกียรติบัตรใบที่ 3 (ถ้ามี)</span><input type="file" name="custom_cert_3" accept="image/*,.pdf" class="w-full text-xs font-medium file:py-2 file:px-4 file:rounded-lg file:bg-sky-600 file:text-white file:font-bold"></div>
+            </div>
+        </div>
+
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl shadow-md text-base transition">
+            <i class="fa-solid fa-paper-plane mr-2"></i> ยื่นคำขอรายวิชาเพิ่มเติมนี้
+        </button>
+    </form>
+
     <script>
     const allCoursesData = {courses_json};
     const courseMap = {{}};
@@ -772,33 +824,17 @@ def submit_credit():
 
     function filterBranch() {{
         const branch = document.getElementById('branch_selector').value;
-        const box = document.getElementById('subject_selection_box');
+        const stdForm = document.getElementById('standard_form');
+        const customForm = document.getElementById('custom_form');
+        
+        stdForm.classList.add('hidden');
+        customForm.classList.add('hidden');
+
         if(branch === "IS") {{
-            box.classList.remove('hidden');
-        }} else {{
-            box.classList.add('hidden');
-            document.getElementById('dynamic_upload_container').classList.add('hidden');
+            stdForm.classList.remove('hidden');
+        }} else if(branch === "CUSTOM") {{
+            customForm.classList.remove('hidden');
         }}
-    }}
-
-    function removeSubjectRow(btn) {{
-        const row = btn.closest('tr');
-        row.remove();
-    }}
-
-    function addCustomSubjectRow() {{
-        const tbody = document.querySelector('#subject_table tbody');
-        const customCode = 'CUSTOM_' + Math.floor(Math.random() * 1000);
-        const newRow = `
-        <tr class="border-b border-sky-50 text-xs hover:bg-slate-50 transition subject-row">
-            <td class="py-3 px-3 text-center"><input type="checkbox" name="course_codes" value="${{customCode}}" checked class="w-5 h-5 accent-slate-900 rounded cursor-pointer course-checkbox"></td>
-            <td class="py-3 px-3 font-mono font-bold text-sky-600">วิชาเพิ่มเอง</td>
-            <td class="py-3 px-3"><input type="text" name="manual_course_name" placeholder="ระบุชื่อวิชา" required class="border p-2 rounded-xl w-full custom-name-input text-xs font-bold"></td>
-            <td class="py-3 px-3 text-slate-600 font-medium">เกียรติบัตรหลักฐาน 1-3 ใบ</td>
-            <td class="py-3 px-3 text-center"><button type="button" onclick="removeSubjectRow(this)" class="text-rose-500 hover:text-rose-700 text-xs font-bold bg-rose-50 px-2 py-1 rounded">ลบ</button></td>
-        </tr>
-        `;
-        tbody.insertAdjacentHTML('beforeend', newRow);
     }}
 
     function generateDynamicUploads() {{
@@ -811,18 +847,6 @@ def submit_credit():
         wrapper.innerHTML = '';
         checkboxes.forEach(cb => {{
             const code = cb.value;
-            if(code.startsWith('CUSTOM_')) {{
-                wrapper.insertAdjacentHTML('beforeend', `
-                    <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm">
-                        <h4 class="font-black text-sky-700 text-lg mb-3">วิชาเพิ่มเติมอิสระ</h4>
-                        <div class="space-y-3">
-                            <input type="file" name="cert_file_MANUAL_1" accept="image/*,.pdf" required class="w-full text-xs font-medium file:py-2 file:px-4 file:rounded-lg file:bg-sky-600 file:text-white file:font-bold">
-                        </div>
-                    </div>
-                `);
-                return;
-            }}
-
             const course = courseMap[code];
             if (!course) return;
 
@@ -857,13 +881,23 @@ def submit_credit():
         container.classList.remove('hidden');
         container.scrollIntoView({{ behavior: 'smooth' }});
     }}
-
-    document.addEventListener("DOMContentLoaded", function() {{
-        filterBranch();
-    }});
     </script>
     """
     return render_layout(content, active_page='submit_credit')
+
+@app.route('/admin/reset_requests')
+def admin_reset_requests():
+    if session.get('role') != 'superadmin':
+        flash('คุณไม่มีสิทธิ์ใช้งานฟังก์ชันนี้ (สำหรับ Super Admin เท่านั้น)', 'error')
+        return redirect(url_for('home'))
+    try:
+        CreditRequest.query.delete()
+        db.session.commit()
+        flash('✅ รีเซ็ตข้อมูลคำร้องเทียบโอนของนักศึกษาทุกคนเรียบร้อยแล้ว', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'เกิดข้อผิดพลาดในการรีเซ็ต: {str(e)}', 'error')
+    return redirect(url_for('admin_requests'))
 
 @app.route('/history')
 def history():
@@ -1083,10 +1117,6 @@ def admin_review(req_id):
             flash('ส่งกลับให้นักศึกษาแก้ไขหลักฐานเรียบร้อยแล้ว', 'success')
             return redirect(url_for('admin_requests'))
 
-    course_data = get_courses()
-    matched_course = next((c for c in course_data if c['name'].strip() == req.course_name.strip() or req.course_name.strip() in c['name']), None)
-    expected_moocs = matched_course['mooc_list'] if matched_course else []
-
     evidence_html = ""
     evidence_data = getattr(req, 'evidence_data', None)
     if evidence_data:
@@ -1122,10 +1152,6 @@ def admin_review(req_id):
                 </div>
                 """
         except: pass
-    
-    if not evidence_html:
-        if getattr(req, 'doc_img', None) and req.doc_img != 'default_doc.png':
-            evidence_html += f'<div class="bg-slate-50 p-2 rounded-2xl"><img src="/static/uploads/{req.doc_img}" class="max-h-56 mx-auto rounded-xl shadow-sm object-contain" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></div>'
 
     precheck_box = f"""
     <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl mb-6">
@@ -1150,7 +1176,7 @@ def admin_review(req_id):
             <div><p class="text-xs font-bold text-slate-400 mb-1">หน่วยกิต</p><p class="font-bold text-sky-600">{getattr(req, 'credits', 0)}</p></div>
         </div>
 
-        <h4 class="font-black text-slate-800 mb-3"><i class="fa-solid fa-images text-sky-500 mr-2"></i> ตรวจสอบหลักฐาน (เจ้าหน้าที่ตรวจสอบยืนยันขั้นสุดท้าย)</h4>
+        <h4 class="font-black text-slate-800 mb-3"><i class="fa-solid fa-images text-sky-500 mr-2"></i> ตรวจสอบหลักฐาน</h4>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {evidence_html if evidence_html else '<p class="text-xs text-slate-400">ไม่มีรูปภาพ</p>'}
         </div>
@@ -1475,5 +1501,5 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
-if __name__ == 'main':
+if __name__ == '__main__':
     app.run(debug=True)
