@@ -32,9 +32,6 @@ def allowed_file(filename):
 
 db = SQLAlchemy(app)
 
-# ==========================================
-# Database Models
-# ==========================================
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     member_id = db.Column(db.String(20), unique=True, nullable=True)
@@ -64,19 +61,11 @@ class CreditRequest(db.Model):
     date_submitted = db.Column(db.String(20), default="2026-08-26")
     doc_img = db.Column(db.String(200), nullable=True)
     doc_img2 = db.Column(db.String(200), nullable=True)
-    evidence_data = db.Column(db.Text, nullable=True) # เก็บ JSON Array [{mooc_name, filename}]
-    status = db.Column(db.String(20), default='Pending') # Pending, Approved, Rejected, Needs_Revision
+    evidence_data = db.Column(db.Text, nullable=True) 
+    status = db.Column(db.String(20), default='Pending') 
     reject_reason = db.Column(db.Text, nullable=True)
     approved_by = db.Column(db.String(100), nullable=True)
     user = db.relationship('User', backref=db.backref('credits_list', lazy=True))
-
-class ProfileEditRequest(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    reason = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(20), default='Pending')
-    created_at = db.Column(db.String(20), default="2026-08-26")
-    user = db.relationship('User', backref=db.backref('edit_requests', lazy=True))
 
 with app.app_context():
     db.create_all()
@@ -121,7 +110,7 @@ def format_address(house_no, moo, soi, subdistrict, district, province, postal_c
     return " ".join(parts)
 
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/180MQL9RadQfhO0uN-L3hQGYiRhDPYvzJ/export?format=csv"
-IS_THAIMOOC_COURSES = [{"code": "15-02-002", "name": "คุณภาพการใช้ชีวิต", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["ชีวิตและการสร้างคุณค่า (2 ชม.)", "การคิดสร้างสรรค์ เพื่อการพัฒนาตนเอง (2 ชม.)"], "hours": "4 ชม.", "credits": 3}]
+IS_THAIMOOC_COURSES = [{"code": "15-02-002", "name": "คุณภาพการใช้ชีวิต", "group": "หมวดวิชาศึกษาทั่วไป", "provider": "ThaiMOOC", "mooc_list": ["ชีวิตและการสร้างคุณค่า", "การคิดสร้างสรรค์ เพื่อการพัฒนาตนเอง"], "hours_list": ["2 ชม.", "2 ชม."], "total_hours": "4 ชม.", "credits": 3}]
 
 def get_courses():
     try:
@@ -147,7 +136,7 @@ def get_courses():
             if current_code not in courses_dict:
                 try: credits_val = int(credits_raw)
                 except: credits_val = 3
-                courses_dict[current_code] = {"code": current_code, "name": name, "group": group, "provider": provider if provider else "ThaiMOOC", "credits": credits_val, "mooc_list": [], "total_hours": 0.0}
+                courses_dict[current_code] = {"code": current_code, "name": name, "group": group, "provider": provider if provider else "ThaiMOOC", "credits": credits_val, "mooc_list": [], "hours_list": [], "total_num_hours": 0.0}
             else:
                 if not courses_dict[current_code]["name"] and name: courses_dict[current_code]["name"] = name
                 if not courses_dict[current_code]["group"] and group: courses_dict[current_code]["group"] = group
@@ -155,19 +144,23 @@ def get_courses():
 
             if mooc_name or hours_raw:
                 nums = re.findall(r'\d+(?:\.\d+)?', hours_raw)
-                if nums: courses_dict[current_code]["total_hours"] += float(nums[0])
-                display_mooc = mooc_name
-                if hours_raw and hours_raw not in mooc_name:
-                    if nums and hours_raw == nums[0]: display_mooc += f" ({hours_raw} ชม.)" 
-                    else: display_mooc += f" ({hours_raw})"
-                for m in display_mooc.split('\n'):
-                    if m.strip(): courses_dict[current_code]["mooc_list"].append(m.strip())
+                if nums: courses_dict[current_code]["total_num_hours"] += float(nums[0])
+                
+                clean_mooc = mooc_name
+                for n in nums:
+                    clean_mooc = clean_mooc.replace(f"({n} ชม.)", "").replace(f"({n} ชั่วโมง)", "").replace(n, "").strip()
+                if not clean_mooc: clean_mooc = mooc_name
+
+                for m in clean_mooc.split('\n'):
+                    if m.strip(): 
+                        courses_dict[current_code]["mooc_list"].append(m.strip())
+                        courses_dict[current_code]["hours_list"].append(hours_raw if hours_raw else "ระบุในใบประกาศ")
 
         courses = []
         for data in courses_dict.values():
-            th = data["total_hours"]
-            if th > 0: data["hours"] = f"{int(th) if th.is_integer() else round(th, 2)} ชม."
-            else: data["hours"] = "ไม่ระบุ"
+            th = data["total_num_hours"]
+            if th > 0: data["total_hours"] = f"{int(th) if th.is_integer() else round(th, 2)} ชม."
+            else: data["total_hours"] = "ไม่ระบุ"
             courses.append(data)
         if courses: return courses
         return IS_THAIMOOC_COURSES
@@ -274,9 +267,6 @@ def render_layout(content, active_page=''):
     </html>
     """
 
-# ==========================================
-# Routes & Controllers
-# ==========================================
 @app.route('/')
 def home():
     if not session.get('user_id'): return redirect(url_for('login'))
@@ -285,7 +275,7 @@ def home():
         session.clear()
         return redirect(url_for('login'))
     
-    # ---------------- ADMIN HOME (พร้อมกราฟสถิติ) ----------------
+    # ---------------- ADMIN HOME (นำเมนูด่วนออกตามสั่ง) ----------------
     if user.role in ['admin', 'superadmin']:
         try:
             pending_reqs = CreditRequest.query.filter_by(status='Pending').order_by(CreditRequest.id.asc()).all()
@@ -333,20 +323,9 @@ def home():
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div class="md:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">สถิติภาพรวมสถานะคำร้องเทียบโอน</h3>
-                <div class="h-64 flex justify-center"><canvas id="adminChart"></canvas></div>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-                <div>
-                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">เมนูด่วน</h3>
-                    <div class="flex flex-col gap-3">
-                        <a href="/admin/students" class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition font-bold text-slate-700 text-sm"><i class="fa-solid fa-users mr-2 text-sky-500"></i> จัดการรายชื่อนักศึกษา</a>
-                        <a href="/admin/requests" class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition font-bold text-slate-700 text-sm"><i class="fa-solid fa-file-signature mr-2 text-sky-500"></i> ตรวจสอบคำร้องทั้งหมด</a>
-                    </div>
-                </div>
-            </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+            <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">สถิติภาพรวมสถานะคำร้องเทียบโอน</h3>
+            <div class="h-64 flex justify-center"><canvas id="adminChart"></canvas></div>
         </div>
 
         <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
@@ -373,7 +352,7 @@ def home():
         """
         return render_layout(content, active_page='home')
 
-    # ---------------- STUDENT HOME (พร้อมกราฟวงกลม) ----------------
+    # ---------------- STUDENT HOME ----------------
     try:
         user_requests = CreditRequest.query.filter_by(user_id=user.id).all()
         approved_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Approved')
@@ -462,10 +441,10 @@ def available_courses():
     search_query = request.args.get('search', '').strip().lower()
     selected_provider = request.args.get('provider', '').strip()
 
-    # ข้อ 3 ฝั่งนักศึกษา: ถ้ายังไม่กดค้นหา (ไม่มีคำค้น) ให้ไม่แสดงรายวิชา
-    if not search_query and not selected_provider:
-        filtered_courses = []
-    else:
+    is_searched = bool(search_query or selected_provider)
+    filtered_courses = []
+    
+    if is_searched:
         filtered_courses = course_data
         if selected_provider and selected_provider != "ทั้งหมด":
             filtered_courses = [c for c in filtered_courses if c['provider'] == selected_provider]
@@ -480,7 +459,17 @@ def available_courses():
     cards = ""
     for c in filtered_courses:
         badge_prov = "bg-sky-100 text-sky-700 border-sky-200" if c['provider'] == 'ThaiMOOC' else "bg-amber-100 text-amber-700 border-amber-200"
-        mooc_items = "".join([f'<li class="flex items-start gap-2 mb-1.5 text-xs text-slate-600"><i class="fa-solid fa-check text-sky-400 mt-0.5"></i> <span>{m}</span></li>' for m in c['mooc_list']])
+        
+        # แยกชั่วโมงเรียนออกจากชื่อบทเรียน ไม่ให้ปะปนกัน
+        mooc_items = ""
+        for idx_m, m in enumerate(c['mooc_list']):
+            h_text = c['hours_list'][idx_m] if idx_m < len(c['hours_list']) else ""
+            mooc_items += f'''
+            <div class="flex items-start justify-between gap-2 mb-2 pb-2 border-b border-slate-50 last:border-0 text-xs">
+                <div class="flex items-start gap-1.5 text-slate-700 font-medium"><i class="fa-solid fa-check text-sky-400 mt-0.5"></i> <span>{m}</span></div>
+                <span class="shrink-0 bg-sky-50 text-sky-700 px-2 py-0.5 rounded text-[10px] font-bold border border-sky-100">{h_text}</span>
+            </div>
+            '''
         
         if c['name'] in approved_courses:
             btn = '<div class="text-center w-full bg-emerald-50 text-emerald-600 font-bold py-2.5 rounded-xl text-xs border border-emerald-200"><i class="fa-solid fa-check-circle"></i> เทียบโอนแล้ว</div>'
@@ -493,10 +482,14 @@ def available_courses():
                 <span class="font-mono text-[10px] font-black bg-slate-100 text-slate-500 px-2.5 py-1 rounded-lg tracking-widest">{c['code']}</span>
                 <span class="px-2.5 py-1 rounded-lg text-[10px] font-black border {badge_prov} uppercase">{c['provider']}</span>
             </div>
-            <h3 class="text-lg font-black text-slate-900 leading-snug mb-4">{c['name']}</h3>
+            <h3 class="text-lg font-black text-slate-900 leading-snug mb-2">{c['name']}</h3>
+            <div class="mb-4 flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-100 text-xs">
+                <span class="font-bold text-slate-500">รวมชั่วโมงเรียน:</span>
+                <span class="font-black text-sky-600">{c['total_hours']}</span>
+            </div>
             <div class="mb-5 flex-grow">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">ต้องเรียนออนไลน์ ({len(c['mooc_list'])} ใบ)</p>
-                <ul class="font-medium">{mooc_items}</ul>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">บทเรียนออนไลน์ย่อย</p>
+                <div>{mooc_items}</div>
             </div>
             <div class="mt-auto border-t border-sky-50 pt-4 flex items-center justify-between gap-3">
                 <div class="text-center shrink-0">
@@ -507,6 +500,14 @@ def available_courses():
             </div>
         </div>
         """
+
+    result_display = ""
+    if not is_searched:
+        result_display = '<div class="py-20 text-center bg-white rounded-3xl border border-dashed border-sky-200"><i class="fa-solid fa-magnifying-glass text-4xl text-sky-300 mb-3 block"></i><p class="text-slate-500 font-bold">กรุณากรอกคำค้นหาด้านบน เพื่อแสดงรายวิชาที่เปิดให้เทียบโอน</p></div>'
+    elif is_searched and not filtered_courses:
+        result_display = '<div class="py-16 text-center bg-white rounded-3xl border border-rose-200 shadow-sm"><i class="fa-regular fa-face-frown-open text-4xl text-rose-400 mb-3 block"></i><p class="text-slate-800 font-black text-lg mb-1">ไม่พบรายวิชาที่ค้นหา</p><p class="text-slate-500 text-xs">ลองเปลี่ยนคำค้นหา หรือตรวจสอบรหัสวิชาใหม่อีกครั้ง</p></div>'
+    else:
+        result_display = f'<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">{cards}</div>'
 
     content = f"""
     <div class="mb-10 text-center max-w-2xl mx-auto">
@@ -529,7 +530,7 @@ def available_courses():
         <button type="submit" class="w-full sm:w-auto bg-gradient-to-r from-sky-500 to-blue-600 text-white font-black px-8 py-4 rounded-full hover:shadow-md transition">ค้นหา</button>
     </form>
 
-    {'<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">' + cards + '</div>' if search_query or selected_provider else '<div class="py-20 text-center bg-white rounded-3xl border border-dashed border-sky-200"><i class="fa-solid fa-search text-4xl text-sky-300 mb-3 block"></i><p class="text-slate-500 font-bold">กรุณากรอกคำค้นหาด้านบน เพื่อแสดงรายวิชาที่เปิดให้เทียบโอน</p></div>'}
+    {result_display}
     """
     return render_layout(content, active_page='available_courses')
 
@@ -545,19 +546,24 @@ def all_courses():
 
     rows = ""
     for idx, c in enumerate(course_data, 1):
-        mooc_str = "<br>".join([f"- {m}" for m in c['mooc_list']])
+        mooc_items = ""
+        for idx_m, m in enumerate(c['mooc_list']):
+            h_text = c['hours_list'][idx_m] if idx_m < len(c['hours_list']) else ""
+            mooc_items += f'<div class="flex justify-between items-center py-1 border-b border-slate-100 last:border-0"><span>- {m}</span><span class="text-sky-700 bg-sky-50 px-2 py-0.5 rounded text-[10px] font-bold border border-sky-100">{h_text}</span></div>'
+
         prov_badge = f'<span class="px-2 py-0.5 rounded text-[10px] font-bold {"bg-sky-100 text-sky-700" if c["provider"] == "ThaiMOOC" else "bg-amber-100 text-amber-700"} border border-slate-100">{c["provider"]}</span>'
         
         if c['name'] in approved_courses: btn = '<span class="text-[10px] font-bold text-emerald-600"><i class="fa-solid fa-check mr-1"></i>โอนแล้ว</span>'
         else: btn = f'<a href="/submit_credit?selected_courses={c["code"]}" class="text-[11px] font-bold bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-sky-600 transition shadow-sm whitespace-nowrap">เลือกเทียบโอน</a>'
 
         rows += f"""
-        <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs">
+        <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs align-top">
             <td class="py-3 px-4 font-mono font-bold text-slate-400">{idx}</td>
             <td class="py-3 px-4 font-mono font-bold text-sky-700">{c['code']}</td>
             <td class="py-3 px-4 font-extrabold text-slate-800">{c['name']}<br><span class="text-[10px] text-slate-400 font-medium">{c['group']}</span></td>
             <td class="py-3 px-4">{prov_badge}</td>
-            <td class="py-3 px-4 font-medium text-slate-600 leading-relaxed">{mooc_str}</td>
+            <td class="py-3 px-4 font-medium text-slate-600"><div class="space-y-1">{mooc_items}</div></td>
+            <td class="py-3 px-4 font-black text-sky-700 whitespace-nowrap">{c['total_hours']}</td>
             <td class="py-3 px-4 text-center font-black text-slate-800">{c['credits']}</td>
             <td class="py-3 px-4 text-center">{btn if session.get('role') not in ['admin', 'superadmin'] else '-'}</td>
         </tr>
@@ -567,16 +573,16 @@ def all_courses():
     <div class="mb-6 flex justify-between items-end">
         <div>
             <h2 class="text-2xl font-black text-slate-900">ตารางโครงสร้างหลักสูตร (Table View)</h2>
-            <p class="text-slate-500 text-sm font-medium mt-1">แสดงรายวิชาทั้งหมดที่รองรับการเทียบโอนในระบบธนาคารหน่วยกิต</p>
+            <p class="text-slate-500 text-sm font-medium mt-1">แสดงรายวิชาทั้งหมดที่รองรับการเทียบโอนในระบบธนาคารหน่วยกิต แยกชั่วโมงเรียนชัดเจน</p>
         </div>
         <a href="/available_courses" class="text-xs font-bold bg-white border border-sky-200 text-sky-600 px-4 py-2 rounded-xl hover:bg-sky-50 shadow-sm"><i class="fa-solid fa-magnifying-glass mr-1"></i> กลับไปหน้าค้นหา (Grid)</a>
     </div>
 
     <div class="bg-white rounded-3xl border border-sky-100 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-left min-w-[900px]">
+            <table class="w-full text-left min-w-[950px]">
                 <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-black text-slate-500 uppercase tracking-wider">
-                    <tr><th class="py-4 px-4 w-10">#</th><th class="py-4 px-4">รหัสวิชา</th><th class="py-4 px-4">ชื่อวิชาหลักสูตร IS</th><th class="py-4 px-4">ระบบ</th><th class="py-4 px-4">ใบเกียรติบัตรย่อยที่ต้องใช้</th><th class="py-4 px-4 text-center">หน่วยกิต</th><th class="py-4 px-4 text-center">จัดการ</th></tr>
+                    <tr><th class="py-4 px-4 w-10">#</th><th class="py-4 px-4">รหัสวิชา</th><th class="py-4 px-4">ชื่อวิชาหลักสูตร IS</th><th class="py-4 px-4">ระบบ</th><th class="py-4 px-4">ใบเกียรติบัตรย่อยที่ต้องใช้</th><th class="py-4 px-4">รวมชั่วโมง</th><th class="py-4 px-4 text-center">หน่วยกิต</th><th class="py-4 px-4 text-center">จัดการ</th></tr>
                 </thead>
                 <tbody>{rows}</tbody>
             </table>
@@ -744,29 +750,6 @@ def submit_credit():
         </div>
     </form>
 
-    <div class="max-w-4xl mx-auto mt-12 mb-12 border-t border-slate-200 pt-10">
-        <div class="bg-amber-50 p-8 rounded-3xl border border-amber-200">
-            <h3 class="text-lg font-black text-amber-900 mb-2">กรณีพิเศษ: วิชานอกหลักสูตร</h3>
-            <p class="text-xs text-amber-700 mb-6">หากไม่พบวิชาในตาราง สามารถกรอกข้อมูลเองและแนบไฟล์ได้ที่นี่</p>
-            <form method="POST" enctype="multipart/form-data" class="space-y-4">
-                <input type="hidden" name="course_codes" value="MANUAL_CUSTOM">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label class="block text-xs font-bold text-amber-900 mb-1.5">ชื่อวิชา</label><input type="text" name="manual_course_name" class="w-full rounded-xl p-3 text-sm border border-amber-200 bg-white" required></div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div><label class="block text-xs font-bold text-amber-900 mb-1.5">ระบบ</label><select name="institution" class="w-full rounded-xl p-3 text-sm border border-amber-200"><option>ThaiMOOC</option><option>ChulaMOOC</option></select></div>
-                        <div><label class="block text-xs font-bold text-amber-900 mb-1.5">หน่วยกิต</label><input type="number" name="credits" value="3" class="w-full rounded-xl p-3 text-sm border border-amber-200"></div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                    <div><label class="block text-xs font-bold text-amber-900 mb-1.5">เกียรติบัตรใบที่ 1 *</label><input type="file" name="cert_file_MANUAL_1" required class="w-full text-xs font-medium file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-amber-200 file:text-amber-900"></div>
-                    <div><label class="block text-xs font-bold text-amber-900 mb-1.5">เกียรติบัตรใบที่ 2 (ถ้ามี)</label><input type="file" name="cert_file_MANUAL_2" class="w-full text-xs font-medium file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-amber-200 file:text-amber-900"></div>
-                    <div><label class="block text-xs font-bold text-amber-900 mb-1.5">เกียรติบัตรใบที่ 3 (ถ้ามี)</label><input type="file" name="cert_file_MANUAL_3" class="w-full text-xs font-medium file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-amber-200 file:text-amber-900"></div>
-                </div>
-                <button type="submit" class="bg-amber-600 text-white font-bold px-6 py-3 rounded-xl text-sm shadow-sm hover:bg-amber-700">ส่งวิชากรณีพิเศษ</button>
-            </form>
-        </div>
-    </div>
-
     <script>
     const allCoursesData = {courses_json};
     const courseMap = {{}};
@@ -886,10 +869,10 @@ def history():
         if evidence_data:
             try:
                 ev_list = json.loads(evidence_data)
-                img_preview = " ".join([f'<a href="/static/uploads/{e.get("filename")}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap"><i class="fa-solid fa-image"></i> ใบที่ {i+1}</a>' for i, e in enumerate(ev_list)])
+                img_preview = " ".join([f'<a href="/static/uploads/{e.get("filename")}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap"><i class="fa-solid fa-image"></i> {e.get("mooc_name", "ใบที่ " + str(i+1))}</a>' for i, e in enumerate(ev_list)])
             except: pass
         else:
-            if getattr(r, 'doc_img', None) and r.doc_img != 'default_doc.png': img_preview += f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2">รูป 1</a>'
+            if getattr(r, 'doc_img', None) and r.doc_img != 'default_doc.png': img_preview += f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2">รูปหลักฐาน</a>'
         
         if not img_preview: img_preview = '<span class="text-[10px] text-slate-400">ไม่มีรูป</span>'
 
@@ -937,13 +920,13 @@ def student_edit_request(req_id):
                             file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
                             new_list.append({"mooc_name": mooc_name, "filename": unique_fn})
                         else:
-                            new_list.append(e) # คงรูปเดิมถ้าไม่ได้อัปโหลดใหม่
+                            new_list.append(e) 
                     else:
                         new_list.append(e)
                 req.evidence_data = json.dumps(new_list, ensure_ascii=False)
             except: pass
 
-        req.status = 'Pending' # เปลี่ยนกลับเป็นรอตรวจอีกครั้งโดยไม่ต้องสร้างคำร้องใหม่
+        req.status = 'Pending' 
         req.reject_reason = None
         db.session.commit()
         flash('อัปเดตหลักฐานและส่งให้เจ้าหน้าที่ตรวจสอบเรียบร้อยแล้ว', 'success')
@@ -1019,13 +1002,13 @@ def admin_requests():
             action_col = f'<a href="/admin/review/{r.id}" class="bg-gradient-to-r from-sky-500 to-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-sky-600 hover:to-blue-700 inline-block shadow-sm">พิจารณาคำร้อง</a>'
         elif status_val == 'Approved':
             status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>'
-            action_col = '<a href="/admin/review/{r.id}" class="text-xs font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-xl border border-sky-200">ดูรายละเอียด</a>'
+            action_col = f'<a href="/admin/review/{r.id}" class="text-xs font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-xl border border-sky-200">ดูรายละเอียด</a>'
         elif status_val == 'Needs_Revision':
             status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">ส่งกลับให้แก้</span>'
             action_col = f'<a href="/admin/review/{r.id}" class="text-xs font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-xl border border-sky-200">ตรวจสอบการแก้ไข</a>'
         else:
             status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800">ไม่อนุมัติ</span>'
-            action_col = '<a href="/admin/review/{r.id}" class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">ดูรายละเอียด</a>'
+            action_col = f'<a href="/admin/review/{r.id}" class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">ดูรายละเอียด</a>'
 
         student_name = r.user.fullname if getattr(r, 'user', None) else '-'
         student_code = r.user.member_id if getattr(r, 'user', None) else '-'
@@ -1074,7 +1057,7 @@ def admin_review(req_id):
             db.session.commit()
             flash('ปฏิเสธคำร้องเรียบร้อย', 'success')
             return redirect(url_for('admin_requests'))
-        elif action == 'revision': # ข้อ 3 ฝั่งเจ้าหน้าที่: ส่งกลับให้นักศึกษาแก้ไขรูปได้
+        elif action == 'revision':
             req.status = 'Needs_Revision'
             req.reject_reason = request.form.get('reject_reason', 'กรุณาแก้ไขรูปหลักฐานให้ถูกต้อง')
             req.approved_by = admin_user.fullname
@@ -1082,19 +1065,30 @@ def admin_review(req_id):
             flash('ส่งกลับให้นักศึกษาแก้ไขหลักฐานเรียบร้อยแล้ว', 'success')
             return redirect(url_for('admin_requests'))
 
-    # ข้อ 4 ฝั่งเจ้าหน้าที่: แสดงรูปหลักฐานที่นักศึกษาแนบมาทั้งหมด
+    # ตรวจสอบชื่อบทเรียนและรูปหลักฐานให้ตรงกันอย่างชัดเจน
+    course_data = get_courses()
+    matched_course = next((c for c in course_data if c['name'] == req.course_name), None)
+    expected_moocs = matched_course['mooc_list'] if matched_course else []
+
     evidence_html = ""
     evidence_data = getattr(req, 'evidence_data', None)
     if evidence_data:
         try:
             ev_list = json.loads(evidence_data)
-            for e in ev_list:
+            for i, e in enumerate(ev_list):
                 mooc_name = e.get('mooc_name', 'เกียรติบัตร')
                 filename = e.get('filename', '')
+                expected_label = expected_moocs[i] if i < len(expected_moocs) else "บทเรียนตามหลักสูตร"
+                
+                match_status = '<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-check"></i> ตรงกับหลักสูตร</span>' if mooc_name == expected_label else f'<span class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-bold">เทียบเคียง: {expected_label}</span>'
+
                 evidence_html += f"""
-                <div class="bg-slate-50 border border-slate-200 p-3 rounded-2xl text-center">
-                    <p class="text-xs font-bold text-sky-700 bg-sky-100 px-2 py-1 rounded-lg mb-2 inline-block">ตรงกับ: {mooc_name}</p>
-                    <a href="/static/uploads/{filename}" target="_blank"><img src="/static/uploads/{filename}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition"></a>
+                <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg">ใบที่ {i+1}: {mooc_name}</span>
+                        {match_status}
+                    </div>
+                    <a href="/static/uploads/{filename}" target="_blank"><img src="/static/uploads/{filename}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain"></a>
                 </div>
                 """
         except: pass
@@ -1117,7 +1111,7 @@ def admin_review(req_id):
             <div><p class="text-xs font-bold text-slate-400 mb-1">หน่วยกิต</p><p class="font-bold text-sky-600">{getattr(req, 'credits', 0)}</p></div>
         </div>
 
-        <h4 class="font-black text-slate-800 mb-3"><i class="fa-solid fa-images text-sky-500 mr-2"></i> หลักฐานที่นักศึกษาแนบมา</h4>
+        <h4 class="font-black text-slate-800 mb-3"><i class="fa-solid fa-images text-sky-500 mr-2"></i> ตรวจสอบหลักฐาน (เปรียบเทียบชื่อบทเรียนออนไลน์กับรูปที่แนบ)</h4>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {evidence_html if evidence_html else '<p class="text-xs text-slate-400">ไม่มีรูปภาพ</p>'}
         </div>
