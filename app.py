@@ -65,7 +65,6 @@ class CreditRequest(db.Model):
     status = db.Column(db.String(20), default='Pending') 
     reject_reason = db.Column(db.Text, nullable=True)
     approved_by = db.Column(db.String(100), nullable=True)
-    system_precheck = db.Column(db.Text, nullable=True)
     user = db.relationship('User', backref=db.backref('credits_list', lazy=True))
 
 with app.app_context():
@@ -73,7 +72,6 @@ with app.app_context():
     try:
         with db.engine.connect() as conn:
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS evidence_data TEXT;"))
-            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS system_precheck TEXT;"))
             conn.commit()
     except Exception:
         pass
@@ -636,7 +634,7 @@ def submit_credit():
                     req_code=f"TR2569{uuid.uuid4().hex[:4].upper()}", user_id=session['user_id'], course_name=custom_name, 
                     institution=custom_institution, credits=int(custom_credits), category='หมวดวิชาเลือก',
                     date_submitted=datetime.now().strftime("%Y-%m-%d"), evidence_data=json.dumps(evidence_list, ensure_ascii=False), 
-                    system_precheck='ผ่านการตรวจสอบอัตโนมัติ: แนบหลักฐานครบถ้วน', status='Pending'
+                    status='Pending'
                 )
                 db.session.add(req)
                 db.session.commit()
@@ -676,7 +674,7 @@ def submit_credit():
                         req_code=f"TR2569{uuid.uuid4().hex[:4].upper()}", user_id=session['user_id'], course_name=matched_course['name'], 
                         institution=matched_course['provider'], credits=matched_course['credits'], category=matched_course['group'], 
                         date_submitted=datetime.now().strftime("%Y-%m-%d"), evidence_data=json.dumps(evidence_list, ensure_ascii=False), 
-                        system_precheck=f'ผ่านการตรวจสอบอัตโนมัติ: แนบหลักฐานครบถ้วน {len(evidence_list)}/{len(mooc_list)} ใบ', status='Pending'
+                        status='Pending'
                     )
                     db.session.add(req)
                     success_count += 1
@@ -984,7 +982,6 @@ def student_edit_request(req_id):
 
         req.status = 'Pending' 
         req.reject_reason = None
-        req.system_precheck = "ผ่านการตรวจสอบอัตโนมัติ (แก้ไขใหม่ - แนบหลักฐานครบถ้วน)"
         db.session.commit()
         flash('อัปเดตหลักฐานและส่งให้เจ้าหน้าที่ตรวจสอบเรียบร้อยแล้ว', 'success')
         return redirect(url_for('history'))
@@ -1130,7 +1127,6 @@ def admin_review(req_id):
             for i, e in enumerate(ev_list):
                 mooc_name = e.get('mooc_name', 'เกียรติบัตร')
                 filename = e.get('filename', '')
-                orig_filename = e.get('original_filename', '').lower()
 
                 evidence_html += f"""
                 <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
@@ -1143,13 +1139,6 @@ def admin_review(req_id):
                 """
         except: pass
 
-    precheck_box = f"""
-    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl mb-6">
-        <p class="text-xs font-bold text-emerald-800 mb-1"><i class="fa-solid fa-robot mr-1"></i> ผลการตรวจสอบอัตโนมัติ (AI):</p>
-        <p class="text-xs text-emerald-700 font-medium">{getattr(req, 'system_precheck', 'ผ่านการตรวจสอบอัตโนมัติ: แนบหลักฐานครบถ้วน')}</p>
-    </div>
-    """
-
     student = req.user
     content = f"""
     <div class="max-w-4xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
@@ -1157,8 +1146,6 @@ def admin_review(req_id):
             <h3 class="text-xl font-black text-slate-900">พิจารณาคำร้อง: {req.course_name}</h3>
             <span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-xs font-bold">{getattr(req, 'req_code', '')}</span>
         </div>
-        
-        {precheck_box}
 
         <div class="bg-sky-50/50 p-6 rounded-2xl border border-sky-100 mb-6 flex gap-8 text-sm">
             <div><p class="text-xs font-bold text-slate-400 mb-1">นักศึกษา</p><p class="font-bold">{student.fullname if student else '-'}</p></div>
