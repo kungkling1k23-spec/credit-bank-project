@@ -9,11 +9,13 @@ from datetime import datetime
 from flask import Flask, request, redirect, url_for, session, flash, get_flashed_messages
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from sqlalchemy import text
 
 app = Flask(__name__)
 app.secret_key = 'credit_bank_is_rmutto_production_key_2026'
 
+# เชื่อมต่อ PostgreSQL บน Render หรือ SQLite
 db_url = os.environ.get('DATABASE_URL')
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
@@ -61,20 +63,33 @@ class CreditRequest(db.Model):
     faculty = db.Column(db.String(100), default="คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ")
     major = db.Column(db.String(100), default="สาขาวิชาระบบสารสนเทศ")
     date_submitted = db.Column(db.String(20), default="2026-08-26")
-    doc_img = db.Column(db.String(200), nullable=True) # ของเดิมเก็บไว้เผื่อของเก่า
-    doc_img2 = db.Column(db.String(200), nullable=True) # ของเดิมเก็บไว้เผื่อของเก่า
+    doc_img = db.Column(db.String(200), nullable=True) # ของเดิม
+    doc_img2 = db.Column(db.String(200), nullable=True) # ของเดิม
     evidence_data = db.Column(db.Text, nullable=True) # ระบบใหม่: เก็บ JSON Array [{mooc_name, filename}]
     status = db.Column(db.String(20), default='Pending') 
     reject_reason = db.Column(db.Text, nullable=True)
     approved_by = db.Column(db.String(100), nullable=True)
     user = db.relationship('User', backref=db.backref('credits_list', lazy=True))
 
+class ProfileEditRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    new_prefix = db.Column(db.String(20))
+    new_fullname = db.Column(db.String(100))
+    new_phone = db.Column(db.String(20))
+    new_email = db.Column(db.String(100))
+    new_address = db.Column(db.Text)
+    reason = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='Pending')
+    approved_by = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.String(20), default="2026-08-26")
+    user = db.relationship('User', backref=db.backref('edit_requests', lazy=True))
+
 # ==========================================
 # Database Auto-Reset & Migration
 # ==========================================
 with app.app_context():
     db.create_all()
-    # Migration สำหรับเพิ่มคอลัมน์ใหม่ evidence_data
     try:
         with db.engine.connect() as conn:
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS evidence_data TEXT;"))
@@ -208,6 +223,7 @@ def render_layout(content, active_page=''):
                     <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('available_courses')}"><i class="fa-solid fa-magnifying-glass text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ค้นหารายวิชา (Search)</span></a>
                     <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('all_courses')}"><i class="fa-solid fa-table-list text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หลักสูตรทั้งหมด (Table)</span></a>
                     <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('submit_credit')}"><i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ยื่นคำขอเทียบโอน</span></a>
+                    <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('credits')}"><i class="fa-solid fa-graduation-cap text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หน่วยกิตสะสม</span></a>
                     <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('history')}"><i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ติดตามสถานะคำขอ</span></a>
                 """}
             ''' if session.get('user_id') else f"""
@@ -238,16 +254,11 @@ def render_layout(content, active_page=''):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>ธนาคารหน่วยกิต IS RMUTTO</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
             body {{ font-family: 'Sarabun', sans-serif; background-color: #f0f9ff; }}
-            .hero-sky {{ background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%); }}
-            .hero-dark-sky {{ background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); }}
             .sidebar-transition {{ transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }}
-            .card-hover {{ transition: all 0.25s ease-in-out; }}
-            .card-hover:hover {{ transform: translateY(-3px); box-shadow: 0 12px 24px -10px rgba(14, 165, 233, 0.15); }}
             .sidebar-expanded {{ width: 270px; }}
             .sidebar-collapsed {{ width: 85px; }}
             .sidebar-collapsed .nav-text, .sidebar-collapsed .logo-img-full, .sidebar-collapsed .section-title {{ display: none; }}
@@ -289,7 +300,7 @@ def home():
         session.clear()
         return redirect(url_for('login'))
     
-    # ---------------- ADMIN DASHBOARD (ดีไซน์ใหม่) ----------------
+    # ---------------- ADMIN DASHBOARD (กลับไปเป็นแบบกล่องเรียบง่าย) ----------------
     if user.role in ['admin', 'superadmin']:
         try:
             pending_reqs = CreditRequest.query.filter_by(status='Pending').order_by(CreditRequest.id.asc()).all()
@@ -299,128 +310,107 @@ def home():
         except:
             pending_reqs, pending_count, total_students, total_approved_credits = [], 0, 0, 0
 
-        # รายการรอด่วน 5 รายการ
         urgent_rows = ""
         for r in pending_reqs[:5]:
-            student_name = r.user.fullname if getattr(r, 'user', None) else 'ไม่ทราบชื่อ'
+            student_name = r.user.fullname if getattr(r, 'user', None) else '-'
             urgent_rows += f"""
-            <div class="flex items-center justify-between p-4 bg-sky-50/50 rounded-2xl border border-sky-100 hover:bg-sky-100/50 transition">
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-500 flex items-center justify-center font-bold text-lg"><i class="fa-solid fa-file-signature"></i></div>
-                    <div>
-                        <p class="text-sm font-extrabold text-slate-800">{r.course_name}</p>
-                        <p class="text-xs text-slate-500 font-medium">โดย {student_name} • {r.date_submitted}</p>
-                    </div>
+            <div class="flex justify-between items-center py-3 border-b border-slate-100 last:border-0">
+                <div>
+                    <p class="text-sm font-bold text-slate-800">{r.course_name}</p>
+                    <p class="text-xs text-slate-500">โดย {student_name} ({r.date_submitted})</p>
                 </div>
-                <a href="/admin/review/{r.id}" class="bg-white hover:bg-sky-50 text-sky-600 border border-sky-200 px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm">ตรวจเอกสาร</a>
+                <a href="/admin/review/{r.id}" class="text-xs font-bold bg-sky-100 text-sky-700 px-3 py-1.5 rounded-lg hover:bg-sky-200 transition">ตรวจเอกสาร</a>
             </div>
             """
-        if not urgent_rows: urgent_rows = '<div class="text-center py-8 text-slate-400 text-sm font-medium">🎉 ยอดเยี่ยม! ตอนนี้ไม่มีคำร้องค้างพิจารณาเลยครับ</div>'
+        if not urgent_rows: urgent_rows = '<div class="text-sm text-slate-500 py-4 text-center">ไม่มีคำร้องรอดำเนินการ</div>'
 
         content = f"""
-        <div class="hero-dark-sky text-white p-8 md:p-10 rounded-[2rem] shadow-lg mb-8 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
-            <div class="relative z-10 text-center md:text-left">
-                <span class="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/30 backdrop-blur-sm shadow-sm inline-block mb-3">Admin Command Center</span>
-                <h2 class="text-3xl font-black mb-2">ยินดีต้อนรับ, {user.fullname}</h2>
-                <p class="text-sky-100 text-sm font-medium">แผงควบคุมระบบตรวจสอบและอนุมัติธนาคารหน่วยกิต (IS)</p>
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 mb-6">
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">ยินดีต้อนรับ, {user.fullname} (เจ้าหน้าที่)</h2>
+            <p class="text-slate-600 text-sm">ระบบจัดการธนาคารหน่วยกิต สาขาวิชาระบบสารสนเทศ</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-sky-50 p-6 rounded-2xl border border-sky-100">
+                <p class="text-sm text-slate-600 font-medium mb-1">นักศึกษาในระบบทั้งหมด</p>
+                <h3 class="text-3xl font-bold text-sky-700">{total_students} <span class="text-base font-normal">คน</span></h3>
             </div>
-            <div class="relative z-10 bg-white/10 backdrop-blur p-4 rounded-3xl border border-white/20 text-center min-w-[150px] shadow-xl">
-                <p class="text-xs text-sky-100 font-bold uppercase tracking-wider mb-1">สถานะระบบ</p>
-                <div class="flex items-center justify-center gap-2"><span class="w-3 h-3 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.8)]"></span> <span class="text-lg font-black text-white">ออนไลน์</span></div>
+            <div class="bg-amber-50 p-6 rounded-2xl border border-amber-100">
+                <p class="text-sm text-slate-600 font-medium mb-1">คำร้องรอตรวจสอบ</p>
+                <h3 class="text-3xl font-bold text-amber-700">{pending_count} <span class="text-base font-normal">รายการ</span></h3>
+            </div>
+            <div class="bg-emerald-50 p-6 rounded-2xl border border-emerald-100">
+                <p class="text-sm text-slate-600 font-medium mb-1">หน่วยกิตอนุมัติรวม</p>
+                <h3 class="text-3xl font-bold text-emerald-700">{total_approved_credits} <span class="text-base font-normal">หน่วยกิต</span></h3>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-3xl border border-sky-100 shadow-sm flex items-center justify-between card-hover relative overflow-hidden">
-                <div class="absolute -right-4 -top-4 text-sky-50 text-7xl opacity-50"><i class="fa-solid fa-users"></i></div>
-                <div class="relative z-10"><p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">นักศึกษาในระบบ</p><h3 class="text-4xl font-black text-slate-800">{total_students}</h3></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">คำร้องล่าสุดที่รอตรวจสอบ</h3>
+                <div>{urgent_rows}</div>
+                <div class="mt-4 text-center"><a href="/admin/requests" class="text-sm font-bold text-sky-600 hover:underline">ดูคำร้องทั้งหมด</a></div>
             </div>
-            <div class="bg-white p-6 rounded-3xl border border-amber-100 shadow-sm flex items-center justify-between card-hover relative overflow-hidden">
-                <div class="absolute -right-4 -top-4 text-amber-50 text-7xl opacity-50"><i class="fa-solid fa-hourglass-half"></i></div>
-                <div class="relative z-10"><p class="text-xs font-bold text-amber-500 uppercase tracking-wider mb-1">รอการตรวจสอบ</p><h3 class="text-4xl font-black text-amber-500">{pending_count}</h3></div>
-            </div>
-            <div class="bg-white p-6 rounded-3xl border border-emerald-100 shadow-sm flex items-center justify-between card-hover relative overflow-hidden">
-                <div class="absolute -right-4 -top-4 text-emerald-50 text-7xl opacity-50"><i class="fa-solid fa-award"></i></div>
-                <div class="relative z-10"><p class="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1">หน่วยกิตอนุมัติรวม</p><h3 class="text-4xl font-black text-emerald-500">{total_approved_credits}</h3></div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2 bg-white p-8 rounded-3xl border border-sky-100 shadow-sm">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-black text-slate-900"><i class="fa-solid fa-bolt text-amber-400 mr-2"></i> คำร้องด่วนที่รอตรวจ (Top 5)</h3>
-                    <a href="/admin/requests" class="text-xs font-bold text-sky-600 hover:text-sky-800">ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i></a>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">เมนูด่วน</h3>
+                <div class="flex flex-col gap-3">
+                    <a href="/admin/students" class="p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition font-bold text-slate-700"><i class="fa-solid fa-users mr-2 text-sky-500"></i> จัดการรายชื่อนักศึกษา</a>
+                    <a href="/all_courses" class="p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition font-bold text-slate-700"><i class="fa-solid fa-table-list mr-2 text-sky-500"></i> ดูโครงสร้างหลักสูตรทั้งหมด</a>
                 </div>
-                <div class="space-y-3">{urgent_rows}</div>
-            </div>
-            <div class="space-y-4">
-                <a href="/admin/students" class="block bg-gradient-to-r from-sky-500 to-blue-600 text-white p-6 rounded-3xl shadow-md hover:shadow-xl transition-all card-hover group border border-sky-300">
-                    <div class="flex justify-between items-center"><h4 class="font-extrabold text-lg"><i class="fa-solid fa-user-graduate mr-2 text-sky-200"></i> จัดการนักศึกษา</h4><i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i></div>
-                </a>
-                <a href="/all_courses" class="block bg-white text-slate-800 p-6 rounded-3xl shadow-sm hover:shadow-md transition-all card-hover border border-sky-200 group">
-                    <div class="flex justify-between items-center"><h4 class="font-extrabold text-lg text-slate-700"><i class="fa-solid fa-table-list mr-2 text-sky-400"></i> โครงสร้างหลักสูตร</h4><i class="fa-solid fa-arrow-right text-sky-400 group-hover:translate-x-1 transition-transform"></i></div>
-                </a>
             </div>
         </div>
         """
         return render_layout(content, active_page='home')
 
-    # ---------------- STUDENT DASHBOARD (ดีไซน์ใหม่) ----------------
+    # ---------------- STUDENT DASHBOARD (กลับไปเป็นแบบกล่องเรียบง่าย) ----------------
     try:
         user_requests = CreditRequest.query.filter_by(user_id=user.id).all()
-        approved_reqs = [r for r in user_requests if getattr(r, 'status', '') == 'Approved']
-        approved_credits = sum(getattr(r, 'credits', 0) for r in approved_reqs)
+        approved_credits = sum(getattr(r, 'credits', 0) for r in user_requests if getattr(r, 'status', '') == 'Approved')
         pending_credits = sum(getattr(r, 'credits', 0) for r in user_requests if getattr(r, 'status', '') in ['Pending', 'Needs_Revision'])
-        target_credits = 120
-        progress_percent = min(100, int((approved_credits / target_credits) * 100)) if target_credits > 0 else 0
     except:
-        user_requests, approved_credits, pending_credits, target_credits, progress_percent = [], 0, 0, 120, 0
+        user_requests, approved_credits, pending_credits = [], 0, 0
 
     history_rows = ""
-    for r in sorted(user_requests, key=lambda x: x.id, reverse=True)[:3]:
+    for r in sorted(user_requests, key=lambda x: x.id, reverse=True)[:5]:
         status = getattr(r, 'status', 'Pending')
-        if status == 'Approved': badge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">อนุมัติแล้ว</span>'
-        elif status == 'Pending': badge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">รอตรวจ</span>'
-        elif status == 'Needs_Revision': badge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700">แก้ไขข้อมูล</span>'
-        else: badge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">ไม่อนุมัติ</span>'
-        history_rows += f'<div class="flex justify-between items-center py-3 border-b border-sky-50 last:border-0"><div class="text-sm font-bold text-slate-700 truncate pr-4">{getattr(r, "course_name", "-")}</div><div>{badge}</div></div>'
-    if not history_rows: history_rows = '<div class="text-xs text-slate-400 text-center py-4">ยังไม่มีประวัติการยื่นคำขอ</div>'
+        if status == 'Approved': badge = '<span class="px-2 py-1 rounded bg-emerald-100 text-emerald-700 text-xs font-bold">อนุมัติแล้ว</span>'
+        elif status == 'Pending': badge = '<span class="px-2 py-1 rounded bg-amber-100 text-amber-700 text-xs font-bold">รอตรวจ</span>'
+        elif status == 'Needs_Revision': badge = '<span class="px-2 py-1 rounded bg-indigo-100 text-indigo-700 text-xs font-bold">แก้ไขข้อมูล</span>'
+        else: badge = '<span class="px-2 py-1 rounded bg-rose-100 text-rose-700 text-xs font-bold">ไม่อนุมัติ</span>'
+        history_rows += f'<div class="flex justify-between items-center py-3 border-b border-slate-100 last:border-0"><div class="text-sm font-bold text-slate-700 pr-4">{getattr(r, "course_name", "-")}</div><div>{badge}</div></div>'
+    if not history_rows: history_rows = '<div class="text-sm text-slate-500 py-4 text-center">คุณยังไม่เคยยื่นคำขอเทียบโอน</div>'
 
     content = f"""
-    <div class="hero-sky text-slate-800 p-8 md:p-10 rounded-[2rem] shadow-sm mb-8 border border-sky-200 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-        <div class="absolute -right-10 -bottom-10 opacity-10 pointer-events-none"><i class="fa-solid fa-graduation-cap text-9xl"></i></div>
-        <div class="relative z-10 text-center md:text-left">
-            <span class="bg-white/50 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-sky-800 mb-3 inline-block border border-sky-300">Information Systems</span>
-            <h2 class="text-3xl font-black mb-1">สวัสดี, {user.prefix or ''}{user.fullname}</h2>
-            <p class="text-sky-700 text-sm font-bold"><i class="fa-solid fa-id-card mr-1"></i> รหัส: {user.member_id or '-'}</p>
+    <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 mb-6">
+        <h2 class="text-2xl font-bold text-slate-900 mb-1">ยินดีต้อนรับ, {user.prefix or ''}{user.fullname}</h2>
+        <p class="text-slate-600 text-sm">รหัสนักศึกษา: {user.member_id or '-'}</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="bg-sky-50 p-6 rounded-2xl border border-sky-100 flex items-center justify-between">
+            <div>
+                <p class="text-sm text-slate-600 font-medium mb-1">หน่วยกิตที่อนุมัติแล้ว</p>
+                <h3 class="text-3xl font-bold text-sky-700">{approved_credits} <span class="text-base font-normal">/ 120 หน่วยกิต</span></h3>
+            </div>
+            <i class="fa-solid fa-graduation-cap text-4xl text-sky-200"></i>
         </div>
-        <div class="relative z-10 shrink-0">
-            <a href="/submit_credit" class="bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-700 hover:to-blue-800 text-white font-black px-7 py-4 rounded-2xl shadow-xl shadow-sky-500/30 transition-all inline-flex items-center gap-2 text-sm"><i class="fa-solid fa-cloud-arrow-up"></i> ยื่นเทียบโอนหน่วยกิตเลย</a>
+        <div class="bg-amber-50 p-6 rounded-2xl border border-amber-100 flex items-center justify-between">
+            <div>
+                <p class="text-sm text-slate-600 font-medium mb-1">อยู่ระหว่างรอพิจารณา</p>
+                <h3 class="text-3xl font-bold text-amber-700">{pending_credits} <span class="text-base font-normal">หน่วยกิต</span></h3>
+            </div>
+            <i class="fa-solid fa-clock-rotate-left text-4xl text-amber-200"></i>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        <div class="lg:col-span-2 bg-white p-8 rounded-3xl border border-sky-100 shadow-sm flex flex-col justify-center">
-            <h3 class="text-lg font-black text-slate-900 mb-6 flex items-center gap-2"><i class="fa-solid fa-bullseye text-sky-500"></i> ความคืบหน้าสู่เป้าหมายหลักสูตร</h3>
-            <div class="flex items-end justify-between mb-2">
-                <span class="text-3xl font-black text-sky-600">{approved_credits} <span class="text-sm font-bold text-slate-400">/ {target_credits} หน่วยกิต</span></span>
-                <span class="text-sm font-black text-sky-500">{progress_percent}%</span>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-4 mb-4 overflow-hidden border border-slate-200">
-                <div class="bg-gradient-to-r from-sky-400 to-blue-500 h-4 rounded-full transition-all duration-1000 ease-out" style="width: {progress_percent}%"></div>
-            </div>
-            <div class="flex gap-4 mt-2">
-                <div class="flex items-center gap-1.5 text-xs font-bold text-slate-600"><span class="w-3 h-3 rounded-full bg-sky-500"></span> อนุมัติแล้ว {approved_credits}</div>
-                <div class="flex items-center gap-1.5 text-xs font-bold text-slate-600"><span class="w-3 h-3 rounded-full bg-amber-400"></span> รอพิจารณา {pending_credits}</div>
-            </div>
+    <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-3">
+            <h3 class="text-lg font-bold text-slate-800">ประวัติการยื่นคำขอล่าสุด</h3>
+            <a href="/history" class="text-sm text-sky-600 font-bold hover:underline">ดูประวัติทั้งหมด</a>
         </div>
-
-        <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-base font-black text-slate-900"><i class="fa-solid fa-clock-rotate-left text-sky-500 mr-1.5"></i> ประวัติล่าสุด</h3>
-                <a href="/history" class="text-[10px] font-bold text-sky-600 hover:underline">ดูทั้งหมด</a>
-            </div>
-            <div class="space-y-1">{history_rows}</div>
+        <div>{history_rows}</div>
+        <div class="mt-6 text-center">
+            <a href="/submit_credit" class="inline-block bg-slate-900 hover:bg-black text-white px-6 py-3 rounded-xl font-bold transition">ยื่นคำขอเทียบโอนใหม่</a>
         </div>
     </div>
     """
@@ -437,7 +427,6 @@ def available_courses():
     if selected_provider and selected_provider != "ทั้งหมด":
         filtered_courses = [c for c in filtered_courses if c['provider'] == selected_provider]
     if search_query:
-        # ค้นหาแบบฉลาด ค้นเจอทั้งชื่อวิชา รหัส และชื่อย่อยใน MOOC
         filtered_courses = [c for c in filtered_courses if search_query in c['name'].lower() or search_query in c['code'].lower() or any(search_query in m.lower() for m in c['mooc_list'])]
 
     try:
@@ -477,7 +466,6 @@ def available_courses():
         </div>
         """
 
-    # หน้า Search Design: เน้นช่อง Search ใหญ่ๆ กลางหน้า
     content = f"""
     <div class="mb-10 text-center max-w-2xl mx-auto">
         <h2 class="text-3xl font-black text-slate-900 mb-3">ค้นหารายวิชาเทียบโอน</h2>
@@ -540,7 +528,6 @@ def all_courses():
         </tr>
         """
 
-    # หน้า All Courses Design: เน้นตาราง Data แบบทางการ ดูข้อมูลได้เยอะๆ
     content = f"""
     <div class="mb-6 flex justify-between items-end">
         <div>
@@ -567,10 +554,8 @@ def all_courses():
 def submit_credit():
     if 'user_id' not in session: return redirect(url_for('login'))
     
-    # ---------------- การจัดการฝั่ง POST (บันทึกข้อมูล) ----------------
     if request.method == 'POST':
         try:
-            # แก้ปัญหาบัคส่งเบิ้ล: ตอนนี้เอา <input type="hidden"> ฝั่ง JS ออกแล้ว จะรับค่าได้ถูกต้อง 1 ชุด
             course_codes = request.form.getlist('course_codes')
             if not course_codes:
                 flash('กรุณาเลือกอย่างน้อย 1 รายวิชา', 'error')
@@ -582,13 +567,12 @@ def submit_credit():
             for code in course_codes:
                 req_code = f"TR2569{uuid.uuid4().hex[:4].upper()}"
                 
-                # --- กรณีวิชานอกหลักสูตร (MANUAL CUSTOM) ---
+                # วิชานอกหลักสูตร
                 if code == 'MANUAL_CUSTOM':
                     course_name = request.form.get('manual_course_name', '').strip()
                     if not course_name: continue
                     
                     evidence_list = []
-                    # ลองหาไฟล์ 3 ช่องที่เตรียมไว้
                     for i in range(1, 4):
                         file_key = f"cert_file_MANUAL_{i}"
                         if file_key in request.files:
@@ -599,7 +583,7 @@ def submit_credit():
                                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
                                 evidence_list.append({"mooc_name": f"เกียรติบัตรใบที่ {i}", "filename": unique_fn})
                     
-                    if not evidence_list: continue # ถ้าไม่ได้อัปรูปเลย ข้าม
+                    if not evidence_list: continue
                     
                     req = CreditRequest(
                         req_code=req_code, user_id=session['user_id'], course_name=course_name, 
@@ -611,7 +595,7 @@ def submit_credit():
                     db.session.add(req)
                     success_count += 1
 
-                # --- กรณีวิชาในระบบ (สร้างช่องตามจำนวน MOOC จริงเป๊ะๆ) ---
+                # วิชาในระบบ
                 else:
                     matched_course = next((c for c in course_data_list if c['code'] == code), None)
                     if not matched_course: continue
@@ -619,7 +603,6 @@ def submit_credit():
                     evidence_list = []
                     mooc_list = matched_course['mooc_list']
                     
-                    # ลูปตามจำนวน MOOC ที่ต้องใช้ เพื่อดึงไฟล์ให้ตรงชื่อ
                     for i, mooc_name in enumerate(mooc_list):
                         file_key = f"cert_file_{code}_{i}"
                         if file_key in request.files:
@@ -628,7 +611,6 @@ def submit_credit():
                                 ext = file.filename.rsplit('.', 1)[1].lower()
                                 unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
                                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
-                                # บันทึกชื่อวิชา MOOC กำกับไฟล์ไว้เลย (แก้ปัญหาแอดมินดูยาก)
                                 evidence_list.append({"mooc_name": mooc_name, "filename": unique_fn})
                     
                     if not evidence_list: continue
@@ -655,12 +637,9 @@ def submit_credit():
             flash(f'Error: {str(e)}', 'error')
             return redirect(url_for('submit_credit'))
 
-
-    # ---------------- การจัดการฝั่ง GET (แสดงหน้าเว็บ) ----------------
     url_selected_code = request.args.get('selected_courses', '')
     course_data = get_courses()
     
-    # ดึงวิชาที่โอนแล้วมาปิดไม่ให้เลือก
     try: approved_courses = [r.course_name for r in CreditRequest.query.filter_by(user_id=session['user_id'], status='Approved').all()]
     except: approved_courses = []
 
@@ -684,7 +663,6 @@ def submit_credit():
 
     courses_json = json.dumps(course_data, ensure_ascii=False)
     
-    # ---------------- ฟอร์มแบบไดนามิก (JS จะสร้างช่องตามจำนวน MOOC เป๊ะๆ) ----------------
     content = f"""
     <div class="max-w-4xl mx-auto mb-10">
         <h2 class="text-3xl font-black text-slate-900 mb-2">ยื่นคำขอเทียบโอน</h2>
@@ -710,7 +688,6 @@ def submit_credit():
             </div>
         </div>
 
-        <!-- กล่องสำหรับสร้าง UI แนบไฟล์แบบไดนามิก -->
         <div id="dynamic_upload_container" class="hidden space-y-6 bg-sky-50/50 p-8 rounded-3xl border border-sky-200 shadow-inner">
             <h3 class="text-xl font-black text-slate-900 mb-1">2. แนบหลักฐานเกียรติบัตร</h3>
             <p class="text-xs text-slate-500 mb-4">กรุณาแนบไฟล์รูปให้ตรงกับชื่อวิชาที่ระบุไว้เหนือปุ่มอัปโหลด</p>
@@ -751,7 +728,6 @@ def submit_credit():
     const courseMap = {{}};
     allCoursesData.forEach(c => courseMap[c.code] = c);
 
-    // ฟังก์ชันสร้างช่อง Upload อัตโนมัติตามจำนวนหลักสูตรย่อยที่กำหนดเป๊ะๆ
     function generateDynamicUploads() {{
         const checkboxes = document.querySelectorAll('.course-checkbox:checked');
         const container = document.getElementById('dynamic_upload_container');
@@ -766,7 +742,6 @@ def submit_credit():
             if (!course) return;
 
             let fileInputsHtml = '';
-            // ลูปสร้าง input ตามจำนวน mooc_list ที่มี ป้องกันเด็กใส่ผิด
             course.mooc_list.forEach((mooc_name, index) => {{
                 fileInputsHtml += `
                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -788,10 +763,7 @@ def submit_credit():
                         <h4 class="font-black text-sky-700 text-lg">${{course.name}} <span class="text-xs font-bold text-slate-400">(${{course.code}})</span></h4>
                         <span class="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-lg">${{course.credits}} หน่วยกิต</span>
                     </div>
-                    <!-- สังเกต: เราเอา input hidden course_codes ออกไปแล้ว เพื่อแก้บัคการส่งค่าซ้ำซ้อน เพราะมันส่งจาก Checkbox มาแล้ว -->
-                    <div class="space-y-3">
-                        ${{fileInputsHtml}}
-                    </div>
+                    <div class="space-y-3">${{fileInputsHtml}}</div>
                 </div>
             `;
             wrapper.insertAdjacentHTML('beforeend', sectionHtml);
@@ -801,7 +773,6 @@ def submit_credit():
         container.scrollIntoView({{ behavior: 'smooth' }});
     }}
 
-    // กดเลือกอัตโนมัติถ้ามาจากหน้าอื่น
     document.addEventListener("DOMContentLoaded", function() {{
         if(document.querySelectorAll('.course-checkbox:checked').length > 0) {{
             generateDynamicUploads();
@@ -827,7 +798,6 @@ def history():
         elif status == 'Needs_Revision': badge = '<span class="px-2 py-1 rounded-lg text-[10px] font-bold bg-indigo-100 text-indigo-700">รอแก้ไข</span>'
         else: badge = '<span class="px-2 py-1 rounded-lg text-[10px] font-bold bg-rose-100 text-rose-700">ไม่อนุมัติ</span>'
         
-        # จัดการการแสดงรูป (รองรับระบบใหม่ evidence_data)
         img_preview = ""
         evidence_data = getattr(r, 'evidence_data', None)
         if evidence_data:
@@ -836,7 +806,6 @@ def history():
                 img_preview = " ".join([f'<a href="/static/uploads/{e.get("filename")}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap"><i class="fa-solid fa-image"></i> ใบที่ {i+1}</a>' for i, e in enumerate(ev_list)])
             except: pass
         else:
-            # สำรองของเก่า
             if getattr(r, 'doc_img', None) and r.doc_img != 'default_doc.png': img_preview += f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2">รูป 1</a>'
         
         if not img_preview: img_preview = '<span class="text-[10px] text-slate-400">ไม่มีรูป</span>'
@@ -862,6 +831,78 @@ def history():
     """
     return render_layout(content, active_page='history')
 
+@app.route('/credits')
+def credits():
+    if 'user_id' not in session: return redirect(url_for('login'))
+    try: approved_requests = CreditRequest.query.filter_by(user_id=session['user_id'], status='Approved').all()
+    except: approved_requests = []
+
+    total_approved = sum(getattr(r, 'credits', 0) for r in approved_requests)
+    rows = ""
+    for r in approved_requests:
+        rows += f"""
+        <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
+            <td class="py-4 px-4 font-extrabold text-slate-900">{getattr(r, 'course_name', '-')}</td>
+            <td class="py-4 px-4 text-slate-600 font-medium">{getattr(r, 'institution', '-')}</td>
+            <td class="py-4 px-4 font-black text-sky-600">{getattr(r, 'credits', 0)} หน่วยกิต</td>
+            <td class="py-4 px-4 text-xs text-slate-500 font-medium">{getattr(r, 'approved_by', 'เจ้าหน้าที่') or 'เจ้าหน้าที่'}</td>
+        </tr>
+        """
+    content = f"""
+    <div class="mb-6"><h2 class="text-2xl font-black text-slate-900">💳 หน่วยกิตสะสมสาขา IS ({total_approved} หน่วยกิต)</h2></div>
+    <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
+        <table class="w-full text-left min-w-[600px]">
+            <thead class="bg-sky-50 border-b border-sky-100 text-xs font-bold text-sky-700 uppercase tracking-wider"><tr><th class="py-3 px-4">วิชา</th><th class="py-3 px-4">ระบบที่เรียน</th><th class="py-3 px-4">หน่วยกิต</th><th class="py-3 px-4">ผู้อนุมัติ</th></tr></thead>
+            <tbody>{rows if rows else '<tr><td colspan="4" class="py-12 text-center text-slate-400 text-sm">ยังไม่มีรายการหน่วยกิตที่ได้รับการอนุมัติ</td></tr>'}</tbody>
+        </table>
+    </div>
+    """
+    return render_layout(content, active_page='credits')
+
+@app.route('/admin/requests')
+def admin_requests():
+    if session.get('role') not in ['admin', 'superadmin']: return redirect(url_for('login'))
+    try: all_requests = CreditRequest.query.order_by(CreditRequest.id.desc()).all()
+    except: all_requests = []
+
+    rows = ""
+    for r in all_requests:
+        status_val = getattr(r, 'status', 'Pending')
+        if status_val == 'Pending':
+            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอการพิจารณา</span>'
+            action_col = f'<a href="/admin/review/{r.id}" class="bg-gradient-to-r from-sky-500 to-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-sky-600 hover:to-blue-700 inline-block shadow-sm">พิจารณาคำร้อง</a>'
+        elif status_val == 'Approved':
+            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>'
+            action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">พิจารณาแล้ว</span>'
+        else:
+            status_badge = f'<span class="px-3 py-1 rounded-full text-xs font-bold {"bg-indigo-100 text-indigo-800" if status_val=="Needs_Revision" else "bg-rose-100 text-rose-800"}">{"ส่งกลับให้แก้" if status_val=="Needs_Revision" else "ไม่อนุมัติ"}</span>'
+            action_col = '<span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">สิ้นสุดคำร้อง</span>'
+
+        student_name = r.user.fullname if getattr(r, 'user', None) else '-'
+        student_code = r.user.member_id if getattr(r, 'user', None) else '-'
+
+        rows += f"""
+        <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
+            <td class="py-4 px-4 font-mono font-bold text-sky-600">{getattr(r, 'req_code', 'TR001')}</td>
+            <td class="py-4 px-4 font-bold text-slate-900">{student_name}<br><span class="text-xs text-sky-600 font-semibold">({student_code})</span></td>
+            <td class="py-4 px-4 text-slate-700 font-medium">{getattr(r, 'course_name', '-')}</td>
+            <td class="py-4 px-4 text-slate-500 text-xs font-medium">{getattr(r, 'date_submitted', '-')}</td>
+            <td class="py-4 px-4">{status_badge}</td>
+            <td class="py-4 px-4">{action_col}</td>
+        </tr>
+        """
+    content = f"""
+    <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
+        <h3 class="text-xl font-black text-slate-900 mb-6">รายการคำร้องเทียบโอนทั้งหมด (สาขาวิชาระบบสารสนเทศ)</h3>
+        <table class="w-full text-left min-w-[650px]">
+            <thead class="bg-sky-50 border-b border-sky-100 text-xs font-bold text-sky-700 uppercase tracking-wider">
+                <tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">ชื่อนักศึกษา</th><th class="py-3 px-4">วิชาที่ขอเทียบโอน</th><th class="py-3 px-4">วันที่ยื่น</th><th class="py-3 px-4">สถานะ</th><th class="py-3 px-4">จัดการ</th></tr>
+            </thead>
+            <tbody>{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีคำร้องในระบบ</td></tr>'}</tbody>
+        </table>
+    </div>
+    """
+    return render_layout(content, active_page='admin_requests')
 
 @app.route('/admin/review/<int:req_id>', methods=['GET', 'POST'])
 def admin_review(req_id):
@@ -885,7 +926,6 @@ def admin_review(req_id):
             flash('ปฏิเสธคำร้องเรียบร้อย', 'success')
             return redirect(url_for('home'))
 
-    # ----- ระบบแสดงรูปภาพแบบใหม่ (จับคู่ชื่อวิชา + รูป) -----
     evidence_html = ""
     evidence_data = getattr(req, 'evidence_data', None)
     
@@ -903,7 +943,6 @@ def admin_review(req_id):
                 """
         except: pass
     
-    # สำรองกรณีคำร้องเก่าๆ ที่ยังไม่มี json data
     if not evidence_html:
         if getattr(req, 'doc_img', None) and req.doc_img != 'default_doc.png':
             evidence_html += f'<div class="bg-slate-50 p-2 rounded-2xl"><img src="/static/uploads/{req.doc_img}" class="max-h-56 mx-auto rounded-xl shadow-sm"></div>'
@@ -922,7 +961,7 @@ def admin_review(req_id):
             <div><p class="text-xs font-bold text-slate-400 mb-1">หน่วยกิต</p><p class="font-bold text-sky-600">{getattr(req, 'credits', 0)}</p></div>
         </div>
 
-        <h4 class="font-black text-slate-800 mb-3"><i class="fa-solid fa-images text-sky-500 mr-2"></i> หลักฐานที่นักศึกษาแนบมา (ระบบตรวจสอบรายชื่อให้อัตโนมัติ)</h4>
+        <h4 class="font-black text-slate-800 mb-3"><i class="fa-solid fa-images text-sky-500 mr-2"></i> หลักฐานที่นักศึกษาแนบมา</h4>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {evidence_html if evidence_html else '<p class="text-xs text-slate-400">ไม่มีรูปภาพ</p>'}
         </div>
@@ -939,8 +978,252 @@ def admin_review(req_id):
     """
     return render_layout(content, active_page='admin_requests')
 
-# โค้ดส่วนอื่นๆ ที่ไม่ได้เขียนในนี้ให้คงเดิมทั้งหมด (Profile, Login, Register ฯลฯ)
-# เพื่อประหยัดพื้นที่แสดงผล สามารถก๊อปวางทับได้เลย ฟังก์ชันเดิมทำงานปกติ
+@app.route('/profile')
+def profile():
+    if 'user_id' not in session: return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    if not user: return redirect(url_for('login'))
+    display_title = "เจ้าหน้าที่" if user.role in ['admin', 'superadmin'] else f"{user.prefix or ''} {user.fullname}"
+    
+    edit_btn_html = ""
+    if user.role not in ['admin', 'superadmin']:
+        edit_btn_html = '<a href="/request_edit_profile" class="absolute top-6 right-6 bg-sky-100 hover:bg-sky-200 text-sky-700 px-4 py-2 rounded-xl text-xs font-bold transition-all"><i class="fa-solid fa-pen mr-1"></i> แก้ไขข้อมูล</a>'
+
+    content = f"""
+    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl relative">
+        {edit_btn_html}
+        <h3 class="text-2xl font-black text-slate-900 mb-1">{display_title}</h3>
+        <p class="text-sm font-bold text-sky-600 mb-1">รหัสนักศึกษา: {user.member_id or '-'}</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 bg-sky-50/50 p-6 rounded-2xl border border-sky-100 text-sm mt-6">
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ชื่อ-สกุล</span> <span class="font-bold text-slate-800">{user.fullname}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เลขบัตรประชาชน</span> <span class="font-bold text-slate-800">{user.id_card or '-'}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เบอร์โทรศัพท์</span> <span class="font-bold text-slate-800">{user.phone or '-'}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">อีเมล</span> <span class="font-bold text-slate-800">{user.email or '-'}</span></div>
+            <div class="md:col-span-2"><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ที่อยู่</span> <span class="font-bold text-slate-800">{user.address or '-'}</span></div>
+        </div>
+    </div>
+    """
+    return render_layout(content, active_page='profile')
+
+@app.route('/request_edit_profile', methods=['GET', 'POST'])
+def request_edit_profile():
+    if 'user_id' not in session: return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+
+    if request.method == 'POST':
+        user.prefix = request.form.get('prefix')
+        user.fullname = request.form.get('fullname')
+        user.phone = request.form.get('phone')
+        user.email = request.form.get('email')
+        
+        house_no = request.form.get('house_no', '')
+        moo = request.form.get('moo', '')
+        soi = request.form.get('soi', '')
+        subdistrict = request.form.get('subdistrict', '')
+        district = request.form.get('district', '')
+        province = request.form.get('province', '')
+        postal_code = request.form.get('postal_code', '')
+
+        new_addr = format_address(house_no, moo, soi, subdistrict, district, province, postal_code)
+        if new_addr:
+            user.address = new_addr
+        
+        db.session.commit()
+        flash('✅ บันทึกข้อมูลส่วนตัวและที่อยู่เรียบร้อยแล้ว', 'success')
+        return redirect(url_for('profile'))
+
+    content = f"""
+    <div class="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
+        <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขข้อมูลส่วนตัวและที่อยู่</h3>
+        <p class="text-xs text-slate-500 mb-6">คุณสามารถแก้ไขข้อมูลเบื้องต้นและที่อยู่แล้วบันทึกเข้าระบบได้ทันที</p>
+        
+        <form method="POST" class="space-y-4">
+            <div class="grid grid-cols-3 gap-3">
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">คำนำหน้า</label>
+                <select name="prefix" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50">
+                    <option value="นาย" {'selected' if user.prefix=='นาย' else ''}>นาย</option>
+                    <option value="นาง" {'selected' if user.prefix=='นาง' else ''}>นาง</option>
+                    <option value="นางสาว" {'selected' if user.prefix=='นางสาว' else ''}>นางสาว</option>
+                </select></div>
+                <div class="col-span-2"><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อ-นามสกุล</label><input type="text" name="fullname" value="{user.fullname}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์</label><input type="tel" name="phone" value="{user.phone or ''}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมล</label><input type="email" name="email" value="{user.email or ''}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+            </div>
+
+            <div class="border-t border-sky-100 pt-4">
+                <label class="block text-xs font-bold text-sky-700 uppercase tracking-wider mb-3"><i class="fa-solid fa-house-user mr-1 text-sky-400"></i> แก้ไขข้อมูลที่อยู่</label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">บ้านเลขที่</label><input type="text" name="house_no" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">หมู่ที่</label><input type="text" name="moo" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">ซอย / ถนน</label><input type="text" name="soi" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">ตำบล/แขวง</label><input type="text" name="subdistrict" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">อำเภอ/เขต</label><input type="text" name="district" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">จังหวัด</label><input type="text" name="province" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">รหัสไปรษณีย์</label><input type="text" name="postal_code" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                </div>
+            </div>
+
+            <div class="pt-4 flex gap-3">
+                <a href="/profile" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-center font-bold py-3.5 rounded-2xl shadow-sm text-sm transition">ยกเลิก</a>
+                <button type="submit" class="w-2/3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm transition">บันทึกการเปลี่ยนแปลง</button>
+            </div>
+        </form>
+    </div>
+    """
+    return render_layout(content, active_page='profile')
+
+@app.route('/admin/students')
+def admin_students():
+    if session.get('role') not in ['admin', 'superadmin']:
+        return redirect(url_for('login'))
+    try: students = User.query.filter_by(role='student').order_by(User.id.desc()).all()
+    except: students = []
+
+    rows = ""
+    for s in students:
+        try: approved_credits = sum(r.credits for r in CreditRequest.query.filter_by(user_id=s.id, status='Approved').all())
+        except: approved_credits = 0
+
+        rows += f"""
+        <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
+            <td class="py-4 px-4 font-bold text-sky-600 font-mono">{s.member_id or '-'}<br><span class="text-xs text-slate-400 font-normal">({s.id_card or '-'})</span></td>
+            <td class="py-4 px-4 font-extrabold text-slate-900">{s.prefix or ''} {s.fullname}<br><span class="text-xs text-slate-500 font-normal">สาขาวิชาระบบสารสนเทศ</span></td>
+            <td class="py-4 px-4 text-xs text-slate-600 font-medium leading-relaxed"><i class="fa-solid fa-phone text-slate-400 mr-1"></i>{s.phone or '-'}<br><i class="fa-solid fa-envelope text-slate-400 mr-1"></i>{s.email or '-'}</td>
+            <td class="py-4 px-4 text-xs text-slate-600 max-w-xs leading-relaxed">{s.address or '-'}</td>
+            <td class="py-4 px-4 font-black text-center"><span class="bg-sky-50 text-sky-700 px-3 py-1 rounded-full text-xs font-bold border border-sky-100">{approved_credits} หน่วยกิต</span></td>
+        </tr>
+        """
+    content = f"""
+    <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
+        <h3 class="text-xl font-black text-slate-900 mb-6"><i class="fa-solid fa-users text-sky-500 mr-2"></i>รายชื่อนักศึกษาสาขาวิชาระบบสารสนเทศ</h3>
+        <table class="w-full text-left min-w-[700px]">
+            <thead class="bg-sky-50 border-b border-sky-100 text-xs font-bold text-sky-700 uppercase tracking-wider">
+                <tr><th class="py-3 px-4">รหัสนักศึกษา / บัตรประชาชน</th><th class="py-3 px-4">ชื่อ-นามสกุล / สาขา</th><th class="py-3 px-4">ข้อมูลติดต่อ</th><th class="py-3 px-4">ที่อยู่</th><th class="py-3 px-4 text-center">หน่วยกิตสะสม</th></tr>
+            </thead>
+            <tbody class="divide-y divide-sky-50">{rows if rows else '<tr><td colspan="5" class="py-12 text-center text-slate-400">ยังไม่มีนักศึกษาลงทะเบียนในระบบ</td></tr>'}</tbody>
+        </table>
+    </div>
+    """
+    return render_layout(content, active_page='admin_students')
+
+@app.route('/admin/manage_admins', methods=['GET', 'POST'])
+def manage_admins():
+    if session.get('role') not in ['admin', 'superadmin']: return redirect(url_for('home'))
+    if request.method == 'POST':
+        fullname = request.form.get('fullname', '').strip()
+        id_card = request.form.get('id_card', '').strip()
+        email = request.form.get('email', '').strip()
+        phone = request.form.get('phone', '').strip()
+        password = request.form.get('password', '').strip()
+
+        if User.query.filter_by(id_card=id_card).first():
+            flash('เลขบัตรประชาชนนี้เคยลงทะเบียนในระบบแล้ว', 'error')
+            return redirect(url_for('manage_admins'))
+
+        new_admin = User(member_id=f"ADM{uuid.uuid4().hex[:3].upper()}", prefix="เจ้าหน้าที่", fullname=fullname, id_card=id_card, username=id_card, password=generate_password_hash(password), email=email, phone=phone, role='admin')
+        db.session.add(new_admin)
+        db.session.commit()
+        flash(f'เพิ่มเจ้าหน้าที่ "{fullname}" เรียบร้อยแล้ว', 'success')
+        return redirect(url_for('manage_admins'))
+
+    admin_list = User.query.filter(User.role.in_(['admin', 'superadmin'])).all()
+    rows = ""
+    for a in admin_list:
+        role_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-800 border border-sky-200">ผู้ดูแลหลัก</span>' if a.role == 'superadmin' else '<span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">เจ้าหน้าที่</span>'
+        rows += f'<tr class="border-b border-sky-50 text-sm"><td class="py-4 px-4 font-bold text-slate-900">{a.fullname}</td><td class="py-4 px-4">{role_badge}</td></tr>'
+
+    content = f"""
+    <div class="max-w-4xl mx-auto space-y-8">
+        <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
+            <h3 class="text-xl font-black text-slate-900 mb-6">เพิ่มบัญชีเจ้าหน้าที่</h3>
+            <form method="POST" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs font-bold text-slate-700">ชื่อ-นามสกุล <span class="text-rose-500">*</span></label><input type="text" name="fullname" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-bold text-slate-700">เลขบัตรประชาชน <span class="text-rose-500">* (Username)</span></label><input type="text" name="id_card" maxlength="13" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-bold text-slate-700">รหัสผ่าน <span class="text-rose-500">*</span></label><input type="password" name="password" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm mt-2">บันทึกเพิ่มเจ้าหน้าที่</button>
+            </form>
+        </div>
+        <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
+            <table class="w-full text-left"><thead class="bg-sky-50 text-xs text-sky-700"><tr><th class="py-3 px-4">ชื่อ-สกุล</th><th class="py-3 px-4">สิทธิ์</th></tr></thead><tbody>{rows}</tbody></table>
+        </div>
+    </div>
+    """
+    return render_layout(content, active_page='manage_admins')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        prefix = request.form.get('prefix', 'นาย')
+        fullname = request.form.get('fullname', '').strip()
+        id_card = request.form.get('id_card', '').strip()
+        dob = request.form.get('dob', '')
+        phone = request.form.get('phone', '').strip()
+        email = request.form.get('email', '').strip()
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        full_address = format_address(request.form.get('house_no'), request.form.get('moo'), request.form.get('soi'), request.form.get('subdistrict'), request.form.get('district'), request.form.get('province'), request.form.get('postal_code'))
+
+        if User.query.filter_by(id_card=id_card).first():
+            flash('เลขบัตรประชาชนนี้เคยลงทะเบียนในระบบแล้ว', 'error')
+            return redirect(url_for('register'))
+        if User.query.filter_by(username=username).first():
+            flash('Username นี้ถูกใช้งานแล้ว กรุณาเลือกชื่อผู้ใช้ใหม่', 'error')
+            return redirect(url_for('register'))
+
+        new_member_id = generate_member_id()
+        new_user = User(
+            member_id=new_member_id, prefix=prefix, fullname=fullname, id_card=id_card, dob=dob, phone=phone, email=email, address=full_address, id_card_img="default_id_card.png", username=username, password=generate_password_hash(password)
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        flash(f'สมัครสมาชิกเรียบร้อยแล้ว! รหัสนักศึกษาของคุณคือ: {new_member_id}', 'success')
+        return redirect(url_for('login'))
+
+    content = """
+    <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl">
+        <h2 class="text-2xl font-black text-slate-900 text-center mb-8">ลงทะเบียนนักศึกษาสาขาวิชาระบบสารสนเทศ</h2>
+        <form method="POST" class="space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">คำนำหน้า *</label><select name="prefix" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"><option value="นาย">นาย</option><option value="นาง">นาง</option><option value="นางสาว">นางสาว</option></select></div>
+                <div class="md:col-span-2"><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อ-นามสกุล *</label><input type="text" name="fullname" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เลขบัตรประชาชน (13 หลัก) *</label><input type="text" name="id_card" maxlength="13" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">วัน/เดือน/ปีเกิด *</label><input type="date" name="dob" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">เบอร์โทรศัพท์ *</label><input type="tel" name="phone" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">อีเมล *</label><input type="email" name="email" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+            </div>
+            <div class="border-t border-sky-100 pt-4">
+                <label class="block text-xs font-bold text-sky-700 uppercase tracking-wider mb-3"><i class="fa-solid fa-house-user mr-1 text-sky-400"></i> ข้อมูลที่อยู่</label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">บ้านเลขที่ *</label><input type="text" name="house_no" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">หมู่ที่</label><input type="text" name="moo" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">ซอย / ถนน</label><input type="text" name="soi" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">ตำบล/แขวง *</label><input type="text" name="subdistrict" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">อำเภอ/เขต *</label><input type="text" name="district" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">จังหวัด *</label><input type="text" name="province" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">รหัสไปรษณีย์ *</label><input type="text" name="postal_code" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 border-t border-sky-100 pt-4">
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">ชื่อผู้ใช้งาน (Username) *</label><input type="text" name="username" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">รหัสผ่าน (Password) *</label><input type="password" name="password" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+            </div>
+            <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm mt-4">ยืนยันการลงทะเบียน</button>
+        </form>
+    </div>
+    """
+    return render_layout(content, active_page='register')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
