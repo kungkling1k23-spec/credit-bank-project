@@ -200,12 +200,12 @@ def render_layout(content, active_page=''):
                     <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
                     <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_students')}"><i class="fa-solid fa-users text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายชื่อนักศึกษา</span></a>
                     <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_requests')}"><i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ตรวจสอบคำร้อง</span></a>
-                    <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('all_courses')}"><i class="fa-solid fa-table-list text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">โครงสร้างหลักสูตร</span></a>
+                    <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('all_courses')}"><i class="fa-solid fa-table-list text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หลักสูตรทั้งหมด</span></a>
                     {manage_admin_menu}
                 """ if user_role in ['admin', 'superadmin'] else f"""
                     <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา IS</p>
                     <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('available_courses')}"><i class="fa-solid fa-magnifying-glass text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ค้นหารายวิชา (Search)</span></a>
-                    <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('all_courses')}"><i class="fa-solid fa-table-list text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หลักสูตรทั้งหมด (Table)</span></a>
+                    <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('all_courses')}"><i class="fa-solid fa-table-list text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หลักสูตรทั้งหมด</span></a>
                     <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('submit_credit')}"><i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ยื่นคำขอเทียบโอน</span></a>
                     <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('credits')}"><i class="fa-solid fa-graduation-cap text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หน่วยกิตสะสม</span></a>
                     <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('history')}"><i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ประวัติคำร้องเทียบโอน</span></a>
@@ -467,11 +467,9 @@ def available_courses():
         
         mooc_items = ""
         for idx_m, m in enumerate(c['mooc_list']):
-            h_text = c['hours_list'][idx_m] if idx_m < len(c['hours_list']) else ""
             mooc_items += f'''
             <div class="flex items-start justify-between gap-2 mb-2 pb-2 border-b border-slate-50 last:border-0 text-xs">
                 <div class="flex items-start gap-1.5 text-slate-700 font-medium"><i class="fa-solid fa-check text-sky-400 mt-0.5"></i> <span>{m}</span></div>
-                <span class="shrink-0 bg-sky-50 text-sky-700 px-2 py-0.5 rounded text-[10px] font-bold border border-sky-100">{h_text}</span>
             </div>
             '''
         
@@ -552,8 +550,7 @@ def all_courses():
     for idx, c in enumerate(course_data, 1):
         mooc_items = ""
         for idx_m, m in enumerate(c['mooc_list']):
-            h_text = c['hours_list'][idx_m] if idx_m < len(c['hours_list']) else ""
-            mooc_items += f'<div class="flex justify-between items-center py-1 border-b border-slate-100 last:border-0"><span>- {m}</span><span class="text-sky-700 bg-sky-50 px-2 py-0.5 rounded text-[10px] font-bold border border-sky-100">{h_text}</span></div>'
+            mooc_items += f'<div class="py-1 border-b border-slate-100 last:border-0">- {m}</div>'
 
         prov_badge = f'<span class="px-2 py-0.5 rounded text-[10px] font-bold {"bg-sky-100 text-sky-700" if c["provider"] == "ThaiMOOC" else "bg-amber-100 text-amber-700"} border border-slate-100">{c["provider"]}</span>'
         
@@ -576,8 +573,8 @@ def all_courses():
     content = f"""
     <div class="mb-6 flex justify-between items-end">
         <div>
-            <h2 class="text-2xl font-black text-slate-900">ตารางโครงสร้างหลักสูตร (Table View)</h2>
-            <p class="text-slate-500 text-sm font-medium mt-1">แสดงรายวิชาทั้งหมดที่รองรับการเทียบโอนในระบบธนาคารหน่วยกิต แยกชั่วโมงเรียนชัดเจน</p>
+            <h2 class="text-2xl font-black text-slate-900">หลักสูตรทั้งหมด</h2>
+            <p class="text-slate-500 text-sm font-medium mt-1">แสดงรายวิชาทั้งหมดที่รองรับการเทียบโอนในระบบธนาคารหน่วยกิต</p>
         </div>
         <a href="/available_courses" class="text-xs font-bold bg-white border border-sky-200 text-sky-600 px-4 py-2 rounded-xl hover:bg-sky-50 shadow-sm"><i class="fa-solid fa-magnifying-glass mr-1"></i> กลับไปหน้าค้นหา (Grid)</a>
     </div>
@@ -625,7 +622,7 @@ def submit_credit():
                                 ext = file.filename.rsplit('.', 1)[1].lower()
                                 unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
                                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
-                                evidence_list.append({"mooc_name": f"เกียรติบัตรใบที่ {i}", "filename": unique_fn})
+                                evidence_list.append({"mooc_name": f"เกียรติบัตรใบที่ {i}", "filename": unique_fn, "original_filename": file.filename})
                     
                     if not evidence_list: continue
                     
@@ -656,7 +653,6 @@ def submit_credit():
                                 ext = file.filename.rsplit('.', 1)[1].lower()
                                 unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
                                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
-                                # เก็บทั้งชื่อบทเรียนและชื่อไฟล์จริง เพื่อใช้เทียบความถูกต้องของรูป
                                 evidence_list.append({"mooc_name": mooc_name, "filename": unique_fn, "original_filename": file.filename})
                     
                     if not evidence_list: continue
@@ -1090,35 +1086,22 @@ def admin_review(req_id):
                 mooc_name = e.get('mooc_name', 'เกียรติบัตร')
                 filename = e.get('filename', '')
                 orig_filename = e.get('original_filename', '').lower()
-                expected_label = expected_moocs[i] if i < len(expected_moocs) else ""
                 
-                # ตรวจสอบความถูกต้องของ "รูปภาพและชื่อไฟล์จริง" ที่นักศึกษาแนบมาอย่างเข้มงวด
-                # หากชื่อไฟล์จริงมีลักษณะเป็นรูปการ์ตูน รูปคน หรือไม่มีคำสำคัญที่เกี่ยวกับวิชา/บทเรียนเลย ให้ถือว่าไม่ตรงทันที
+                # เช็คความถูกต้องของรูปภาพ: หากชื่อไฟล์มีคีย์เวิร์ดรูปถ่ายบุคคล / การ์ตูน / รูปแปลกปลอม จะแสดงป้ายเตือน "ไม่ตรงกับหลักสูตร"
                 is_name_match = True
-                
-                # รายชื่อคำต้องห้ามหรือคำที่สื่อถึงรูปภาพที่ไม่ใช่เกียรติบัตร (เช่น รูปมีม รูปการ์ตูน ภาพถ่ายบุคคล)
                 invalid_keywords = ['myphoto', 'avatar', 'anime', 'cartoon', 'cat', 'dog', 'hello', 'kitty', 'profile', 'selfie', 'pic', 'img']
                 if any(kw in orig_filename for kw in invalid_keywords):
                     is_name_match = False
                 
-                # ตรวจสอบว่าชื่อไฟล์หรือเกียรติบัตรสอดคล้องกับบทเรียนในหลักสูตรไหม
-                if expected_label:
-                    # แยกคำสำคัญจากชื่อบทเรียน (เช่น "การสร้างคุณค่า" -> "สร้างคุณค่า", "คุณค่า")
-                    keywords = [w for w in expected_label.split() if len(w) > 2]
-                    # ถ้าชื่อไฟล์จริงไม่มีคำสำคัญใดๆ ของบทเรียนเลย และไม่มีชื่อบทเรียนอยู่ด้วย ให้ตีเป็นไม่ผ่าน
-                    if keywords and not any(kw in orig_filename for kw in keywords) and mooc_name.lower() not in orig_filename:
-                        # อนุญาตเฉพาะกรณีที่ชื่อไฟล์สะอาดพอสมควร แต่ถ้าเป็นรูปแปลกปลอมจะปัดตก
-                        pass
-                
-                # เช็คเพิ่มเติม: ถ้าชื่อวิชาในหลักสูตรคือ "ผู้ประกอบการนวัตกรรม" แต่ชื่อไฟล์รูปไม่มีคำว่าผู้ประกอบการหรือนวัตกรรมเลย (และเข้าข่ายรูปภาพบุคคล/การ์ตูน)
                 if 'ผู้ประกอบการ' in req.course_name and not any(k in orig_filename for k in ['ผู้ประกอบการ', 'นวัตกรรม', 'entrepreneur', 'innovation', 'cert', 'certificate']):
                     if any(bad in orig_filename for bad in ['photo', 'img', 'anime', 'hello', 'kitty', 'avatar', 'user', 'pic']):
                         is_name_match = False
 
-                if is_name_match:
-                    match_status = '<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-check"></i> ตรงกับหลักสูตร</span>'
-                else:
+                # ตามคำขอ: ลบป้าย "ตรงกับหลักสูตร" ออก เหลือแสดงเฉพาะป้ายเตือน "ไม่ตรงกับหลักสูตร" (สีแดง) เมื่อรูปไม่ถูกต้องเท่านั้น
+                if not is_name_match:
                     match_status = '<span class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-triangle-exclamation"></i> ไม่ตรงกับหลักสูตร</span>'
+                else:
+                    match_status = ''
 
                 evidence_html += f"""
                 <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
