@@ -606,12 +606,17 @@ def submit_credit():
             course_data_list = get_courses()
             success_count = 0
 
+            # ดึงคำขอที่มีอยู่แล้วของนักศึกษา เพื่อป้องกันการยื่นซ้ำในวิชาเดิมทุกสถานะ
+            existing_reqs = CreditRequest.query.filter_by(user_id=session['user_id']).all()
+            existing_course_names = [r.course_name.strip() for r in existing_reqs]
+
             for code in course_codes:
                 req_code = f"TR2569{uuid.uuid4().hex[:4].upper()}"
                 
                 if code == 'MANUAL_CUSTOM':
                     course_name = request.form.get('manual_course_name', '').strip()
                     if not course_name: continue
+                    if course_name in existing_course_names: continue # ป้องกันซ้ำ
                     
                     evidence_list = []
                     for i in range(1, 4):
@@ -641,6 +646,7 @@ def submit_credit():
                 else:
                     matched_course = next((c for c in course_data_list if c['code'] == code), None)
                     if not matched_course: continue
+                    if matched_course['name'].strip() in existing_course_names: continue # ป้องกันซ้ำ
 
                     evidence_list = []
                     mooc_list = matched_course['mooc_list']
@@ -674,7 +680,7 @@ def submit_credit():
                 flash(f'ยื่นคำขอสำเร็จ {success_count} รายวิชา (รอเจ้าหน้าที่ตรวจสอบ)', 'success')
                 return redirect(url_for('history'))
             else:
-                flash('ไม่พบไฟล์หลักฐาน หรือข้อมูลไม่ครบถ้วน', 'error')
+                flash('ไม่สามารถยื่นซ้ำได้ หรือไม่พบไฟล์หลักฐานที่ถูกต้อง', 'error')
                 return redirect(url_for('submit_credit'))
 
         except Exception as e:
@@ -685,13 +691,15 @@ def submit_credit():
     url_selected_code = request.args.get('selected_courses', '')
     course_data = get_courses()
     
-    try: approved_courses = [r.course_name for r in CreditRequest.query.filter_by(user_id=session['user_id'], status='Approved').all()]
-    except: approved_courses = []
+    try:
+        all_user_reqs = CreditRequest.query.filter_by(user_id=session['user_id']).all()
+        submitted_course_names = [r.course_name.strip() for r in all_user_reqs]
+    except: submitted_course_names = []
 
     is_subject_rows = ""
     for item in course_data:
-        if item['name'] in approved_courses:
-            action_col = '<span class="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded">ผ่านแล้ว</span>'
+        if item['name'].strip() in submitted_course_names:
+            action_col = '<span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200"><i class="fa-solid fa-lock"></i> เคยยื่นแล้ว</span>'
         else:
             is_checked = "checked" if item['code'] == url_selected_code else ""
             action_col = f'<input type="checkbox" name="course_codes" value="{item["code"]}" {is_checked} class="w-5 h-5 accent-slate-900 rounded cursor-pointer course-checkbox" onchange="toggleSubjectRow(this)">'
@@ -712,19 +720,19 @@ def submit_credit():
     content = f"""
     <div class="max-w-4xl mx-auto mb-10">
         <h2 class="text-3xl font-black text-slate-900 mb-2">ยื่นคำขอเทียบโอน</h2>
-        <p class="text-slate-500 text-sm font-medium">กรุณาเลือกสาขาวิชาเพื่อแสดงรายวิชา และสามารถเพิ่ม/ลบรายวิชาได้ตามต้องการ</p>
+        <p class="text-slate-500 text-sm font-medium">กรุณาเลือกสาขาวิชาด้านล่างเพื่อแสดงรายวิชา และสามารถเพิ่ม/ลบรายวิชาได้ตามต้องการ</p>
     </div>
 
     <div class="max-w-4xl mx-auto bg-white p-6 rounded-3xl border border-sky-100 shadow-sm mb-6">
-        <label class="block text-xs font-bold text-slate-700 uppercase mb-2">เลือกสาขาวิชา</label>
+        <label class="block text-xs font-bold text-slate-700 uppercase mb-2">เลือกสาขาวิชาเพื่อเริ่มยื่นคำขอ</label>
         <select id="branch_selector" onchange="filterBranch()" class="w-full border border-sky-200 rounded-xl p-3 text-sm font-bold text-sky-900 bg-sky-50/50 outline-none">
             <option value="">-- กรุณาเลือกสาขาวิชา --</option>
-            <option value="IS" selected>สาขาวิชาระบบสารสนเทศ (Information Systems)</option>
+            <option value="IS">สาขาวิชาระบบสารสนเทศ (Information Systems)</option>
         </select>
     </div>
 
     <form method="POST" enctype="multipart/form-data" class="max-w-4xl mx-auto space-y-8">
-        <div id="subject_selection_box" class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm">
+        <div id="subject_selection_box" class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm hidden">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
                 <h3 class="text-lg font-black text-slate-800">1. เลือกวิชาที่ต้องการเทียบโอน</h3>
                 <button type="button" onclick="addCustomSubjectRow()" class="text-xs font-bold bg-sky-100 text-sky-700 px-3 py-1.5 rounded-xl hover:bg-sky-200"><i class="fa-solid fa-plus mr-1"></i> เพิ่มรายวิชาเอง</button>
@@ -766,9 +774,9 @@ def submit_credit():
         const branch = document.getElementById('branch_selector').value;
         const box = document.getElementById('subject_selection_box');
         if(branch === "IS") {{
-            box.style.display = 'block';
+            box.classList.remove('hidden');
         }} else {{
-            box.style.display = 'none';
+            box.classList.add('hidden');
             document.getElementById('dynamic_upload_container').classList.add('hidden');
         }}
     }}
@@ -785,8 +793,8 @@ def submit_credit():
         <tr class="border-b border-sky-50 text-xs hover:bg-slate-50 transition subject-row">
             <td class="py-3 px-3 text-center"><input type="checkbox" name="course_codes" value="${{customCode}}" checked class="w-5 h-5 accent-slate-900 rounded cursor-pointer course-checkbox"></td>
             <td class="py-3 px-3 font-mono font-bold text-sky-600">วิชาเพิ่มเอง</td>
-            <td class="py-3 px-3"><input type="text" placeholder="ระบุชื่อวิชา" class="border p-1 rounded w-full custom-name-input"></td>
-            <td class="py-3 px-3 text-slate-600 font-medium">เกียรติบัตรหลักฐาน 1 ใบ</td>
+            <td class="py-3 px-3"><input type="text" name="manual_course_name" placeholder="ระบุชื่อวิชา" required class="border p-2 rounded-xl w-full custom-name-input text-xs font-bold"></td>
+            <td class="py-3 px-3 text-slate-600 font-medium">เกียรติบัตรหลักฐาน 1-3 ใบ</td>
             <td class="py-3 px-3 text-center"><button type="button" onclick="removeSubjectRow(this)" class="text-rose-500 hover:text-rose-700 text-xs font-bold bg-rose-50 px-2 py-1 rounded">ลบ</button></td>
         </tr>
         `;
@@ -807,7 +815,9 @@ def submit_credit():
                 wrapper.insertAdjacentHTML('beforeend', `
                     <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm">
                         <h4 class="font-black text-sky-700 text-lg mb-3">วิชาเพิ่มเติมอิสระ</h4>
-                        <input type="file" name="cert_file_${{code}}_0" accept="image/*,.pdf" required class="w-full text-xs font-medium file:py-2 file:px-4 file:rounded-lg file:bg-sky-600 file:text-white file:font-bold">
+                        <div class="space-y-3">
+                            <input type="file" name="cert_file_MANUAL_1" accept="image/*,.pdf" required class="w-full text-xs font-medium file:py-2 file:px-4 file:rounded-lg file:bg-sky-600 file:text-white file:font-bold">
+                        </div>
                     </div>
                 `);
                 return;
@@ -1087,7 +1097,6 @@ def admin_review(req_id):
                 filename = e.get('filename', '')
                 orig_filename = e.get('original_filename', '').lower()
                 
-                # เช็คความถูกต้องของรูปภาพ: หากชื่อไฟล์มีคีย์เวิร์ดรูปถ่ายบุคคล / การ์ตูน / รูปแปลกปลอม จะแสดงป้ายเตือน "ไม่ตรงกับหลักสูตร"
                 is_name_match = True
                 invalid_keywords = ['myphoto', 'avatar', 'anime', 'cartoon', 'cat', 'dog', 'hello', 'kitty', 'profile', 'selfie', 'pic', 'img']
                 if any(kw in orig_filename for kw in invalid_keywords):
@@ -1097,7 +1106,6 @@ def admin_review(req_id):
                     if any(bad in orig_filename for bad in ['photo', 'img', 'anime', 'hello', 'kitty', 'avatar', 'user', 'pic']):
                         is_name_match = False
 
-                # ตามคำขอ: ลบป้าย "ตรงกับหลักสูตร" ออก เหลือแสดงเฉพาะป้ายเตือน "ไม่ตรงกับหลักสูตร" (สีแดง) เมื่อรูปไม่ถูกต้องเท่านั้น
                 if not is_name_match:
                     match_status = '<span class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-triangle-exclamation"></i> ไม่ตรงกับหลักสูตร</span>'
                 else:
@@ -1467,5 +1475,5 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
-if __name__ == '__main__':
+if __name__ == 'main':
     app.run(debug=True)
