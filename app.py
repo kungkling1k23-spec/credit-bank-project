@@ -1009,7 +1009,6 @@ def admin_requests():
     for r in all_requests:
         status_val = getattr(r, 'status', 'Pending')
         if status_val == 'Pending':
-            # ลบคำว่า (ผ่านสเต็ปแรกแล้ว) ออกตามสั่ง
             status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">รอตรวจ</span>'
             action_col = f'<a href="/admin/review/{r.id}" class="bg-gradient-to-r from-sky-500 to-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-sky-600 hover:to-blue-700 inline-block shadow-sm">พิจารณาคำร้อง</a>'
         elif status_val == 'Approved':
@@ -1089,10 +1088,10 @@ def admin_review(req_id):
             for i, e in enumerate(ev_list):
                 mooc_name = e.get('mooc_name', 'เกียรติบัตร')
                 filename = e.get('filename', '')
-                expected_label = expected_moocs[i] if i < len(expected_moocs) else "บทเรียนตามหลักสูตร"
+                expected_label = expected_moocs[i] if i < len(expected_moocs) else ""
                 
-                # ตรวจสอบชื่อให้ตรงกัน ถ้าไม่ตรงให้แสดงป้ายเตือน "ไม่ตรงกับหลักสูตร" อย่างชัดเจนตามภาพตัวอย่างของอาจารย์
-                if mooc_name == expected_label:
+                # เช็คความถูกต้องอย่างแม่นยำ: ชื่อที่นักศึกษาแนบมากับชื่อในหลักสูตรต้องตรงกันจริงๆ
+                if expected_label and mooc_name.strip() == expected_label.strip():
                     match_status = '<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-check"></i> ตรงกับหลักสูตร</span>'
                 else:
                     match_status = '<span class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-triangle-exclamation"></i> ไม่ตรงกับหลักสูตร</span>'
@@ -1114,8 +1113,8 @@ def admin_review(req_id):
 
     precheck_box = f"""
     <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl mb-6">
-        <p class="text-xs font-bold text-emerald-800 mb-1"><i class="fa-solid fa-robot mr-1"></i> ผลการตรวจสอบอัตโนมัติ (สเต็ปแรก):</p>
-        <p class="text-xs text-emerald-700 font-medium">{getattr(req, 'system_precheck', 'ผ่านการตรวจสอบสเต็ปแรกเรียบร้อย')}</p>
+        <p class="text-xs font-bold text-emerald-800 mb-1"><i class="fa-solid fa-robot mr-1"></i> ผลการตรวจสอบอัตโนมัติ:</p>
+        <p class="text-xs text-emerald-700 font-medium">{getattr(req, 'system_precheck', 'ผ่านการตรวจสอบเรียบร้อย')}</p>
     </div>
     """
 
