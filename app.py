@@ -181,7 +181,6 @@ def render_layout(content, active_page=''):
     if user_role == 'superadmin':
         manage_admin_menu = f"""
         <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group mt-2 {is_active('manage_admins')}"><i class="fa-solid fa-user-shield text-lg w-6 text-center text-sky-600"></i><span class="nav-text font-bold">จัดการเจ้าหน้าที่</span></a>
-        <a href="/admin/reset_requests" onclick="return confirm('คำเตือน: คุณต้องการรีเซ็ตข้อมูลคำร้องเทียบโอนของนักศึกษาทุกคนจริงหรือไม่?')" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group mt-1 text-rose-600 hover:bg-rose-50"><i class="fa-solid fa-triangle-exclamation text-lg w-6 text-center text-rose-500"></i><span class="nav-text font-bold">รีเซ็ตคำร้องทั้งหมด</span></a>
         """
 
     sidebar_html = f"""
@@ -544,6 +543,7 @@ def all_courses():
     if 'user_id' not in session: return redirect(url_for('login'))
     
     course_data = get_courses()
+    total_courses_count = len(course_data)
     try:
         approved_reqs = CreditRequest.query.filter_by(user_id=session['user_id'], status='Approved').all()
         approved_courses = [r.course_name for r in approved_reqs]
@@ -576,7 +576,7 @@ def all_courses():
     content = f"""
     <div class="mb-6 flex justify-between items-end">
         <div>
-            <h2 class="text-2xl font-black text-slate-900">หลักสูตรทั้งหมด</h2>
+            <h2 class="text-2xl font-black text-slate-900">หลักสูตรทั้งหมด <span class="text-sm font-bold text-sky-600 bg-sky-50 px-3 py-1 rounded-xl border border-sky-100 ml-2">รวมทั้งสิ้น {total_courses_count} รายวิชา</span></h2>
             <p class="text-slate-500 text-sm font-medium mt-1">แสดงรายวิชาทั้งหมดที่รองรับการเทียบโอนในระบบธนาคารหน่วยกิต</p>
         </div>
         <a href="/available_courses" class="text-xs font-bold bg-white border border-sky-200 text-sky-600 px-4 py-2 rounded-xl hover:bg-sky-50 shadow-sm"><i class="fa-solid fa-magnifying-glass mr-1"></i> กลับไปหน้าค้นหา (Grid)</a>
@@ -706,9 +706,11 @@ def submit_credit():
     for item in course_data:
         if item['name'].strip() in submitted_course_names:
             action_col = '<span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200"><i class="fa-solid fa-lock"></i> เคยยื่นแล้ว</span>'
+            del_col = '-'
         else:
             is_checked = "checked" if item['code'] == url_selected_code else ""
             action_col = f'<input type="checkbox" name="course_codes" value="{item["code"]}" {is_checked} class="w-5 h-5 accent-slate-900 rounded cursor-pointer course-checkbox">'
+            del_col = '<button type="button" onclick="removeSubjectRow(this)" class="text-rose-500 hover:text-rose-700 text-xs font-bold bg-rose-50 px-2.5 py-1 rounded-lg transition"><i class="fa-solid fa-trash"></i> ลบ</button>'
 
         mooc_str = "<br>".join([f"- {m}" for m in item['mooc_list']])
         is_subject_rows += f"""
@@ -717,6 +719,7 @@ def submit_credit():
             <td class="py-3 px-3 font-mono font-bold text-sky-600">{item['code']}</td>
             <td class="py-3 px-3 font-extrabold text-slate-800">{item['name']}</td>
             <td class="py-3 px-3 text-slate-600 font-medium">{mooc_str}</td>
+            <td class="py-3 px-3 text-center">{del_col}</td>
         </tr>
         """
 
@@ -741,13 +744,17 @@ def submit_credit():
     <form method="POST" enctype="multipart/form-data" id="standard_form" class="max-w-4xl mx-auto space-y-8 hidden">
         <input type="hidden" name="form_type" value="standard">
         <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 mb-4 gap-3">
                 <h3 class="text-lg font-black text-slate-800">เลือกวิชาในหลักสูตรที่ต้องการเทียบโอน</h3>
+                <div class="flex gap-2">
+                    <button type="button" onclick="toggleSelectAll(true)" class="text-xs font-bold bg-sky-100 text-sky-700 px-3 py-1.5 rounded-xl hover:bg-sky-200 transition"><i class="fa-solid fa-square-check mr-1"></i> เลือกทั้งหมด</button>
+                    <button type="button" onclick="toggleSelectAll(false)" class="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl hover:bg-slate-200 transition"><i class="fa-regular fa-square mr-1"></i> ยกเลิกเลือก</button>
+                </div>
             </div>
             <div class="overflow-x-auto border border-slate-100 rounded-xl mb-6">
                 <table class="w-full text-left" id="subject_table">
                     <thead class="bg-slate-50 text-slate-500 text-[11px] font-black uppercase tracking-wider">
-                        <tr><th class="py-3 px-3 text-center w-16">เลือก</th><th class="py-3 px-3">รหัส</th><th class="py-3 px-3">วิชา IS</th><th class="py-3 px-3">MOOC ที่ต้องใช้แนบหลักฐาน</th></tr>
+                        <tr><th class="py-3 px-3 text-center w-16">เลือก</th><th class="py-3 px-3">รหัส</th><th class="py-3 px-3">วิชา IS</th><th class="py-3 px-3">MOOC ที่ต้องใช้แนบหลักฐาน</th><th class="py-3 px-3 text-center">จัดการ</th></tr>
                     </thead>
                     <tbody>{is_subject_rows}</tbody>
                 </table>
@@ -837,6 +844,18 @@ def submit_credit():
         }}
     }}
 
+    function removeSubjectRow(btn) {{
+        const row = btn.closest('tr');
+        row.remove();
+    }}
+
+    function toggleSelectAll(selectState) {{
+        const checkboxes = document.querySelectorAll('.course-checkbox');
+        checkboxes.forEach(cb => {{
+            cb.checked = selectState;
+        }});
+    }}
+
     function generateDynamicUploads() {{
         const checkboxes = document.querySelectorAll('.course-checkbox:checked');
         const container = document.getElementById('dynamic_upload_container');
@@ -884,20 +903,6 @@ def submit_credit():
     </script>
     """
     return render_layout(content, active_page='submit_credit')
-
-@app.route('/admin/reset_requests')
-def admin_reset_requests():
-    if session.get('role') != 'superadmin':
-        flash('คุณไม่มีสิทธิ์ใช้งานฟังก์ชันนี้ (สำหรับ Super Admin เท่านั้น)', 'error')
-        return redirect(url_for('home'))
-    try:
-        CreditRequest.query.delete()
-        db.session.commit()
-        flash('✅ รีเซ็ตข้อมูลคำร้องเทียบโอนของนักศึกษาทุกคนเรียบร้อยแล้ว', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'เกิดข้อผิดพลาดในการรีเซ็ต: {str(e)}', 'error')
-    return redirect(url_for('admin_requests'))
 
 @app.route('/history')
 def history():
