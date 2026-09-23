@@ -1481,5 +1481,20 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
+@app.route('/secret_clear_all_requests')
+def secret_clear_all_requests():
+    # ป้องกันไม่ให้คนอื่นเข้าถึงได้ ให้เฉพาะ superadmin เท่านั้น
+    if session.get('role') != 'superadmin': 
+        return "คุณไม่มีสิทธิ์เข้าถึงหน้านี้"
+    
+    try:
+        deleted_count = db.session.query(CreditRequest).delete()
+        db.session.commit()
+        flash(f'ลบข้อมูลคำร้องบนระบบออนไลน์สำเร็จทั้งหมด {deleted_count} รายการ!', 'success')
+        return redirect(url_for('admin_requests'))
+    except Exception as e:
+        db.session.rollback()
+        return f"เกิดข้อผิดพลาด: {e}"
+
 if __name__ == '__main__':
     app.run(debug=True)
