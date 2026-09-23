@@ -987,7 +987,6 @@ def student_edit_request(req_id):
         flash('อัปเดตหลักฐานและส่งให้เจ้าหน้าที่ตรวจสอบเรียบร้อยแล้ว', 'success')
         return redirect(url_for('history'))
 
-    # ดึงชื่อวิชา MOOC ย่อยมาแสดงคู่กับหลักฐาน
     course_data_list = get_courses()
     matched_course = next((c for c in course_data_list if c['name'] == req.course_name), None)
     mooc_names = matched_course['mooc_list'] if matched_course else []
@@ -1009,10 +1008,10 @@ def student_edit_request(req_id):
 
     content = f"""
     <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
-        <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขหลักฐานคำร้อง: {{req.course_name}}</h3>
-        <p class="text-xs text-rose-600 mb-6 font-bold">เหตุผลที่ต้องแก้ไข: {{req.reject_reason or "-"}}</p>
+        <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขหลักฐานคำร้อง: {req.course_name}</h3>
+        <p class="text-xs text-rose-600 mb-6 font-bold">เหตุผลที่ต้องแก้ไข: {req.reject_reason or "-"}</p>
         <form method="POST" enctype="multipart/form-data" class="space-y-6">
-            <div class="space-y-4">{{ev_html}}</div>
+            <div class="space-y-4">{ev_html}</div>
             <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm">บันทึกและส่งให้เจ้าหน้าที่ตรวจสอบอีกครั้ง</button>
         </form>
     </div>
@@ -1124,7 +1123,6 @@ def admin_review(req_id):
             flash('ส่งกลับให้นักศึกษาแก้ไขหลักฐานเรียบร้อยแล้ว', 'success')
             return redirect(url_for('admin_requests'))
 
-    # ดึงชื่อวิชา MOOC ย่อยมาแสดงคู่กับหลักฐาน
     course_data_list = get_courses()
     matched_course = next((c for c in course_data_list if c['name'] == req.course_name), None)
     mooc_names = matched_course['mooc_list'] if matched_course else []
@@ -1148,19 +1146,19 @@ def admin_review(req_id):
     content = f"""
     <div class="max-w-4xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
         <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-black text-slate-900">พิจารณาคำร้อง: {{req.course_name}}</h3>
-            <span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-xs font-bold">{{getattr(req, 'req_code', '')}}</span>
+            <h3 class="text-xl font-black text-slate-900">พิจารณาคำร้อง: {req.course_name}</h3>
+            <span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-xs font-bold">{getattr(req, 'req_code', '')}</span>
         </div>
 
         <div class="bg-sky-50/50 p-6 rounded-2xl border border-sky-100 mb-6 flex gap-8 text-sm">
-            <div><p class="text-xs font-bold text-slate-400 mb-1">นักศึกษา</p><p class="font-bold">{{student.fullname if student else '-'}}</p></div>
-            <div><p class="text-xs font-bold text-slate-400 mb-1">ระบบ</p><p class="font-bold">{{getattr(req, 'institution', '-')}}</p></div>
-            <div><p class="text-xs font-bold text-slate-400 mb-1">หน่วยกิต</p><p class="font-bold text-sky-600">{{getattr(req, 'credits', 0)}}</p></div>
+            <div><p class="text-xs font-bold text-slate-400 mb-1">นักศึกษา</p><p class="font-bold">{student.fullname if student else '-'}</p></div>
+            <div><p class="text-xs font-bold text-slate-400 mb-1">ระบบ</p><p class="font-bold">{getattr(req, 'institution', '-')}</p></div>
+            <div><p class="text-xs font-bold text-slate-400 mb-1">หน่วยกิต</p><p class="font-bold text-sky-600">{getattr(req, 'credits', 0)}</p></div>
         </div>
 
         <h4 class="font-black text-slate-800 mb-3"><i class="fa-solid fa-images text-sky-500 mr-2"></i> ตรวจสอบหลักฐาน</h4>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {{evidence_html if evidence_html else '<p class="text-xs text-slate-400">ไม่มีรูปภาพ</p>'}}
+            {evidence_html if evidence_html else '<p class="text-xs text-slate-400">ไม่มีรูปภาพ</p>'}
         </div>
 
         <form method="POST" class="border-t border-slate-100 pt-6 space-y-4">
