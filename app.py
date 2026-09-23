@@ -924,9 +924,9 @@ def history():
         else: badge = f'<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-100 text-rose-700">ไม่อนุมัติ ({r.reject_reason or "-"})</span>'
         
         img_preview = ""
-        if r.doc_img: img_preview += f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2"><i class="fa-solid fa-image"></i> รูปที่ 1</a>'
-        if r.doc_img2: img_preview += f'<a href="/static/uploads/{r.doc_img2}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2"><i class="fa-solid fa-image"></i> รูปที่ 2</a>'
-        if r.doc_img3: img_preview += f'<a href="/static/uploads/{r.doc_img3}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2"><i class="fa-solid fa-image"></i> รูปที่ 3</a>'
+        if getattr(r, 'doc_img', None): img_preview += f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2"><i class="fa-solid fa-image"></i> รูปที่ 1</a>'
+        if getattr(r, 'doc_img2', None): img_preview += f'<a href="/static/uploads/{r.doc_img2}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2"><i class="fa-solid fa-image"></i> รูปที่ 2</a>'
+        if getattr(r, 'doc_img3', None): img_preview += f'<a href="/static/uploads/{r.doc_img3}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2"><i class="fa-solid fa-image"></i> รูปที่ 3</a>'
         
         if not img_preview: img_preview = '<span class="text-[10px] text-slate-400">ไม่มีรูป</span>'
 
@@ -984,11 +984,11 @@ def student_edit_request(req_id):
         return redirect(url_for('history'))
 
     ev_html = ""
-    if req.doc_img:
+    if getattr(req, 'doc_img', None):
         ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-xs font-bold text-sky-700 mb-2">หลักฐานที่ 1</p><img src="/static/uploads/{req.doc_img}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_0" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
-    if req.doc_img2:
+    if getattr(req, 'doc_img2', None):
         ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-xs font-bold text-sky-700 mb-2">หลักฐานที่ 2</p><img src="/static/uploads/{req.doc_img2}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_1" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
-    if req.doc_img3:
+    if getattr(req, 'doc_img3', None):
         ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-xs font-bold text-sky-700 mb-2">หลักฐานที่ 3</p><img src="/static/uploads/{req.doc_img3}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_2" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
 
     content = f"""
@@ -1109,11 +1109,11 @@ def admin_review(req_id):
             return redirect(url_for('admin_requests'))
 
     evidence_html = ""
-    if req.doc_img:
+    if getattr(req, 'doc_img', None):
         evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg mb-2 inline-block">หลักฐานที่ 1</span><a href="/static/uploads/{req.doc_img}" target="_blank"><img src="/static/uploads/{req.doc_img}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
-    if req.doc_img2:
+    if getattr(req, 'doc_img2', None):
         evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg mb-2 inline-block">หลักฐานที่ 2</span><a href="/static/uploads/{req.doc_img2}" target="_blank"><img src="/static/uploads/{req.doc_img2}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
-    if req.doc_img3:
+    if getattr(req, 'doc_img3', None):
         evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg mb-2 inline-block">หลักฐานที่ 3</span><a href="/static/uploads/{req.doc_img3}" target="_blank"><img src="/static/uploads/{req.doc_img3}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
 
     student = req.user
