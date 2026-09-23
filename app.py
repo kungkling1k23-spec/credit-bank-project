@@ -1,10 +1,10 @@
 import os
+import json
 import uuid
 import csv
 import io
 import urllib.request
 import re
-import json
 from datetime import datetime
 from flask import Flask, request, redirect, url_for, session, flash, get_flashed_messages
 from flask_sqlalchemy import SQLAlchemy
@@ -61,7 +61,8 @@ class CreditRequest(db.Model):
     date_submitted = db.Column(db.String(20), default="2026-08-26")
     doc_img = db.Column(db.String(200), nullable=True)
     doc_img2 = db.Column(db.String(200), nullable=True)
-    evidence_data = db.Column(db.Text, nullable=True) 
+    doc_img3 = db.Column(db.String(200), nullable=True)
+    evidence_data = db.Column(db.Text, nullable=True) # เก็บไว้กัน error เวลาอ่านฐานข้อมูลเก่า
     status = db.Column(db.String(20), default='Pending') 
     reject_reason = db.Column(db.Text, nullable=True)
     approved_by = db.Column(db.String(100), nullable=True)
@@ -71,7 +72,9 @@ with app.app_context():
     db.create_all()
     try:
         with db.engine.connect() as conn:
-            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS evidence_data TEXT;"))
+            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS doc_img TEXT;"))
+            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS doc_img2 TEXT;"))
+            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS doc_img3 TEXT;"))
             conn.commit()
     except Exception:
         pass
@@ -615,7 +618,7 @@ def submit_credit():
                     flash('คุณเคยยื่นคำขอรายวิชานี้ไปแล้ว ไม่สามารถยื่นซ้ำได้', 'error')
                     return redirect(url_for('submit_credit'))
                 
-                evidence_list = []
+                saved_files = []
                 for i in range(1, 4):
                     file_key = f"custom_cert_{i}"
                     if file_key in request.files:
@@ -624,16 +627,20 @@ def submit_credit():
                             ext = file.filename.rsplit('.', 1)[1].lower()
                             unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
                             file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
-                            evidence_list.append({"mooc_name": f"เกียรติบัตรใบที่ {i}", "filename": unique_fn, "original_filename": file.filename})
+                            saved_files.append(unique_fn)
                 
-                if not evidence_list:
+                if not saved_files:
                     flash('กรุณาแนบไฟล์เกียรติบัตรหลักฐานอย่างน้อย 1 ไฟล์', 'error')
                     return redirect(url_for('submit_credit'))
                 
                 req = CreditRequest(
                     req_code=f"TR2569{uuid.uuid4().hex[:4].upper()}", user_id=session['user_id'], course_name=custom_name, 
                     institution=custom_institution, credits=int(custom_credits), category='หมวดวิชาเลือก',
-                    date_submitted=datetime.now().strftime("%Y-%m-%d"), evidence_data=json.dumps(evidence_list, ensure_ascii=False), 
+                    date_submitted=datetime.now().strftime("%Y-%m-%d"), 
+                    doc_img=saved_files[0] if len(saved_files) > 0 else None,
+                    doc_img2=saved_files[1] if len(saved_files) > 1 else None,
+                    doc_img3=saved_files[2] if len(saved_files) > 2 else None,
+                    evidence_data=None, # บังคับปิดช่องนี้
                     status='Pending'
                 )
                 db.session.add(req)
@@ -655,7 +662,7 @@ def submit_credit():
                     if not matched_course: continue
                     if matched_course['name'].strip() in existing_course_names: continue
 
-                    evidence_list = []
+                    saved_files = []
                     mooc_list = matched_course['mooc_list']
                     
                     for i, mooc_name in enumerate(mooc_list):
@@ -666,14 +673,18 @@ def submit_credit():
                                 ext = file.filename.rsplit('.', 1)[1].lower()
                                 unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
                                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
-                                evidence_list.append({"mooc_name": mooc_name, "filename": unique_fn, "original_filename": file.filename})
+                                saved_files.append(unique_fn)
                     
-                    if not evidence_list: continue
+                    if not saved_files: continue
 
                     req = CreditRequest(
                         req_code=f"TR2569{uuid.uuid4().hex[:4].upper()}", user_id=session['user_id'], course_name=matched_course['name'], 
                         institution=matched_course['provider'], credits=matched_course['credits'], category=matched_course['group'], 
-                        date_submitted=datetime.now().strftime("%Y-%m-%d"), evidence_data=json.dumps(evidence_list, ensure_ascii=False), 
+                        date_submitted=datetime.now().strftime("%Y-%m-%d"), 
+                        doc_img=saved_files[0] if len(saved_files) > 0 else None,
+                        doc_img2=saved_files[1] if len(saved_files) > 1 else None,
+                        doc_img3=saved_files[2] if len(saved_files) > 2 else None,
+                        evidence_data=None, # บังคับปิดช่องนี้
                         status='Pending'
                     )
                     db.session.add(req)
@@ -738,7 +749,6 @@ def submit_credit():
         </select>
     </div>
 
-    <!-- ฟอร์มเลือกจากหลักสูตรปกติ -->
     <form method="POST" enctype="multipart/form-data" id="standard_form" class="max-w-4xl mx-auto space-y-8 hidden">
         <input type="hidden" name="form_type" value="standard">
         <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm">
@@ -777,7 +787,6 @@ def submit_credit():
         </div>
     </form>
 
-    <!-- ฟอร์มเพิ่มรายวิชาเอง (แยกออกมาต่างหาก) -->
     <form method="POST" enctype="multipart/form-data" id="custom_form" class="max-w-4xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-sm space-y-6 hidden">
         <input type="hidden" name="form_type" value="custom">
         <div class="border-b border-slate-100 pb-3">
@@ -919,14 +928,9 @@ def history():
         else: badge = f'<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-100 text-rose-700">ไม่อนุมัติ ({r.reject_reason or "-"})</span>'
         
         img_preview = ""
-        evidence_data = getattr(r, 'evidence_data', None)
-        if evidence_data:
-            try:
-                ev_list = json.loads(evidence_data)
-                img_preview = " ".join([f'<a href="/static/uploads/{e.get("filename")}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap"><i class="fa-solid fa-image"></i> {e.get("mooc_name", "ใบที่ " + str(i+1))}</a>' for i, e in enumerate(ev_list)])
-            except: pass
-        else:
-            if getattr(r, 'doc_img', None) and r.doc_img != 'default_doc.png': img_preview += f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2">รูปหลักฐาน</a>'
+        if getattr(r, 'doc_img', None): img_preview += f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2"><i class="fa-solid fa-image"></i> รูปที่ 1</a>'
+        if getattr(r, 'doc_img2', None): img_preview += f'<a href="/static/uploads/{r.doc_img2}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2"><i class="fa-solid fa-image"></i> รูปที่ 2</a>'
+        if getattr(r, 'doc_img3', None): img_preview += f'<a href="/static/uploads/{r.doc_img3}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2"><i class="fa-solid fa-image"></i> รูปที่ 3</a>'
         
         if not img_preview: img_preview = '<span class="text-[10px] text-slate-400">ไม่มีรูป</span>'
 
@@ -958,27 +962,24 @@ def student_edit_request(req_id):
     if req.user_id != session['user_id']: return redirect(url_for('history'))
 
     if request.method == 'POST':
-        evidence_data = getattr(req, 'evidence_data', None)
-        if evidence_data:
-            try:
-                ev_list = json.loads(evidence_data)
-                new_list = []
-                for i, e in enumerate(ev_list):
-                    mooc_name = e.get('mooc_name', f'ใบที่ {i+1}')
-                    file_key = f"cert_file_{i}"
-                    if file_key in request.files:
-                        file = request.files[file_key]
-                        if file and file.filename != '' and allowed_file(file.filename):
-                            ext = file.filename.rsplit('.', 1)[1].lower()
-                            unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
-                            file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
-                            new_list.append({"mooc_name": mooc_name, "filename": unique_fn, "original_filename": file.filename})
-                        else:
-                            new_list.append(e) 
-                    else:
-                        new_list.append(e)
-                req.evidence_data = json.dumps(new_list, ensure_ascii=False)
-            except: pass
+        if 'cert_file_0' in request.files:
+            file = request.files['cert_file_0']
+            if file and file.filename != '' and allowed_file(file.filename):
+                ext = file.filename.rsplit('.', 1)[1].lower()
+                req.doc_img = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], req.doc_img))
+        if 'cert_file_1' in request.files:
+            file = request.files['cert_file_1']
+            if file and file.filename != '' and allowed_file(file.filename):
+                ext = file.filename.rsplit('.', 1)[1].lower()
+                req.doc_img2 = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], req.doc_img2))
+        if 'cert_file_2' in request.files:
+            file = request.files['cert_file_2']
+            if file and file.filename != '' and allowed_file(file.filename):
+                ext = file.filename.rsplit('.', 1)[1].lower()
+                req.doc_img3 = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], req.doc_img3))
 
         req.status = 'Pending' 
         req.reject_reason = None
@@ -987,20 +988,12 @@ def student_edit_request(req_id):
         return redirect(url_for('history'))
 
     ev_html = ""
-    evidence_data = getattr(req, 'evidence_data', None)
-    if evidence_data:
-        try:
-            ev_list = json.loads(evidence_data)
-            for i, e in enumerate(ev_list):
-                ev_html += f"""
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                    <p class="text-xs font-bold text-sky-700 mb-2">หลักฐาน: {e.get('mooc_name')}</p>
-                    <img src="/static/uploads/{e.get('filename')}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain" onerror="this.src='https://via.placeholder.com/150?text=No+Image';">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">เปลี่ยนไฟล์ใหม่ (ถ้าต้องการ)</label>
-                    <input type="file" name="cert_file_{i}" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-sky-600 file:text-white">
-                </div>
-                """
-        except: pass
+    if getattr(req, 'doc_img', None):
+        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-xs font-bold text-sky-700 mb-2">หลักฐานที่ 1</p><img src="/static/uploads/{req.doc_img}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_0" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
+    if getattr(req, 'doc_img2', None):
+        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-xs font-bold text-sky-700 mb-2">หลักฐานที่ 2</p><img src="/static/uploads/{req.doc_img2}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_1" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
+    if getattr(req, 'doc_img3', None):
+        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-xs font-bold text-sky-700 mb-2">หลักฐานที่ 3</p><img src="/static/uploads/{req.doc_img3}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_2" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
 
     content = f"""
     <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
@@ -1120,24 +1113,12 @@ def admin_review(req_id):
             return redirect(url_for('admin_requests'))
 
     evidence_html = ""
-    evidence_data = getattr(req, 'evidence_data', None)
-    if evidence_data:
-        try:
-            ev_list = json.loads(evidence_data)
-            for i, e in enumerate(ev_list):
-                mooc_name = e.get('mooc_name', 'เกียรติบัตร')
-                filename = e.get('filename', '')
-
-                evidence_html += f"""
-                <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg">ใบที่ {i+1}: {mooc_name}</span>
-                    </div>
-                    <p class="text-[11px] text-slate-500 mb-2 font-mono">ไฟล์แนบ: {e.get('original_filename', filename)}</p>
-                    <a href="/static/uploads/{filename}" target="_blank"><img src="/static/uploads/{filename}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain" onerror="this.src='https://via.placeholder.com/300x200?text=Image+Not+Found';"></a>
-                </div>
-                """
-        except: pass
+    if getattr(req, 'doc_img', None):
+        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg mb-2 inline-block">หลักฐานที่ 1</span><a href="/static/uploads/{req.doc_img}" target="_blank"><img src="/static/uploads/{req.doc_img}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
+    if getattr(req, 'doc_img2', None):
+        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg mb-2 inline-block">หลักฐานที่ 2</span><a href="/static/uploads/{req.doc_img2}" target="_blank"><img src="/static/uploads/{req.doc_img2}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
+    if getattr(req, 'doc_img3', None):
+        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg mb-2 inline-block">หลักฐานที่ 3</span><a href="/static/uploads/{req.doc_img3}" target="_blank"><img src="/static/uploads/{req.doc_img3}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
 
     student = req.user
     content = f"""
