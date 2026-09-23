@@ -987,20 +987,32 @@ def student_edit_request(req_id):
         flash('อัปเดตหลักฐานและส่งให้เจ้าหน้าที่ตรวจสอบเรียบร้อยแล้ว', 'success')
         return redirect(url_for('history'))
 
+    # ดึงชื่อวิชา MOOC ย่อยมาแสดงคู่กับหลักฐาน
+    course_data_list = get_courses()
+    matched_course = next((c for c in course_data_list if c['name'] == req.course_name), None)
+    mooc_names = matched_course['mooc_list'] if matched_course else []
+
+    def get_mooc_title(index, default_title):
+        if index < len(mooc_names): return f"{default_title} : {mooc_names[index]}"
+        return default_title
+
     ev_html = ""
     if getattr(req, 'doc_img', None):
-        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-xs font-bold text-sky-700 mb-2">หลักฐานที่ 1</p><img src="/static/uploads/{req.doc_img}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_0" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
+        title = get_mooc_title(0, "หลักฐานที่ 1")
+        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img src="/static/uploads/{req.doc_img}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_0" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
     if getattr(req, 'doc_img2', None):
-        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-xs font-bold text-sky-700 mb-2">หลักฐานที่ 2</p><img src="/static/uploads/{req.doc_img2}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_1" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
+        title = get_mooc_title(1, "หลักฐานที่ 2")
+        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img src="/static/uploads/{req.doc_img2}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_1" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
     if getattr(req, 'doc_img3', None):
-        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-xs font-bold text-sky-700 mb-2">หลักฐานที่ 3</p><img src="/static/uploads/{req.doc_img3}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_2" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
+        title = get_mooc_title(2, "หลักฐานที่ 3")
+        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img src="/static/uploads/{req.doc_img3}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_2" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
 
     content = f"""
     <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
-        <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขหลักฐานคำร้อง: {req.course_name}</h3>
-        <p class="text-xs text-rose-600 mb-6 font-bold">เหตุผลที่ต้องแก้ไข: {req.reject_reason or "-"}</p>
+        <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขหลักฐานคำร้อง: {{req.course_name}}</h3>
+        <p class="text-xs text-rose-600 mb-6 font-bold">เหตุผลที่ต้องแก้ไข: {{req.reject_reason or "-"}}</p>
         <form method="POST" enctype="multipart/form-data" class="space-y-6">
-            <div class="space-y-4">{ev_html}</div>
+            <div class="space-y-4">{{ev_html}}</div>
             <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm">บันทึกและส่งให้เจ้าหน้าที่ตรวจสอบอีกครั้ง</button>
         </form>
     </div>
@@ -1112,31 +1124,43 @@ def admin_review(req_id):
             flash('ส่งกลับให้นักศึกษาแก้ไขหลักฐานเรียบร้อยแล้ว', 'success')
             return redirect(url_for('admin_requests'))
 
+    # ดึงชื่อวิชา MOOC ย่อยมาแสดงคู่กับหลักฐาน
+    course_data_list = get_courses()
+    matched_course = next((c for c in course_data_list if c['name'] == req.course_name), None)
+    mooc_names = matched_course['mooc_list'] if matched_course else []
+
+    def get_mooc_title(index, default_title):
+        if index < len(mooc_names): return f"{default_title} : {mooc_names[index]}"
+        return default_title
+
     evidence_html = ""
     if getattr(req, 'doc_img', None):
-        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg mb-2 inline-block">หลักฐานที่ 1</span><a href="/static/uploads/{req.doc_img}" target="_blank"><img src="/static/uploads/{req.doc_img}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
+        title = get_mooc_title(0, "หลักฐานที่ 1")
+        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-sm font-bold text-sky-700 bg-sky-100 px-3 py-1.5 rounded-lg mb-2 inline-block">{title}</span><a href="/static/uploads/{req.doc_img}" target="_blank"><img src="/static/uploads/{req.doc_img}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
     if getattr(req, 'doc_img2', None):
-        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg mb-2 inline-block">หลักฐานที่ 2</span><a href="/static/uploads/{req.doc_img2}" target="_blank"><img src="/static/uploads/{req.doc_img2}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
+        title = get_mooc_title(1, "หลักฐานที่ 2")
+        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-sm font-bold text-sky-700 bg-sky-100 px-3 py-1.5 rounded-lg mb-2 inline-block">{title}</span><a href="/static/uploads/{req.doc_img2}" target="_blank"><img src="/static/uploads/{req.doc_img2}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
     if getattr(req, 'doc_img3', None):
-        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-lg mb-2 inline-block">หลักฐานที่ 3</span><a href="/static/uploads/{req.doc_img3}" target="_blank"><img src="/static/uploads/{req.doc_img3}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
+        title = get_mooc_title(2, "หลักฐานที่ 3")
+        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-sm font-bold text-sky-700 bg-sky-100 px-3 py-1.5 rounded-lg mb-2 inline-block">{title}</span><a href="/static/uploads/{req.doc_img3}" target="_blank"><img src="/static/uploads/{req.doc_img3}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
 
     student = req.user
     content = f"""
     <div class="max-w-4xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
         <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-black text-slate-900">พิจารณาคำร้อง: {req.course_name}</h3>
-            <span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-xs font-bold">{getattr(req, 'req_code', '')}</span>
+            <h3 class="text-xl font-black text-slate-900">พิจารณาคำร้อง: {{req.course_name}}</h3>
+            <span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-xs font-bold">{{getattr(req, 'req_code', '')}}</span>
         </div>
 
         <div class="bg-sky-50/50 p-6 rounded-2xl border border-sky-100 mb-6 flex gap-8 text-sm">
-            <div><p class="text-xs font-bold text-slate-400 mb-1">นักศึกษา</p><p class="font-bold">{student.fullname if student else '-'}</p></div>
-            <div><p class="text-xs font-bold text-slate-400 mb-1">ระบบ</p><p class="font-bold">{getattr(req, 'institution', '-')}</p></div>
-            <div><p class="text-xs font-bold text-slate-400 mb-1">หน่วยกิต</p><p class="font-bold text-sky-600">{getattr(req, 'credits', 0)}</p></div>
+            <div><p class="text-xs font-bold text-slate-400 mb-1">นักศึกษา</p><p class="font-bold">{{student.fullname if student else '-'}}</p></div>
+            <div><p class="text-xs font-bold text-slate-400 mb-1">ระบบ</p><p class="font-bold">{{getattr(req, 'institution', '-')}}</p></div>
+            <div><p class="text-xs font-bold text-slate-400 mb-1">หน่วยกิต</p><p class="font-bold text-sky-600">{{getattr(req, 'credits', 0)}}</p></div>
         </div>
 
         <h4 class="font-black text-slate-800 mb-3"><i class="fa-solid fa-images text-sky-500 mr-2"></i> ตรวจสอบหลักฐาน</h4>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {evidence_html if evidence_html else '<p class="text-xs text-slate-400">ไม่มีรูปภาพ</p>'}
+            {{evidence_html if evidence_html else '<p class="text-xs text-slate-400">ไม่มีรูปภาพ</p>'}}
         </div>
 
         <form method="POST" class="border-t border-slate-100 pt-6 space-y-4">
