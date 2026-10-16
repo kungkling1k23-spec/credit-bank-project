@@ -667,7 +667,7 @@ def submit_credit():
 
     courses_json_str = json.dumps(courses_data, ensure_ascii=False)
 
-    html_template = f"""
+    html_part = f"""
     <div class="max-w-5xl mx-auto space-y-6">
         <!-- ส่วนหัว -->
         <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -725,20 +725,22 @@ def submit_credit():
             </div>
         </form>
     </div>
+    """
 
+    js_template = """
     <script>
     const allCoursesData = __COURSES_JSON__;
-    const courseMap = {{}};
-    allCoursesData.forEach(c => {{ courseMap[c.code] = c; }});
+    const courseMap = {};
+    allCoursesData.forEach(c => { courseMap[c.code] = c; });
 
-    function toggleSelectAll(selectState) {{
+    function toggleSelectAll(selectState) {
         const checkboxes = document.querySelectorAll('.course-checkbox:not(:disabled)');
-        checkboxes.forEach(cb => {{
+        checkboxes.forEach(cb => {
             cb.checked = selectState;
-        }});
-    }}
+        });
+    }
 
-    function removeUploadBox(code) {{
+    function removeUploadBox(code) {
         const box = document.getElementById('upload-box-' + code);
         if(box) box.remove();
         
@@ -746,65 +748,66 @@ def submit_credit():
         if(checkbox) checkbox.checked = false;
         
         const wrapper = document.getElementById('upload_forms_wrapper');
-        if (wrapper.children.length === 0) {{
+        if (wrapper.children.length === 0) {
             document.getElementById('dynamic_upload_container').classList.add('hidden');
-        }}
-    }}
+        }
+    }
 
-    function generateDynamicUploads() {{
+    function generateDynamicUploads() {
         const checkboxes = document.querySelectorAll('.course-checkbox:checked');
         const container = document.getElementById('dynamic_upload_container');
         const wrapper = document.getElementById('upload_forms_wrapper');
         
-        if (checkboxes.length === 0) {{ 
+        if (checkboxes.length === 0) { 
             alert('กรุณาติ๊กเลือกวิชาอย่างน้อย 1 วิชา ก่อนกดสร้างฟอร์มครับ'); 
             return; 
-        }}
+        }
 
         wrapper.innerHTML = '';
-        checkboxes.forEach(cb => {{
+        checkboxes.forEach(cb => {
             const code = cb.value;
             const course = courseMap[code];
             if (!course) return;
 
             let fileInputsHtml = '';
-            course.mooc_list.forEach((mooc_name, index) => {{
+            course.mooc_list.forEach((mooc_name, index) => {
                 fileInputsHtml += `
                 <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div class="flex-grow">
-                        <span class="bg-sky-100 text-sky-800 text-[11px] px-2.5 py-1 rounded-lg font-black uppercase mb-2 inline-block">ใบประกาศที่ \${index + 1}</span>
-                        <p class="text-sm font-bold text-slate-700">\${mooc_name}</p>
+                        <span class="bg-sky-100 text-sky-800 text-[11px] px-2.5 py-1 rounded-lg font-black uppercase mb-2 inline-block">ใบประกาศที่ ${index + 1}</span>
+                        <p class="text-sm font-bold text-slate-700">${mooc_name}</p>
                     </div>
                     <div class="shrink-0 w-full md:w-auto">
-                        <input type="file" name="cert_file_\${code}_\${index}" accept="image/*,.pdf" required 
+                        <input type="file" name="cert_file_${code}_${index}" accept="image/*,.pdf" required 
                             class="w-full md:w-72 text-xs font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-sky-600 file:text-white file:font-bold file:cursor-pointer hover:file:bg-sky-700 bg-white border border-slate-200 p-1 rounded-xl">
                     </div>
                 </div>
                 `;
-            }});
+            });
 
             const sectionHtml = `
-                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm" id="upload-box-\${course.code}">
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm" id="upload-box-${course.code}">
                     <div class="flex flex-wrap justify-between items-center border-b border-slate-100 pb-4 mb-4 gap-4">
                         <div>
-                            <h4 class="font-black text-slate-800 text-lg">\${course.name}</h4>
-                            <p class="text-sm font-bold text-slate-500 mt-1">รหัส: \${course.code} <span class="mx-2 text-slate-300">|</span> \${course.credits} หน่วยกิต</p>
+                            <h4 class="font-black text-slate-800 text-lg">${course.name}</h4>
+                            <p class="text-sm font-bold text-slate-500 mt-1">รหัส: ${course.code} <span class="mx-2 text-slate-300">|</span> ${course.credits} หน่วยกิต</p>
                         </div>
-                        <button type="button" onclick="removeUploadBox('\${course.code}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2"><i class="fa-solid fa-trash"></i> เอาวิชานี้ออก</button>
+                        <button type="button" onclick="removeUploadBox('${course.code}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2"><i class="fa-solid fa-trash"></i> เอาวิชานี้ออก</button>
                     </div>
-                    <div class="space-y-3">\${fileInputsHtml}</div>
+                    <div class="space-y-3">${fileInputsHtml}</div>
                 </div>
             `;
             wrapper.insertAdjacentHTML('beforeend', sectionHtml);
-        }});
+        });
 
         container.classList.remove('hidden');
-        container.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
-    }}
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     </script>
     """
 
-    content = html_template.replace('__COURSES_JSON__', courses_json_str)
+    js_code = js_template.replace('__COURSES_JSON__', courses_json_str)
+    content = html_part + js_code
 
     return render_layout(content, active_page='submit_credit')
 
