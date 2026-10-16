@@ -600,145 +600,76 @@ def all_courses():
 
 @app.route('/submit_credit', methods=['GET', 'POST'])
 def submit_credit():
-    if 'user_id' not in session: return redirect(url_for('login'))
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])
     
     if request.method == 'POST':
-        try:
-            form_type = request.form.get('form_type', 'standard')
-            existing_reqs = CreditRequest.query.filter_by(user_id=session['user_id']).all()
-            existing_course_names = [r.course_name.strip() for r in existing_reqs]
-            
-            if form_type == 'custom':
-                custom_name = request.form.get('custom_course_name', '').strip()
-                custom_credits = request.form.get('custom_credits', '3')
-                custom_institution = request.form.get('custom_institution', 'ThaiMOOC')
-                
-                if not custom_name:
-                    flash('กรุณาระบุชื่อรายวิชาที่ต้องการเพิ่มเอง', 'error')
-                    return redirect(url_for('submit_credit'))
-                if custom_name in existing_course_names:
-                    flash('คุณเคยยื่นคำขอรายวิชานี้ไปแล้ว ไม่สามารถยื่นซ้ำได้', 'error')
-                    return redirect(url_for('submit_credit'))
-                
-                saved_files = []
-                for i in range(1, 4):
-                    file_key = f"custom_cert_{i}"
+        selected_codes = request.form.getlist('selected_courses')
+        courses_data = get_courses()
+        course_dict = {c['code']: c for c in courses_data}
+
+        for code in selected_codes:
+            if code in course_dict:
+                c_info = course_dict[code]
+                doc_imgs = []
+                for idx in range(len(c_info['mooc_list'])):
+                    file_key = f'cert_file_{code}_{idx}'
                     if file_key in request.files:
                         file = request.files[file_key]
                         if file and file.filename != '' and allowed_file(file.filename):
                             ext = file.filename.rsplit('.', 1)[1].lower()
-                            unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
-                            file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
-                            saved_files.append(unique_fn)
+                            filename = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
+                            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                            doc_imgs.append(filename)
                 
-                if not saved_files:
-                    flash('กรุณาแนบไฟล์เกียรติบัตรหลักฐานอย่างน้อย 1 ไฟล์', 'error')
-                    return redirect(url_for('submit_credit'))
-                
-                req = CreditRequest(
-                    req_code=f"TR2569{uuid.uuid4().hex[:4].upper()}", user_id=session['user_id'], course_name=custom_name, 
-                    institution=custom_institution, credits=int(custom_credits), category='หมวดวิชาเลือก',
-                    date_submitted=datetime.now().strftime("%Y-%m-%d"), 
-                    doc_img=saved_files[0] if len(saved_files) > 0 else None,
-                    doc_img2=saved_files[1] if len(saved_files) > 1 else None,
-                    doc_img3=saved_files[2] if len(saved_files) > 2 else None,
-                    evidence_data=None, # บังคับปิดช่องนี้
-                    status='Pending'
-                )
-                db.session.add(req)
-                db.session.commit()
-                flash('ยื่นคำขอรายวิชาเพิ่มเติมสำเร็จ', 'success')
-                return redirect(url_for('history'))
-
-            else:
-                course_codes = request.form.getlist('course_codes')
-                if not course_codes:
-                    flash('กรุณาเลือกอย่างน้อย 1 รายวิชา', 'error')
-                    return redirect(url_for('submit_credit'))
-
-                course_data_list = get_courses()
-                success_count = 0
-
-                for code in course_codes:
-                    matched_course = next((c for c in course_data_list if c['code'] == code), None)
-                    if not matched_course: continue
-                    if matched_course['name'].strip() in existing_course_names: continue
-
-                    saved_files = []
-                    mooc_list = matched_course['mooc_list']
-                    
-                    for i, mooc_name in enumerate(mooc_list):
-                        file_key = f"cert_file_{code}_{i}"
-                        if file_key in request.files:
-                            file = request.files[file_key]
-                            if file and file.filename != '' and allowed_file(file.filename):
-                                ext = file.filename.rsplit('.', 1)[1].lower()
-                                unique_fn = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
-                                file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_fn))
-                                saved_files.append(unique_fn)
-                    
-                    if not saved_files: continue
-
-                    req = CreditRequest(
-                        req_code=f"TR2569{uuid.uuid4().hex[:4].upper()}", user_id=session['user_id'], course_name=matched_course['name'], 
-                        institution=matched_course['provider'], credits=matched_course['credits'], category=matched_course['group'], 
-                        date_submitted=datetime.now().strftime("%Y-%m-%d"), 
-                        doc_img=saved_files[0] if len(saved_files) > 0 else None,
-                        doc_img2=saved_files[1] if len(saved_files) > 1 else None,
-                        doc_img3=saved_files[2] if len(saved_files) > 2 else None,
-                        evidence_data=None, # บังคับปิดช่องนี้
+                if doc_imgs:
+                    new_req = CreditRequest(
+                        user_id=user.id,
+                        course_code=c_info['code'],
+                        course_name=c_info['name'],
+                        credits=c_info['credits'],
+                        doc_img=doc_imgs[0] if len(doc_imgs) > 0 else None,
+                        doc_img2=doc_imgs[1] if len(doc_imgs) > 1 else None,
+                        doc_img3=doc_imgs[2] if len(doc_imgs) > 2 else None,
                         status='Pending'
                     )
-                    db.session.add(req)
-                    success_count += 1
+                    db.session.add(new_req)
+        
+        db.session.commit()
+        flash('ยื่นคำขอเทียบโอนเรียบร้อยแล้ว', 'success')
+        return redirect(url_for('history'))
 
-                db.session.commit()
-                if success_count > 0:
-                    flash(f'ยื่นคำขอสำเร็จ {success_count} รายวิชา', 'success')
-                    return redirect(url_for('history'))
-                else:
-                    flash('ไม่สามารถยื่นซ้ำได้ หรือไม่พบไฟล์หลักฐานที่ถูกต้อง', 'error')
-                    return redirect(url_for('submit_credit'))
+    # GET Request: ดึงข้อมูลวิชาและสร้างตาราง
+    courses_data = get_courses()
+    user_requests = CreditRequest.query.filter_by(user_id=session['user_id']).all()
+    submitted_course_names = [r.course_name for r in user_requests]
 
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error: {str(e)}', 'error')
-            return redirect(url_for('submit_credit'))
-
-    url_selected_code = request.args.get('selected_courses', '')
-    course_data = get_courses()
-    
-    try:
-        all_user_reqs = CreditRequest.query.filter_by(user_id=session['user_id']).all()
-        submitted_course_names = [r.course_name.strip() for r in all_user_reqs]
-    except: submitted_course_names = []
-
-    is_subject_rows = ""
-    for item in course_data:
-        if item['name'].strip() in submitted_course_names:
-            action_col = '<span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200"><i class="fa-solid fa-lock"></i> เคยยื่นแล้ว</span>'
-            del_col = '-'
+    std_rows = ""
+    for c in courses_data:
+        already = c['name'] in submitted_course_names
+        if already:
+            cb_html = '<span class="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-lg font-bold inline-block">ยื่นแล้ว</span>'
         else:
-            is_checked = "checked" if item['code'] == url_selected_code else ""
-            action_col = f'<input type="checkbox" name="course_codes" value="{item["code"]}" {is_checked} class="w-5 h-5 accent-slate-900 rounded cursor-pointer course-checkbox">'
-            del_col = '<button type="button" onclick="removeSubjectRow(this)" class="text-rose-500 hover:text-rose-700 text-xs font-bold bg-rose-50 px-2.5 py-1 rounded-lg transition"><i class="fa-solid fa-trash"></i> ลบ</button>'
+            cb_html = f'<input type="checkbox" name="selected_courses" value="{c["code"]}" class="course-checkbox w-4 h-4 text-sky-600 rounded cursor-pointer">'
 
-        mooc_str = "<br>".join([f"- {m}" for m in item['mooc_list']])
-        is_subject_rows += f"""
-        <tr class="border-b border-sky-50 text-xs hover:bg-slate-50 transition subject-row" data-code="{item['code']}">
-            <td class="py-3 px-3 text-center">{action_col}</td>
-            <td class="py-3 px-3 font-mono font-bold text-sky-600">{item['code']}</td>
-            <td class="py-3 px-3 font-extrabold text-slate-800">{item['name']}</td>
-            <td class="py-3 px-3 text-slate-600 font-medium">{mooc_str}</td>
-            <td class="py-3 px-3 text-center">{del_col}</td>
+        moocs_html = "<br>".join([f'<span class="text-slate-600">• {m}</span>' for m in c['mooc_list']])
+        
+        std_rows += f"""
+        <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
+            <td class="px-6 py-4 text-center">{cb_html}</td>
+            <td class="px-6 py-4 font-mono font-bold text-sky-700 text-xs">{c['code']}</td>
+            <td class="px-6 py-4 font-bold text-slate-800">{c['name']} <span class="text-xs text-slate-400 font-normal">({c['credits']} หน่วยกิต)</span></td>
+            <td class="px-6 py-4 text-xs leading-relaxed">{moocs_html}</td>
         </tr>
         """
 
-    courses_json = json.dumps(course_data, ensure_ascii=False)
-    
-    content = f"""
+    courses_json_str = json.dumps(courses_data, ensure_ascii=False)
+
+    html_template = f"""
     <div class="max-w-5xl mx-auto space-y-6">
-        <!-- ส่วนหัว (เอา Dropdown ออก ทำเป็น Header สะอาดๆ) -->
+        <!-- ส่วนหัว -->
         <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h2 class="text-3xl font-black text-slate-800 mb-2">ยื่นคำขอเทียบโอน</h2>
@@ -756,7 +687,7 @@ def submit_credit():
                 <table class="w-full text-sm text-left">
                     <thead class="bg-slate-50 text-slate-500 font-extrabold text-xs uppercase tracking-wider">
                         <tr>
-                            <th class="px-6 py-5 text-center w-20">เลือก</th>
+                            <th class="px-6 py-5 text-center w-24">เลือก</th>
                             <th class="px-6 py-5 w-32">รหัสวิชา</th>
                             <th class="px-6 py-5 w-64">ชื่อรายวิชา</th>
                             <th class="px-6 py-5">MOOC ที่ต้องใช้แนบหลักฐาน</th>
@@ -768,7 +699,7 @@ def submit_credit():
                 </table>
             </div>
             
-            <!-- ปุ่มกดสร้างฟอร์ม (ย้ายมาจัดตรงกลางให้เด่นขึ้น) -->
+            <!-- ปุ่มกดสร้างฟอร์ม -->
             <div class="p-6 bg-slate-50 border-t border-slate-100 text-center md:text-right">
                 <button type="button" onclick="generateDynamicUploads()" class="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 px-8 rounded-2xl shadow-md transition">
                     สร้างฟอร์มอัปโหลดหลักฐาน <i class="fa-solid fa-arrow-down ml-2"></i>
@@ -794,88 +725,87 @@ def submit_credit():
             </div>
         </form>
     </div>
-    """
-    
-    content += """
+
     <script>
-    const allCoursesData = {courses_json};
-    const courseMap = {};
-    allCoursesData.forEach(c => courseMap[c.code] = c);
+    const allCoursesData = __COURSES_JSON__;
+    const courseMap = {{}};
+    allCoursesData.forEach(c => {{ courseMap[c.code] = c; }});
 
-    function toggleSelectAll(selectState) {
+    function toggleSelectAll(selectState) {{
         const checkboxes = document.querySelectorAll('.course-checkbox:not(:disabled)');
-        checkboxes.forEach(cb => {
+        checkboxes.forEach(cb => {{
             cb.checked = selectState;
-        });
-    }
+        }});
+    }}
 
-    function removeUploadBox(code) {
+    function removeUploadBox(code) {{
         const box = document.getElementById('upload-box-' + code);
         if(box) box.remove();
         
         const checkbox = document.querySelector('input[value="' + code + '"]');
         if(checkbox) checkbox.checked = false;
         
-        // ซ่อนกล่องใหญ่ถ้ารายการถูกลบออกหมด
         const wrapper = document.getElementById('upload_forms_wrapper');
-        if (wrapper.children.length === 0) {
+        if (wrapper.children.length === 0) {{
             document.getElementById('dynamic_upload_container').classList.add('hidden');
-        }
-    }
+        }}
+    }}
 
-    function generateDynamicUploads() {
+    function generateDynamicUploads() {{
         const checkboxes = document.querySelectorAll('.course-checkbox:checked');
         const container = document.getElementById('dynamic_upload_container');
         const wrapper = document.getElementById('upload_forms_wrapper');
         
-        if (checkboxes.length === 0) { 
+        if (checkboxes.length === 0) {{ 
             alert('กรุณาติ๊กเลือกวิชาอย่างน้อย 1 วิชา ก่อนกดสร้างฟอร์มครับ'); 
             return; 
-        }
+        }}
 
         wrapper.innerHTML = '';
-        checkboxes.forEach(cb => {
+        checkboxes.forEach(cb => {{
             const code = cb.value;
             const course = courseMap[code];
             if (!course) return;
 
             let fileInputsHtml = '';
-            course.mooc_list.forEach((mooc_name, index) => {
+            course.mooc_list.forEach((mooc_name, index) => {{
                 fileInputsHtml += `
                 <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div class="flex-grow">
-                        <span class="bg-sky-100 text-sky-800 text-[11px] px-2.5 py-1 rounded-lg font-black uppercase mb-2 inline-block">ใบประกาศที่ ${index + 1}</span>
-                        <p class="text-sm font-bold text-slate-700">${mooc_name}</p>
+                        <span class="bg-sky-100 text-sky-800 text-[11px] px-2.5 py-1 rounded-lg font-black uppercase mb-2 inline-block">ใบประกาศที่ \${index + 1}</span>
+                        <p class="text-sm font-bold text-slate-700">\${mooc_name}</p>
                     </div>
                     <div class="shrink-0 w-full md:w-auto">
-                        <input type="file" name="cert_file_${code}_${index}" accept="image/*,.pdf" required 
+                        <input type="file" name="cert_file_\${code}_\${index}" accept="image/*,.pdf" required 
                             class="w-full md:w-72 text-xs font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-sky-600 file:text-white file:font-bold file:cursor-pointer hover:file:bg-sky-700 bg-white border border-slate-200 p-1 rounded-xl">
                     </div>
                 </div>
                 `;
-            });
+            }});
 
             const sectionHtml = `
-                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm" id="upload-box-${course.code}">
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm" id="upload-box-\${course.code}">
                     <div class="flex flex-wrap justify-between items-center border-b border-slate-100 pb-4 mb-4 gap-4">
                         <div>
-                            <h4 class="font-black text-slate-800 text-lg">${course.name}</h4>
-                            <p class="text-sm font-bold text-slate-500 mt-1">รหัส: ${course.code} <span class="mx-2 text-slate-300">|</span> ${course.credits} หน่วยกิต</p>
+                            <h4 class="font-black text-slate-800 text-lg">\${course.name}</h4>
+                            <p class="text-sm font-bold text-slate-500 mt-1">รหัส: \${course.code} <span class="mx-2 text-slate-300">|</span> \${course.credits} หน่วยกิต</p>
                         </div>
-                        <button type="button" onclick="removeUploadBox('${course.code}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2"><i class="fa-solid fa-trash"></i> เอาวิชานี้ออก</button>
+                        <button type="button" onclick="removeUploadBox('\${course.code}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2"><i class="fa-solid fa-trash"></i> เอาวิชานี้ออก</button>
                     </div>
-                    <div class="space-y-3">${fileInputsHtml}</div>
+                    <div class="space-y-3">\${fileInputsHtml}</div>
                 </div>
             `;
             wrapper.insertAdjacentHTML('beforeend', sectionHtml);
-        });
+        }});
 
         container.classList.remove('hidden');
-        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+        container.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+    }}
     </script>
     """
-    
+
+    content = html_template.replace('__COURSES_JSON__', courses_json_str)
+
     return render_layout(content, active_page='submit_credit')
 
 @app.route('/history')
