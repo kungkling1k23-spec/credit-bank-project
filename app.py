@@ -787,6 +787,8 @@ def submit_credit():
 
             const sectionHtml = `
                 <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm" id="upload-box-${course.code}">
+                    <!-- เพิ่ม Hidden Input ส่งรหัสวิชาเข้าไปในฟอร์ม POST -->
+                    <input type="hidden" name="selected_courses" value="${course.code}">
                     <div class="flex flex-wrap justify-between items-center border-b border-slate-100 pb-4 mb-4 gap-4">
                         <div>
                             <h4 class="font-black text-slate-800 text-lg">${course.name}</h4>
