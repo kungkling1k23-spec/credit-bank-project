@@ -854,8 +854,9 @@ def submit_credit():
     }}
 
     function removeSubjectRow(btn) {{
+        // สำหรับปุ่ม 'ลบ' ในตารางด้านบน
         const row = btn.closest('tr');
-        row.remove();
+        if(row) row.remove();
     }}
 
     function toggleSelectAll(selectState) {{
@@ -863,6 +864,16 @@ def submit_credit():
         checkboxes.forEach(cb => {{
             cb.checked = selectState;
         }});
+    }}
+
+    function removeUploadBox(code) {{
+        // สำหรับปุ่ม 'ลบรายการนี้' ในกล่องอัปโหลดด้านล่าง
+        const box = document.getElementById('upload-box-' + code);
+        if(box) box.remove();
+        
+        // เอาติ๊กถูกออกจากตารางด้านบนด้วย
+        const checkbox = document.querySelector('input[value="' + code + '"]');
+        if(checkbox) checkbox.checked = false;
     }}
 
     function generateDynamicUploads() {{
@@ -894,14 +905,13 @@ def submit_credit():
                 `;
             }});
 
-            // เพิ่มปุ่มลบ ให้ลบช่องอัปโหลดที่สร้างมาแล้วทิ้ง และเอาติ๊กถูกออกจากตาราง
             const sectionHtml = `
                 <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm" id="upload-box-${{course.code}}">
                     <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
                         <h4 class="font-black text-sky-700 text-lg">${{course.name}} <span class="text-xs font-bold text-slate-400">(${{course.code}})</span></h4>
                         <div class="flex items-center gap-2">
                             <span class="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-lg">${{course.credits}} หน่วยกิต</span>
-                            <button type="button" onclick="document.getElementById('upload-box-${{course.code}}').remove(); document.querySelector('input[value=\\'${{course.code}}\\']').checked = false;" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-trash"></i> ลบรายการนี้</button>
+                            <button type="button" onclick="removeUploadBox('${{course.code}}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-trash"></i> ลบรายการนี้</button>
                         </div>
                     </div>
                     <div class="space-y-3">${{fileInputsHtml}}</div>
@@ -1014,17 +1024,17 @@ def student_edit_request(req_id):
         title = get_mooc_title(2, "หลักฐานที่ 3")
         evidence_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img id="preview-img-2" src="/static/uploads/{req.doc_img3}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_2" onchange="previewImage(event, \'preview-img-2\')" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
 
-    content = f"""
+ content = f"""
     <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
         <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขหลักฐานคำร้อง: {req.course_name}</h3>
         <p class="text-xs text-rose-600 mb-6 font-bold">เหตุผลที่ต้องแก้ไข: {req.reject_reason or "-"}</p>
         <form method="POST" enctype="multipart/form-data" class="space-y-6">
-            <div class="space-y-4">{{evidence_html}}</div>
+            <!-- แก้ไขตรงนี้เป็นปีกกาเดี่ยว จะโชว์รูปได้แล้วครับ -->
+            <div class="space-y-4">{evidence_html}</div>
             <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm">บันทึกและส่งให้เจ้าหน้าที่ตรวจสอบอีกครั้ง</button>
         </form>
     </div>
     
-    <!-- สคริปต์สำหรับโชว์รูปภาพใหม่ทันที -->
     <script>
         function previewImage(event, imgId) {{
             var input = event.target;
