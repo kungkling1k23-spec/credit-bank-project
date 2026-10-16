@@ -1012,6 +1012,54 @@ def student_edit_request(req_id):
         if index < len(mooc_names): return f"{default_title} : {mooc_names[index]}"
         return default_title
 
+    ev_html = ""
+    if getattr(req, 'doc_img', None):
+        title = get_mooc_title(0, "หลักฐานที่ 1")
+        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img id="preview-img-0" src="/static/uploads/{req.doc_img}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_0" onchange="previewImage(event, \'preview-img-0\')" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
+    if getattr(req, 'doc_img2', None):
+        title = get_mooc_title(1, "หลักฐานที่ 2")
+        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img id="preview-img-1" src="/static/uploads/{req.doc_img2}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_1" onchange="previewImage(event, \'preview-img-1\')" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
+    if getattr(req, 'doc_img3', None):
+        title = get_mooc_title(2, "หลักฐานที่ 3")
+        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img id="preview-img-2" src="/static/uploads/{req.doc_img3}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_2" onchange="previewImage(event, \'preview-img-2\')" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
+
+    content = f"""
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
+        <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขหลักฐานคำร้อง: {req.course_name}</h3>
+        <p class="text-xs text-rose-600 mb-6 font-bold">เหตุผลที่ต้องแก้ไข: {req.reject_reason or "-"}</p>
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+            <div class="space-y-4">{ev_html}</div>
+            <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm">บันทึกและส่งให้เจ้าหน้าที่ตรวจสอบอีกครั้ง</button>
+        </form>
+    </div>
+    """
+    
+    # แก้ปัญหาเครื่องหมายปีกกาของสคริปต์ตีกัน โดยแยกเป็นสตริงปกติ
+    content += """
+    <script>
+        function previewImage(event, imgId) {
+            var input = event.target;
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById(imgId).src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+    """
+    
+    return render_layout(content, active_page='history')
+
+    course_data_list = get_courses()
+    matched_course = next((c for c in course_data_list if c['name'] == req.course_name), None)
+    mooc_names = matched_course['mooc_list'] if matched_course else []
+
+    def get_mooc_title(index, default_title):
+        if index < len(mooc_names): return f"{default_title} : {mooc_names[index]}"
+        return default_title
+
     evidence_html = ""
     # เพิ่ม id ให้รูปภาพ และ onchange ให้ input สำหรับเปลี่ยนรูปเรียลไทม์
     if getattr(req, 'doc_img', None):
