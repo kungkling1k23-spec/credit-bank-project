@@ -1024,7 +1024,7 @@ def student_edit_request(req_id):
         title = get_mooc_title(2, "หลักฐานที่ 3")
         evidence_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img id="preview-img-2" src="/static/uploads/{req.doc_img3}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_2" onchange="previewImage(event, \'preview-img-2\')" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
 
- content = f"""
+        content = f"""
     <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
         <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขหลักฐานคำร้อง: {req.course_name}</h3>
         <p class="text-xs text-rose-600 mb-6 font-bold">เหตุผลที่ต้องแก้ไข: {req.reject_reason or "-"}</p>
@@ -1048,7 +1048,7 @@ def student_edit_request(req_id):
         }}
     </script>
     """
-    return render_layout(content, active_page='history')
+        return render_layout(content, active_page='history')
 
 @app.route('/credits')
 def credits():
