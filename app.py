@@ -287,6 +287,9 @@ def home():
         session.clear()
         return redirect(url_for('login'))
     
+    # -------------------------------------------------------------
+    # 1. ฝั่งเจ้าหน้าที่ (Admin / Superadmin Dashboard)
+    # -------------------------------------------------------------
     if user.role in ['admin', 'superadmin']:
         try:
             pending_reqs = CreditRequest.query.filter_by(status='Pending').order_by(CreditRequest.id.asc()).all()
@@ -296,7 +299,7 @@ def home():
             rejected_count = CreditRequest.query.filter_by(status='Rejected').count()
             revision_count = CreditRequest.query.filter_by(status='Needs_Revision').count()
             total_approved_credits = sum(r.credits for r in CreditRequest.query.filter_by(status='Approved').all())
-        except:
+        except Exception:
             pending_reqs, pending_count, total_students, approved_count, rejected_count, revision_count, total_approved_credits = [], 0, 0, 0, 0, 0, 0
 
         urgent_rows = ""
@@ -313,7 +316,7 @@ def home():
             """
         if not urgent_rows: urgent_rows = '<div class="text-sm text-slate-500 py-4 text-center">ไม่มีคำร้องรอดำเนินการ</div>'
 
-        content = f"""
+        admin_content = f"""
         <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 mb-6">
             <h2 class="text-2xl font-bold text-slate-900 mb-2">ยินดีต้อนรับ, {user.fullname} (เจ้าหน้าที่)</h2>
             <p class="text-slate-600 text-sm">ระบบจัดการธนาคารหน่วยกิต สาขาวิชาระบบสารสนเทศ</p>
@@ -361,88 +364,369 @@ def home():
         }});
         </script>
         """
-        return render_layout(content, active_page='home')
+        return render_layout(admin_content, active_page='home')
 
+    # -------------------------------------------------------------
+    # 2. ฝั่งนักศึกษา (Student Dashboard แบบ Interactive ใหม่)
+    # -------------------------------------------------------------
     try:
-        user_requests = CreditRequest.query.filter_by(user_id=user.id).all()
-        approved_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Approved')
-        pending_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Pending')
-        revision_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Needs_Revision')
-        rejected_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Rejected')
+        user_requests = CreditRequest.query.filter_by(user_id=user.id).order_by(CreditRequest.id.desc()).all()
+    except Exception:
+        user_requests = []
 
-        approved_credits = sum(getattr(r, 'credits', 0) for r in user_requests if getattr(r, 'status', '') == 'Approved')
-        pending_credits = sum(getattr(r, 'credits', 0) for r in user_requests if getattr(r, 'status', '') in ['Pending', 'Needs_Revision'])
-    except:
-        user_requests, approved_count, pending_count, revision_count, rejected_count, approved_credits, pending_credits = [], 0, 0, 0, 0, 0, 0
+    pending_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Pending')
+    approved_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Approved')
+    revision_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Needs_Revision')
+    rejected_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Rejected')
+    need_edit_count = revision_count + rejected_count
 
-    history_rows = ""
-    for r in sorted(user_requests, key=lambda x: x.id, reverse=True)[:5]:
-        status = getattr(r, 'status', 'Pending')
-        if status == 'Approved': badge = '<span class="px-2 py-1 rounded bg-emerald-100 text-emerald-700 text-xs font-bold">อนุมัติแล้ว</span>'
-        elif status == 'Pending': badge = '<span class="px-2 py-1 rounded bg-amber-100 text-amber-700 text-xs font-bold">รอตรวจ</span>'
-        elif status == 'Needs_Revision': badge = '<span class="px-2 py-1 rounded bg-indigo-100 text-indigo-700 text-xs font-bold">ส่งกลับให้แก้ไข</span>'
-        else: badge = '<span class="px-2 py-1 rounded bg-rose-100 text-rose-700 text-xs font-bold">ไม่อนุมัติ</span>'
-        history_rows += f'<div class="flex justify-between items-center py-3 border-b border-slate-100 last:border-0"><div class="text-sm font-bold text-slate-700 pr-4">{getattr(r, "course_name", "-")}</div><div>{badge}</div></div>'
-    if not history_rows: history_rows = '<div class="text-sm text-slate-500 py-4 text-center">คุณยังไม่เคยยื่นคำขอเทียบโอน</div>'
+    approved_credits = sum(getattr(r, 'credits', 0) for r in user_requests if getattr(r, 'status', '') == 'Approved')
+    target_credits = 120
+    credit_percent = min(100, round((approved_credits / target_credits) * 100, 1))
 
-    content = f"""
-    <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 mb-6">
-        <h2 class="text-2xl font-bold text-slate-900 mb-1">ยินดีต้อนรับ, {user.prefix or ''}{user.fullname}</h2>
-        <p class="text-slate-600 text-sm">รหัสนักศึกษา: {user.member_id or '-'}</p>
-    </div>
+    req_list_json = []
+    for r in user_requests:
+        req_list_json.append({
+            'id': r.id,
+            'req_code': getattr(r, 'req_code', '-'),
+            'course_name': getattr(r, 'course_name', '-'),
+            'credits': getattr(r, 'credits', 0),
+            'status': getattr(r, 'status', 'Pending'),
+            'reject_reason': getattr(r, 'reject_reason', '-') or '-',
+            'doc_img': getattr(r, 'doc_img', None),
+            'doc_img2': getattr(r, 'doc_img2', None),
+            'doc_img3': getattr(r, 'doc_img3', None),
+            'date_submitted': getattr(r, 'date_submitted', '-')
+        })
+    req_json_str = json.dumps(req_list_json, ensure_ascii=False)
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div class="bg-sky-50 p-6 rounded-2xl border border-sky-100 flex items-center justify-between">
-            <div>
-                <p class="text-sm text-slate-600 font-medium mb-1">หน่วยกิตที่อนุมัติแล้ว</p>
-                <h3 class="text-3xl font-bold text-sky-700">{approved_credits} <span class="text-base font-normal">/ 120 หน่วยกิต</span></h3>
-            </div>
-            <i class="fa-solid fa-graduation-cap text-4xl text-sky-200"></i>
-        </div>
-        <div class="bg-amber-50 p-6 rounded-2xl border border-amber-100 flex items-center justify-between">
-            <div>
-                <p class="text-sm text-slate-600 font-medium mb-1">อยู่ระหว่างรอพิจารณา</p>
-                <h3 class="text-3xl font-bold text-amber-700">{pending_credits} <span class="text-base font-normal">หน่วยกิต</span></h3>
-            </div>
-            <i class="fa-solid fa-clock-rotate-left text-4xl text-amber-200"></i>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div class="md:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">สัดส่วนสถานะคำขอ</h3>
-            <div class="h-48 flex justify-center"><canvas id="studentChart"></canvas></div>
-        </div>
-        <div class="md:col-span-2 bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-            <div>
-                <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-3">
-                    <h3 class="text-lg font-bold text-slate-800">ประวัติการยื่นคำขอล่าสุด</h3>
-                    <a href="/history" class="text-sm text-sky-600 font-bold hover:underline">ดูประวัติทั้งหมด</a>
+    html_part = f"""
+    <div class="max-w-6xl mx-auto space-y-8">
+        <!-- Banner ต้อนรับ -->
+        <div class="relative overflow-hidden bg-gradient-to-r from-sky-600 via-indigo-600 to-slate-900 rounded-3xl p-8 text-white shadow-xl">
+            <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <span class="bg-white/20 backdrop-blur-md text-sky-100 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Student Portal</span>
+                    <h1 class="text-3xl font-black mt-2">ยินดีต้อนรับ, {user.prefix or ''}{user.fullname} 👋</h1>
+                    <p class="text-sky-100/80 text-sm mt-1">รหัสนักศึกษา: {user.member_id or '-'} | ระบบธนาคารหน่วยกิต (Credit Bank) IS RMUTTO</p>
                 </div>
-                <div>{history_rows}</div>
+                <a href="/submit_credit" class="group bg-white hover:bg-sky-50 text-sky-700 font-extrabold px-6 py-3.5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 text-sm shrink-0">
+                    <i class="fa-solid fa-circle-plus text-sky-600 group-hover:rotate-90 transition-transform duration-300"></i>
+                    ยื่นคำขอเทียบโอนใหม่
+                </a>
             </div>
-            <div class="mt-6 text-center">
-                <a href="/submit_credit" class="inline-block bg-slate-900 hover:bg-black text-white px-6 py-3 rounded-xl font-bold transition text-sm">ยื่นคำขอเทียบโอนใหม่</a>
+            <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+        </div>
+
+        <!-- Section: สรุปความก้าวหน้าหน่วยกิต & การ์ดสถิติแบบคลิกกรองข้อมูลได้ -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- การ์ด Progress หลอดความก้าวหน้าสะสมหน่วยกิต -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-xs font-black uppercase tracking-wider text-slate-400">หน่วยกิตที่เทียบโอนสำเร็จ</span>
+                        <span class="bg-emerald-50 text-emerald-600 text-xs font-bold px-2.5 py-1 rounded-lg"><i class="fa-solid fa-award"></i> อนุมัติแล้ว</span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-4xl font-black text-slate-800">{approved_credits}</span>
+                        <span class="text-sm font-bold text-slate-400">/ {target_credits} หน่วยกิต</span>
+                    </div>
+                </div>
+
+                <div class="mt-6 space-y-2">
+                    <div class="flex justify-between text-xs font-bold">
+                        <span class="text-slate-500">ความก้าวหน้าตามเป้าหมาย</span>
+                        <span class="text-sky-600">{credit_percent}%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden p-0.5">
+                        <div class="bg-gradient-to-r from-sky-500 to-emerald-500 h-full rounded-full transition-all duration-1000" style="width: {credit_percent}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- การ์ดสถิติสถานะ (3 ช่องด้านขวา - กดได้ทุกใบ) -->
+            <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- การ์ด รอดำเนินการ -->
+                <div onclick="filterByStatus('Pending')" class="cursor-pointer group bg-white hover:bg-amber-50/50 p-6 rounded-3xl border border-amber-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+                        <span class="relative flex h-3 w-3">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                        </span>
+                    </div>
+                    <p class="text-2xl font-black text-slate-800">{pending_count}</p>
+                    <p class="text-xs font-bold text-amber-700 mt-1">รอดำเนินการ <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                </div>
+
+                <!-- การ์ด อนุมัติแล้ว -->
+                <div onclick="filterByStatus('Approved')" class="cursor-pointer group bg-white hover:bg-emerald-50/50 p-6 rounded-3xl border border-emerald-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:text-emerald-500 transition-colors"></i>
+                    </div>
+                    <p class="text-2xl font-black text-slate-800">{approved_count}</p>
+                    <p class="text-xs font-bold text-emerald-700 mt-1">อนุมัติเรียบร้อย <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                </div>
+
+                <!-- การ์ด ต้องแก้ไข -->
+                <div onclick="filterByStatus('Need_Edit')" class="cursor-pointer group bg-white hover:bg-rose-50/50 p-6 rounded-3xl border border-rose-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:text-rose-500 transition-colors"></i>
+                    </div>
+                    <p class="text-2xl font-black text-slate-800">{need_edit_count}</p>
+                    <p class="text-xs font-bold text-rose-700 mt-1">ต้องแก้ไขหลักฐาน <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: กราฟ Interactive Donut Chart + ตารางรายการคำร้อง -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <!-- กราฟ Donut Chart สรุปภาพรวม -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center">
+                <h3 class="text-base font-black text-slate-800 mb-2 w-full text-left">สัดส่วนสถานะคำร้อง</h3>
+                <p class="text-xs text-slate-400 mb-6 w-full text-left">สามารถคลิกชิ้นส่วนกราฟเพื่อกรองตารางได้</p>
+                <div class="w-48 h-48 relative">
+                    <canvas id="studentChart"></canvas>
+                </div>
+            </div>
+
+            <!-- ตารางแสดงคำร้องล่าสุด พร้อม Tab -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+                    <div>
+                        <h3 class="text-lg font-black text-slate-800">รายการคำร้องเทียบโอน</h3>
+                        <p class="text-xs text-slate-400" id="filter_status_label">แสดงคำร้องทั้งหมด</p>
+                    </div>
+
+                    <!-- Filter Tabs -->
+                    <div class="flex flex-wrap gap-1.5 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
+                        <button onclick="filterByStatus('ALL')" id="btn-tab-ALL" class="tab-btn px-3 py-1.5 rounded-xl bg-slate-900 text-white shadow-sm">ทั้งหมด</button>
+                        <button onclick="filterByStatus('Pending')" id="btn-tab-Pending" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">รอดำเนินการ</button>
+                        <button onclick="filterByStatus('Approved')" id="btn-tab-Approved" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">อนุมัติแล้ว</button>
+                        <button onclick="filterByStatus('Need_Edit')" id="btn-tab-Need_Edit" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">ต้องแก้ไข</button>
+                    </div>
+                </div>
+
+                <!-- ตารางรายการ -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-slate-400 font-extrabold uppercase bg-slate-50 rounded-xl">
+                            <tr>
+                                <th class="px-4 py-3 rounded-l-xl">ชื่อวิชาที่ขอเทียบโอน</th>
+                                <th class="px-4 py-3 text-center">หน่วยกิต</th>
+                                <th class="px-4 py-3 text-center">สถานะ</th>
+                                <th class="px-4 py-3 text-right rounded-r-xl">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requests_tbody" class="divide-y divide-slate-100">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- 🔍 Pop-up Modal ดูรายละเอียดคำร้องด่วน (Quick View) -->
+    <div id="quickViewModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6 relative border border-slate-100">
+            <button onclick="closeQuickView()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                <div class="p-3 bg-sky-100 text-sky-600 rounded-2xl"><i class="fa-solid fa-file-invoice text-xl"></i></div>
+                <div>
+                    <h3 class="text-lg font-black text-slate-800" id="modal_course_name">-</h3>
+                    <p class="text-xs font-bold text-slate-400" id="modal_credits_text">-</p>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-black uppercase text-slate-400">สถานะคำร้องปัจจุบัน</label>
+                <div id="modal_status_badge"></div>
+                <p id="modal_reject_reason_box" class="hidden text-xs text-rose-600 bg-rose-50 p-3 rounded-xl border border-rose-100 font-bold mt-2"></p>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-black uppercase text-slate-400">รูปหลักฐานใบประกาศแนบ</label>
+                <div id="modal_images_container" class="grid grid-cols-3 gap-2"></div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex gap-3">
+                <button onclick="closeQuickView()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-xs transition">ปิดหน้าต่าง</button>
+                <a id="modal_action_btn" href="#" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-2xl text-xs text-center transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-pen-to-square"></i> แก้ไขคำร้องนี้
+                </a>
+            </div>
+        </div>
+    </div>
+    """
+
+    js_template = """
     <script>
-    const sCtx = document.getElementById('studentChart').getContext('2d');
-    new Chart(sCtx, {{
-        type: 'doughnut',
-        data: {{
-            labels: ['รอตรวจ', 'อนุมัติแล้ว', 'ให้แก้ไข', 'ไม่อนุมัติ'],
-            datasets: [{{
-                data: [{pending_count}, {approved_count}, {revision_count}, {rejected_count}],
-                backgroundColor: ['#f59e0b', '#10b981', '#6366f1', '#f43f5e']
-            }}]
-        }},
-        options: {{ responsive: true, maintainAspectRatio: false }}
-    }});
+    const requestsData = __REQUESTS_JSON__;
+    let currentFilter = 'ALL';
+
+    function renderTable() {
+        const tbody = document.getElementById('requests_tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        const filtered = requestsData.filter(r => {
+            if (currentFilter === 'ALL') return true;
+            if (currentFilter === 'Pending') return r.status === 'Pending';
+            if (currentFilter === 'Approved') return r.status === 'Approved';
+            if (currentFilter === 'Need_Edit') return r.status !== 'Pending' && r.status !== 'Approved';
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-xs font-bold text-slate-400"><i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>ไม่พบรายการคำร้องในหมวดนี้</td></tr>`;
+            return;
+        }
+
+        filtered.forEach(item => {
+            let badgeHtml = '';
+            if (item.status === 'Pending') {
+                badgeHtml = `<span class="bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> รอดำเนินการ</span>`;
+            } else if (item.status === 'Approved') {
+                badgeHtml = `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-[10px]"></i> อนุมัติแล้ว</span>`;
+            } else {
+                badgeHtml = `<span class="bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> ให้แก้ไข</span>`;
+            }
+
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-50/80 transition';
+            tr.innerHTML = `
+                <td class="px-4 py-4 font-bold text-slate-800">${item.course_name}</td>
+                <td class="px-4 py-4 text-center font-bold text-slate-600">${item.credits}</td>
+                <td class="px-4 py-4 text-center">${badgeHtml}</td>
+                <td class="px-4 py-4 text-right">
+                    <button onclick="openQuickView(${item.id})" class="bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1">
+                        <i class="fa-solid fa-eye"></i> รายละเอียด
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function filterByStatus(status) {
+        currentFilter = status;
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.className = 'tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800';
+        });
+        const activeBtn = document.getElementById('btn-tab-' + status);
+        if(activeBtn) {
+            activeBtn.className = 'tab-btn px-3 py-1.5 rounded-xl bg-slate-900 text-white shadow-sm';
+        }
+
+        const labelMap = {
+            'ALL': 'แสดงคำร้องทั้งหมด',
+            'Pending': 'แสดงเฉพาะคำร้องที่ รอดำเนินการ',
+            'Approved': 'แสดงเฉพาะคำร้องที่ อนุมัติแล้ว',
+            'Need_Edit': 'แสดงเฉพาะคำร้องที่ ต้องแก้ไขหลักฐาน'
+        };
+        const labelElem = document.getElementById('filter_status_label');
+        if(labelElem) labelElem.innerText = labelMap[status] || '';
+
+        renderTable();
+    }
+
+    function openQuickView(id) {
+        const item = requestsData.find(r => r.id === id);
+        if (!item) return;
+
+        document.getElementById('modal_course_name').innerText = item.course_name;
+        document.getElementById('modal_credits_text').innerText = 'จำนวน: ' + item.credits + ' หน่วยกิต';
+
+        const badgeContainer = document.getElementById('modal_status_badge');
+        const reasonBox = document.getElementById('modal_reject_reason_box');
+        const actionBtn = document.getElementById('modal_action_btn');
+
+        if (item.status === 'Pending') {
+            badgeContainer.innerHTML = `<span class="bg-amber-100 text-amber-800 text-xs font-extrabold px-3 py-1.5 rounded-xl">⏳ อยู่ระหว่างการตรวจสอบของเจ้าหน้าที่</span>`;
+            reasonBox.classList.add('hidden');
+            actionBtn.classList.add('hidden');
+        } else if (item.status === 'Approved') {
+            badgeContainer.innerHTML = `<span class="bg-emerald-100 text-emerald-800 text-xs font-extrabold px-3 py-1.5 rounded-xl">✅ คำร้องได้รับการอนุมัติเรียบร้อยแล้ว</span>`;
+            reasonBox.classList.add('hidden');
+            actionBtn.classList.add('hidden');
+        } else {
+            badgeContainer.innerHTML = `<span class="bg-rose-100 text-rose-800 text-xs font-extrabold px-3 py-1.5 rounded-xl">⚠️ เจ้าหน้าที่ปฏิเสธ / ให้แก้ไขหลักฐาน</span>`;
+            reasonBox.innerText = 'เหตุผลที่ต้องแก้ไข: ' + (item.reject_reason || '-');
+            reasonBox.classList.remove('hidden');
+            actionBtn.href = '/student/edit_request/' + item.id;
+            actionBtn.classList.remove('hidden');
+        }
+
+        const imgBox = document.getElementById('modal_images_container');
+        imgBox.innerHTML = '';
+        [item.doc_img, item.doc_img2, item.doc_img3].forEach(img => {
+            if (img) {
+                imgBox.innerHTML += `<a href="/static/uploads/${img}" target="_blank"><img src="/static/uploads/${img}" class="h-20 w-full object-cover rounded-xl border border-slate-200 hover:opacity-80 transition"></a>`;
+            }
+        });
+
+        document.getElementById('quickViewModal').classList.remove('hidden');
+    }
+
+    function closeQuickView() {
+        document.getElementById('quickViewModal').classList.add('hidden');
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        renderTable();
+
+        const pendingCount = requestsData.filter(r => r.status === 'Pending').length;
+        const approvedCount = requestsData.filter(r => r.status === 'Approved').length;
+        const needEditCount = requestsData.filter(r => r.status !== 'Pending' && r.status !== 'Approved').length;
+
+        const chartCanvas = document.getElementById('studentChart');
+        if (chartCanvas) {
+            const ctx = chartCanvas.getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['รอดำเนินการ', 'อนุมัติแล้ว', 'ต้องแก้ไข'],
+                    datasets: [{
+                        data: [pendingCount, approvedCount, needEditCount],
+                        backgroundColor: ['#f59e0b', '#10b981', '#f43f5e'],
+                        borderWidth: 0,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '75%',
+                    onClick: (evt, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const statusMap = ['Pending', 'Approved', 'Need_Edit'];
+                            filterByStatus(statusMap[index]);
+                        }
+                    }
+                }
+            });
+        }
+    });
     </script>
     """
-    return render_layout(content, active_page='home')
+
+    js_code = js_template.replace('__REQUESTS_JSON__', req_json_str)
+    student_content = html_part + js_code
+
+    return render_layout(student_content, active_page='home')
 
 @app.route('/available_courses')
 def available_courses():
