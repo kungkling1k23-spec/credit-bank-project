@@ -604,6 +604,8 @@ def submit_credit():
         return redirect(url_for('login'))
 
     user = User.query.get(session['user_id'])
+    upload_folder = app.config.get('UPLOAD_FOLDER', os.path.join(app.root_path, 'static', 'uploads'))
+    os.makedirs(upload_folder, exist_ok=True)
     
     if request.method == 'POST':
         selected_codes = request.form.getlist('selected_courses')
@@ -621,15 +623,16 @@ def submit_credit():
                         if file and file.filename != '' and allowed_file(file.filename):
                             ext = file.filename.rsplit('.', 1)[1].lower()
                             filename = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
-                            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                            file.save(os.path.join(upload_folder, filename))
                             doc_imgs.append(filename)
                 
                 if doc_imgs:
+                    # สร้างวัตถุ CreditRequest ให้ตรงกับคลาสในภาพ
                     new_req = CreditRequest(
                         user_id=user.id,
-                        course_code=c_info['code'],
-                        course_name=c_info['name'],
+                        course_name=c_info['name'],   # ใช้ course_name (ไม่ส่ง course_code)
                         credits=c_info['credits'],
+                        institution="ThaiMOOC",      # กำหนดค่าป้องกัน nullable=False
                         doc_img=doc_imgs[0] if len(doc_imgs) > 0 else None,
                         doc_img2=doc_imgs[1] if len(doc_imgs) > 1 else None,
                         doc_img3=doc_imgs[2] if len(doc_imgs) > 2 else None,
@@ -787,7 +790,6 @@ def submit_credit():
 
             const sectionHtml = `
                 <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm" id="upload-box-${course.code}">
-                    <!-- เพิ่ม Hidden Input ส่งรหัสวิชาเข้าไปในฟอร์ม POST -->
                     <input type="hidden" name="selected_courses" value="${course.code}">
                     <div class="flex flex-wrap justify-between items-center border-b border-slate-100 pb-4 mb-4 gap-4">
                         <div>
