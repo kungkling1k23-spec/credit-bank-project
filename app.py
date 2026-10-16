@@ -737,195 +737,145 @@ def submit_credit():
     courses_json = json.dumps(course_data, ensure_ascii=False)
     
     content = f"""
-    <div class="max-w-4xl mx-auto mb-8">
-        <h2 class="text-3xl font-black text-slate-900 mb-2">ยื่นคำขอเทียบโอน</h2>
-        <p class="text-slate-500 text-sm font-medium">กรุณาเลือกสาขาวิชาด้านล่างเพื่อแสดงรายวิชาในหลักสูตร หรือเลือกเมนูเพิ่มรายวิชาเองแยกต่างหาก</p>
-    </div>
-
-    <div class="max-w-4xl mx-auto bg-white p-6 rounded-3xl border border-sky-100 shadow-sm mb-6">
-        <label class="block text-xs font-bold text-slate-700 uppercase mb-2">เลือกสาขาวิชาเพื่อเริ่มยื่นคำขอ</label>
-        <select id="branch_selector" onchange="filterBranch()" class="w-full border border-sky-200 rounded-xl p-3 text-sm font-bold text-sky-900 bg-sky-50/50 outline-none">
-            <option value="">-- กรุณาเลือกสาขาวิชา หรือประเภทการยื่น --</option>
-            <option value="IS">สาขาวิชาระบบสารสนเทศ (Information Systems - ตามหลักสูตร)</option>
-            <option value="CUSTOM">เพิ่มรายวิชาเอง (นอกหลักสูตร / อิสระ)</option>
-        </select>
-    </div>
-
-    <form method="POST" enctype="multipart/form-data" id="standard_form" class="max-w-4xl mx-auto space-y-8 hidden">
-        <input type="hidden" name="form_type" value="standard">
-        <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 mb-4 gap-3">
-                <h3 class="text-lg font-black text-slate-800">เลือกวิชาในหลักสูตรที่ต้องการเทียบโอน</h3>
-                <div class="flex gap-2">
-                    <button type="button" onclick="toggleSelectAll(true)" class="text-xs font-bold bg-sky-100 text-sky-700 px-3 py-1.5 rounded-xl hover:bg-sky-200 transition"><i class="fa-solid fa-square-check mr-1"></i> เลือกทั้งหมด</button>
-                    <button type="button" onclick="toggleSelectAll(false)" class="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl hover:bg-slate-200 transition"><i class="fa-regular fa-square mr-1"></i> ยกเลิกเลือก</button>
-                </div>
+    <div class="max-w-5xl mx-auto space-y-6">
+        <!-- ส่วนหัว (เอา Dropdown ออก ทำเป็น Header สะอาดๆ) -->
+        <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h2 class="text-3xl font-black text-slate-800 mb-2">ยื่นคำขอเทียบโอน</h2>
+                <p class="text-slate-500 text-sm">เลือกวิชาในหลักสูตรที่ต้องการเทียบโอน จากนั้นกดปุ่มสร้างฟอร์มด้านล่างเพื่อแนบหลักฐาน</p>
             </div>
-            <div class="overflow-x-auto border border-slate-100 rounded-xl mb-6">
-                <table class="w-full text-left" id="subject_table">
-                    <thead class="bg-slate-50 text-slate-500 text-[11px] font-black uppercase tracking-wider">
-                        <tr><th class="py-3 px-3 text-center w-16">เลือก</th><th class="py-3 px-3">รหัส</th><th class="py-3 px-3">วิชา IS</th><th class="py-3 px-3">MOOC ที่ต้องใช้แนบหลักฐาน</th><th class="py-3 px-3 text-center">จัดการ</th></tr>
+            <div class="space-x-2 shrink-0">
+                <button type="button" onclick="toggleSelectAll(true)" class="text-xs bg-sky-50 text-sky-700 px-4 py-2.5 rounded-xl hover:bg-sky-100 font-bold transition">เลือกทั้งหมด</button>
+                <button type="button" onclick="toggleSelectAll(false)" class="text-xs bg-slate-50 text-slate-600 px-4 py-2.5 rounded-xl hover:bg-slate-100 font-bold transition">ยกเลิกเลือก</button>
+            </div>
+        </div>
+
+        <!-- ตารางรายวิชาหลักสูตร -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-slate-50 text-slate-500 font-extrabold text-xs uppercase tracking-wider">
+                        <tr>
+                            <th class="px-6 py-5 text-center w-20">เลือก</th>
+                            <th class="px-6 py-5 w-32">รหัสวิชา</th>
+                            <th class="px-6 py-5 w-64">ชื่อรายวิชา</th>
+                            <th class="px-6 py-5">MOOC ที่ต้องใช้แนบหลักฐาน</th>
+                        </tr>
                     </thead>
-                    <tbody>{is_subject_rows}</tbody>
+                    <tbody class="divide-y divide-slate-100">
+                        {std_rows}
+                    </tbody>
                 </table>
             </div>
             
-            <div class="text-center">
-                <button type="button" onclick="generateDynamicUploads()" class="bg-slate-900 hover:bg-black text-white font-black px-8 py-4 rounded-xl shadow-md transition text-sm">
-                    <i class="fa-solid fa-arrow-down mr-2"></i> สร้างช่องแนบหลักฐานสำหรับวิชาที่เลือก
+            <!-- ปุ่มกดสร้างฟอร์ม (ย้ายมาจัดตรงกลางให้เด่นขึ้น) -->
+            <div class="p-6 bg-slate-50 border-t border-slate-100 text-center md:text-right">
+                <button type="button" onclick="generateDynamicUploads()" class="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 px-8 rounded-2xl shadow-md transition">
+                    สร้างฟอร์มอัปโหลดหลักฐาน <i class="fa-solid fa-arrow-down ml-2"></i>
                 </button>
             </div>
         </div>
 
-        <div id="dynamic_upload_container" class="hidden space-y-6 bg-sky-50/50 p-8 rounded-3xl border border-sky-200 shadow-inner">
-            <h3 class="text-xl font-black text-slate-900 mb-1">แนบหลักฐานเกียรติบัตร</h3>
-            <p class="text-xs text-slate-500 mb-4">กรุณาแนบไฟล์รูปให้ตรงกับชื่อวิชาที่ระบุไว้เหนือปุ่มอัปโหลด</p>
-            
-            <div id="upload_forms_wrapper" class="space-y-6"></div>
-            
-            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl shadow-md text-base transition mt-4">
-                <i class="fa-solid fa-paper-plane mr-2"></i> ยืนยันส่งคำร้องทั้งหมด
-            </button>
-        </div>
-    </form>
-
-    <form method="POST" enctype="multipart/form-data" id="custom_form" class="max-w-4xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-sm space-y-6 hidden">
-        <input type="hidden" name="form_type" value="custom">
-        <div class="border-b border-slate-100 pb-3">
-            <h3 class="text-xl font-black text-slate-900">เพิ่มรายวิชาเอง (อิสระ / นอกหลักสูตร)</h3>
-            <p class="text-xs text-slate-500 mt-1">กรอกรายละเอียดรายวิชาและแนบเกียรติบัตรหลักฐาน 1-3 ไฟล์</p>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ชื่อรายวิชา</label>
-                <input type="text" name="custom_course_name" placeholder="ระบุชื่อวิชา" required class="w-full border border-sky-200 rounded-xl p-3 text-sm bg-sky-50/50 outline-none">
+        <!-- ส่วนฟอร์มอัปโหลดหลักฐานแบบไดนามิก -->
+        <form method="POST" enctype="multipart/form-data" id="dynamic_upload_container" class="hidden space-y-6 mt-8">
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-sky-100">
+                <div class="flex items-center gap-3 border-b border-slate-100 pb-5 mb-6">
+                    <div class="bg-sky-100 p-2.5 rounded-xl text-sky-600"><i class="fa-solid fa-cloud-arrow-up text-lg"></i></div>
+                    <h3 class="text-xl font-black text-slate-800">กล่องอัปโหลดหลักฐานตามวิชาที่เลือก</h3>
+                </div>
+                
+                <div id="upload_forms_wrapper" class="space-y-5"></div>
+                
+                <div class="mt-8 pt-6 border-t border-slate-100">
+                    <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black py-4 rounded-2xl shadow-lg hover:shadow-xl transition text-lg">
+                        ยืนยันการส่งคำขอเทียบโอน
+                    </button>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ระบบ / แหล่งที่เรียน</label>
-                <select name="custom_institution" class="w-full border border-sky-200 rounded-xl p-3 text-sm bg-sky-50/50 outline-none">
-                    <option value="ThaiMOOC">ThaiMOOC</option>
-                    <option value="ChulaMOOC">ChulaMOOC</option>
-                    <option value="อื่นๆ">อื่นๆ</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">จำนวนหน่วยกิต</label>
-                <select name="custom_credits" class="w-full border border-sky-200 rounded-xl p-3 text-sm bg-sky-50/50 outline-none">
-                    <option value="3">3 หน่วยกิต</option>
-                    <option value="2">2 หน่วยกิต</option>
-                    <option value="1">1 หน่วยกิต</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="space-y-4 pt-2">
-            <label class="block text-xs font-bold text-slate-700 uppercase">แนบไฟล์เกียรติบัตร (อย่างน้อย 1 ไฟล์)</label>
-            <div class="p-4 bg-sky-50/50 rounded-2xl border border-sky-100 space-y-3">
-                <div><span class="text-xs font-bold text-sky-700 block mb-1">เกียรติบัตรใบที่ 1</span><input type="file" name="custom_cert_1" accept="image/*,.pdf" required class="w-full text-xs font-medium file:py-2 file:px-4 file:rounded-lg file:bg-sky-600 file:text-white file:font-bold"></div>
-                <div><span class="text-xs font-bold text-sky-700 block mb-1">เกียรติบัตรใบที่ 2 (ถ้ามี)</span><input type="file" name="custom_cert_2" accept="image/*,.pdf" class="w-full text-xs font-medium file:py-2 file:px-4 file:rounded-lg file:bg-sky-600 file:text-white file:font-bold"></div>
-                <div><span class="text-xs font-bold text-sky-700 block mb-1">เกียรติบัตรใบที่ 3 (ถ้ามี)</span><input type="file" name="custom_cert_3" accept="image/*,.pdf" class="w-full text-xs font-medium file:py-2 file:px-4 file:rounded-lg file:bg-sky-600 file:text-white file:font-bold"></div>
-            </div>
-        </div>
-
-        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl shadow-md text-base transition">
-            <i class="fa-solid fa-paper-plane mr-2"></i> ยื่นคำขอรายวิชาเพิ่มเติมนี้
-        </button>
-    </form>
-
-  <script>
+        </form>
+    </div>
+    """
+    
+    content += """
+    <script>
     const allCoursesData = {courses_json};
-    const courseMap = {{}};
+    const courseMap = {};
     allCoursesData.forEach(c => courseMap[c.code] = c);
 
-    function filterBranch() {{
-        const branch = document.getElementById('branch_selector').value;
-        const stdForm = document.getElementById('standard_form');
-        const customForm = document.getElementById('custom_form');
-        
-        stdForm.classList.add('hidden');
-        customForm.classList.add('hidden');
-
-        if(branch === "IS") {{
-            stdForm.classList.remove('hidden');
-        }} else if(branch === "CUSTOM") {{
-            customForm.classList.remove('hidden');
-        }}
-    }}
-
-    function removeSubjectRow(btn) {{
-        // สำหรับปุ่ม 'ลบ' ในตารางด้านบน
-        const row = btn.closest('tr');
-        if(row) row.remove();
-    }}
-
-    function toggleSelectAll(selectState) {{
-        const checkboxes = document.querySelectorAll('.course-checkbox');
-        checkboxes.forEach(cb => {{
+    function toggleSelectAll(selectState) {
+        const checkboxes = document.querySelectorAll('.course-checkbox:not(:disabled)');
+        checkboxes.forEach(cb => {
             cb.checked = selectState;
-        }});
-    }}
+        });
+    }
 
-    function removeUploadBox(code) {{
-        // สำหรับปุ่ม 'ลบรายการนี้' ในกล่องอัปโหลดด้านล่าง
+    function removeUploadBox(code) {
         const box = document.getElementById('upload-box-' + code);
         if(box) box.remove();
         
-        // เอาติ๊กถูกออกจากตารางด้านบนด้วย
         const checkbox = document.querySelector('input[value="' + code + '"]');
         if(checkbox) checkbox.checked = false;
-    }}
+        
+        // ซ่อนกล่องใหญ่ถ้ารายการถูกลบออกหมด
+        const wrapper = document.getElementById('upload_forms_wrapper');
+        if (wrapper.children.length === 0) {
+            document.getElementById('dynamic_upload_container').classList.add('hidden');
+        }
+    }
 
-    function generateDynamicUploads() {{
+    function generateDynamicUploads() {
         const checkboxes = document.querySelectorAll('.course-checkbox:checked');
         const container = document.getElementById('dynamic_upload_container');
         const wrapper = document.getElementById('upload_forms_wrapper');
         
-        if (checkboxes.length === 0) {{ alert('กรุณาติ๊กเลือกวิชาอย่างน้อย 1 วิชา'); return; }}
+        if (checkboxes.length === 0) { 
+            alert('กรุณาติ๊กเลือกวิชาอย่างน้อย 1 วิชา ก่อนกดสร้างฟอร์มครับ'); 
+            return; 
+        }
 
         wrapper.innerHTML = '';
-        checkboxes.forEach(cb => {{
+        checkboxes.forEach(cb => {
             const code = cb.value;
             const course = courseMap[code];
             if (!course) return;
 
             let fileInputsHtml = '';
-            course.mooc_list.forEach((mooc_name, index) => {{
+            course.mooc_list.forEach((mooc_name, index) => {
                 fileInputsHtml += `
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div class="flex-grow">
-                        <span class="bg-sky-100 text-sky-800 text-[10px] px-2 py-0.5 rounded font-black uppercase mb-1 inline-block">ต้องใช้ใบที่ ${{index + 1}}</span>
-                        <p class="text-sm font-extrabold text-slate-800">${{mooc_name}}</p>
+                        <span class="bg-sky-100 text-sky-800 text-[11px] px-2.5 py-1 rounded-lg font-black uppercase mb-2 inline-block">ใบประกาศที่ ${index + 1}</span>
+                        <p class="text-sm font-bold text-slate-700">${mooc_name}</p>
                     </div>
                     <div class="shrink-0 w-full md:w-auto">
-                        <input type="file" name="cert_file_${{code}}_${{index}}" accept="image/*,.pdf" required 
-                            class="w-full md:w-64 text-xs font-medium file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-sky-600 file:text-white file:font-bold file:cursor-pointer hover:file:bg-sky-700 bg-slate-50 border border-slate-200 p-1 rounded-xl">
+                        <input type="file" name="cert_file_${code}_${index}" accept="image/*,.pdf" required 
+                            class="w-full md:w-72 text-xs font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-sky-600 file:text-white file:font-bold file:cursor-pointer hover:file:bg-sky-700 bg-white border border-slate-200 p-1 rounded-xl">
                     </div>
                 </div>
                 `;
-            }});
+            });
 
             const sectionHtml = `
-                <div class="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm" id="upload-box-${{course.code}}">
-                    <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
-                        <h4 class="font-black text-sky-700 text-lg">${{course.name}} <span class="text-xs font-bold text-slate-400">(${{course.code}})</span></h4>
-                        <div class="flex items-center gap-2">
-                            <span class="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-lg">${{course.credits}} หน่วยกิต</span>
-                            <button type="button" onclick="removeUploadBox('${{course.code}}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-trash"></i> ลบรายการนี้</button>
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm" id="upload-box-${course.code}">
+                    <div class="flex flex-wrap justify-between items-center border-b border-slate-100 pb-4 mb-4 gap-4">
+                        <div>
+                            <h4 class="font-black text-slate-800 text-lg">${course.name}</h4>
+                            <p class="text-sm font-bold text-slate-500 mt-1">รหัส: ${course.code} <span class="mx-2 text-slate-300">|</span> ${course.credits} หน่วยกิต</p>
                         </div>
+                        <button type="button" onclick="removeUploadBox('${course.code}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2"><i class="fa-solid fa-trash"></i> เอาวิชานี้ออก</button>
                     </div>
-                    <div class="space-y-3">${{fileInputsHtml}}</div>
+                    <div class="space-y-3">${fileInputsHtml}</div>
                 </div>
             `;
             wrapper.insertAdjacentHTML('beforeend', sectionHtml);
-        }});
+        });
 
         container.classList.remove('hidden');
-        container.scrollIntoView({{ behavior: 'smooth' }});
-    }}
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     </script>
-    
     """
+    
     return render_layout(content, active_page='submit_credit')
 
 @app.route('/history')
