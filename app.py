@@ -288,7 +288,7 @@ def home():
         return redirect(url_for('login'))
     
     # =============================================================
-    # 1. ฝั่งเจ้าหน้าที่ (Officer / Admin Dashboard - Interactive)
+    # 1. ฝั่งเจ้าหน้าที่ (Officer / Admin Dashboard)
     # =============================================================
     if user.role in ['admin', 'superadmin']:
         try:
@@ -296,11 +296,10 @@ def home():
             pending_count = len(pending_reqs)
             total_students = User.query.filter_by(role='student').count()
             approved_count = CreditRequest.query.filter_by(status='Approved').count()
-            rejected_count = CreditRequest.query.filter_by(status='Rejected').count()
             revision_count = CreditRequest.query.filter_by(status='Needs_Revision').count()
             total_approved_credits = sum(r.credits for r in CreditRequest.query.filter_by(status='Approved').all())
         except Exception:
-            pending_reqs, pending_count, total_students, approved_count, rejected_count, revision_count, total_approved_credits = [], 0, 0, 0, 0, 0, 0
+            pending_reqs, pending_count, total_students, approved_count, revision_count, total_approved_credits = [], 0, 0, 0, 0, 0
 
         # แปลงข้อมูลคำร้องรอตรวจเป็น JSON สำหรับ Quick View Modal
         admin_pending_json = []
@@ -337,21 +336,21 @@ def home():
                         <p class="text-slate-300 text-sm mt-1">ระบบบริหารจัดการธนาคารหน่วยกิต (Credit Bank) สาขาวิชาระบบสารสนเทศ</p>
                     </div>
                     <div class="flex flex-wrap gap-2 shrink-0">
+                        <a href="/admin/export_csv" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-3 rounded-2xl shadow-lg transition text-xs flex items-center gap-2">
+                            <i class="fa-solid fa-file-excel"></i> ออกรายงานประจำเดือน (CSV)
+                        </a>
                         <a href="/admin/requests" class="bg-sky-500 hover:bg-sky-600 text-white font-extrabold px-5 py-3 rounded-2xl shadow-lg transition text-xs flex items-center gap-2">
                             <i class="fa-solid fa-file-signature"></i> ตรวจสอบคำร้อง ({pending_count})
-                        </a>
-                        <a href="/admin/students" class="bg-white/10 hover:bg-white/20 text-white font-bold px-5 py-3 rounded-2xl backdrop-blur-md transition text-xs flex items-center gap-2">
-                            <i class="fa-solid fa-users"></i> รายชื่อนักศึกษา
                         </a>
                     </div>
                 </div>
                 <div class="absolute -right-10 -bottom-10 w-56 h-56 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
             </div>
 
-            <!-- การ์ดสถิติตัวเลขใหญ่ 4 ช่อง -->
+            <!-- การ์ดสถิติตัวเลขใหญ่ 4 ช่อง (คลิกเปิดดูข้อมูลได้ทุกใบ) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- คำร้องรอตรวจสอบ -->
-                <a href="/admin/requests" class="group bg-white p-6 rounded-3xl border border-amber-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <a href="/admin/requests?status=Pending" class="group bg-white p-6 rounded-3xl border border-amber-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-3">
                         <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-clock-rotate-left"></i>
@@ -377,35 +376,34 @@ def home():
                     <p class="text-xs font-bold text-sky-700 mt-1">นักศึกษาในระบบทั้งหมด <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
                 </a>
 
-                <!-- อนุมัติสำเร็จ -->
-                <div class="bg-white p-6 rounded-3xl border border-emerald-100 shadow-sm">
+                <!-- อนุมัติสำเร็จ (คลิกไปดูรายการที่อนุมัติแล้วได้) -->
+                <a href="/admin/requests?status=Approved" class="group bg-white p-6 rounded-3xl border border-emerald-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-3">
-                        <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-xl font-black">
+                        <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-circle-check"></i>
                         </div>
-                        <span class="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg">Approved</span>
+                        <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:text-emerald-500 transition-colors"></i>
                     </div>
                     <p class="text-3xl font-black text-slate-800">{approved_count}</p>
-                    <p class="text-xs font-bold text-emerald-700 mt-1">รายการที่อนุมัติแล้ว</p>
-                </div>
+                    <p class="text-xs font-bold text-emerald-700 mt-1">รายการที่อนุมัติแล้ว <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                </a>
 
-                <!-- หน่วยกิตอนุมัติรวม -->
-                <div class="bg-white p-6 rounded-3xl border border-indigo-100 shadow-sm">
+                <!-- หน่วยกิตอนุมัติรวม (คลิกไปดูหน้ารายการอนุมัติ) -->
+                <a href="/admin/requests?status=Approved" class="group bg-white p-6 rounded-3xl border border-indigo-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-3">
-                        <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-xl font-black">
+                        <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-award"></i>
                         </div>
-                        <span class="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-1 rounded-lg">Total Credits</span>
+                        <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
                     </div>
                     <p class="text-3xl font-black text-slate-800">{total_approved_credits}</p>
-                    <p class="text-xs font-bold text-indigo-700 mt-1">หน่วยกิตสะสมรวมทั้งสาขา</p>
-                </div>
+                    <p class="text-xs font-bold text-indigo-700 mt-1">หน่วยกิตสะสมรวมทั้งสาขา <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                </a>
             </div>
 
             <!-- กราฟ Bar Chart + รายการคำร้องรอตรวจเร่งด่วน -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                
-                <!-- กราฟแสดงสถิติคำร้อง -->
+                <!-- กราฟแสดงสถิติคำร้อง (ไม่มีคำว่าไม่อนุมัติ) -->
                 <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
                     <h3 class="text-base font-black text-slate-800 mb-1">ภาพรวมสถานะคำร้องเทียบโอน</h3>
                     <p class="text-xs text-slate-400 mb-6">จำแนกตามขั้นตอนการพิจารณา</p>
@@ -414,7 +412,7 @@ def home():
                     </div>
                 </div>
 
-                <!-- รายการคำร้องรอตรวจสอบเร่งด่วน (พร้อมปุ่มดูด่วน) -->
+                <!-- รายการคำร้องรอตรวจสอบเร่งด่วน -->
                 <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
                     <div class="flex justify-between items-center border-b border-slate-100 pb-4">
                         <div>
@@ -439,11 +437,10 @@ def home():
                         </table>
                     </div>
                 </div>
-
             </div>
         </div>
 
-        <!-- 🔍 Admin Quick Review Modal (พรีวิวดูหลักฐานด่วน) -->
+        <!-- 🔍 Admin Quick Review Modal -->
         <div id="adminQuickModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity">
             <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-6 relative border border-slate-100">
                 <button onclick="closeAdminQuickModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
@@ -554,11 +551,11 @@ def home():
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: ['รอตรวจ', 'อนุมัติแล้ว', 'ส่งแก้ไข', 'ไม่อนุมัติ'],
+                        labels: ['รอตรวจสอบ', 'อนุมัติแล้ว', 'ส่งกลับให้แก้ไข'],
                         datasets: [{
                             label: 'จำนวนคำร้อง',
-                            data: [__PENDING__, __APPROVED__, __REVISION__, __REJECTED__],
-                            backgroundColor: ['#f59e0b', '#10b981', '#6366f1', '#f43f5e'],
+                            data: [__PENDING__, __APPROVED__, __REVISION__],
+                            backgroundColor: ['#f59e0b', '#10b981', '#6366f1'],
                             borderRadius: 12
                         }]
                     },
@@ -577,8 +574,7 @@ def home():
         js_code = js_template.replace('__ADMIN_PENDING_JSON__', admin_pending_json_str)\
                              .replace('__PENDING__', str(pending_count))\
                              .replace('__APPROVED__', str(approved_count))\
-                             .replace('__REVISION__', str(revision_count))\
-                             .replace('__REJECTED__', str(rejected_count))
+                             .replace('__REVISION__', str(revision_count))
 
         admin_content = html_part + js_code
         return render_layout(admin_content, active_page='home')
@@ -594,8 +590,7 @@ def home():
     pending_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Pending')
     approved_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Approved')
     revision_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Needs_Revision')
-    rejected_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Rejected')
-    need_edit_count = revision_count + rejected_count
+    need_edit_count = revision_count
 
     approved_credits = sum(getattr(r, 'credits', 0) for r in user_requests if getattr(r, 'status', '') == 'Approved')
     target_credits = 120
@@ -635,9 +630,8 @@ def home():
             <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
         </div>
 
-        <!-- Section: สรุปความก้าวหน้าหน่วยกิต & การ์ดสถิติแบบคลิกกรองข้อมูลได้ -->
+        <!-- Section: สรุปความก้าวหน้าหน่วยกิต & การ์ดสถิติ -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- การ์ด Progress หลอดความก้าวหน้าสะสมหน่วยกิต -->
             <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
                 <div>
                     <div class="flex justify-between items-center mb-3">
@@ -661,7 +655,6 @@ def home():
                 </div>
             </div>
 
-            <!-- การ์ดสถิติสถานะ -->
             <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div onclick="filterByStatus('Pending')" class="cursor-pointer group bg-white hover:bg-amber-50/50 p-6 rounded-3xl border border-amber-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-4">
@@ -688,15 +681,15 @@ def home():
                     <p class="text-xs font-bold text-emerald-700 mt-1">อนุมัติเรียบร้อย <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
                 </div>
 
-                <div onclick="filterByStatus('Need_Edit')" class="cursor-pointer group bg-white hover:bg-rose-50/50 p-6 rounded-3xl border border-rose-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <div onclick="filterByStatus('Need_Edit')" class="cursor-pointer group bg-white hover:bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-4">
-                        <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-pen-to-square"></i>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:text-rose-500 transition-colors"></i>
+                        <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
                     </div>
                     <p class="text-2xl font-black text-slate-800">{need_edit_count}</p>
-                    <p class="text-xs font-bold text-rose-700 mt-1">ต้องแก้ไขหลักฐาน <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                    <p class="text-xs font-bold text-indigo-700 mt-1">ต้องแก้ไขหลักฐาน <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
                 </div>
             </div>
         </div>
@@ -810,7 +803,7 @@ def home():
             } else if (item.status === 'Approved') {
                 badgeHtml = `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-[10px]"></i> อนุมัติแล้ว</span>`;
             } else {
-                badgeHtml = `<span class="bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> ให้แก้ไข</span>`;
+                badgeHtml = `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"><i class="fa-solid fa-pen-to-square text-[10px]"></i> ให้แก้ไข</span>`;
             }
 
             const tr = document.createElement('tr');
@@ -871,8 +864,8 @@ def home():
             reasonBox.classList.add('hidden');
             actionBtn.classList.add('hidden');
         } else {
-            badgeContainer.innerHTML = `<span class="bg-rose-100 text-rose-800 text-xs font-extrabold px-3 py-1.5 rounded-xl">⚠️ เจ้าหน้าที่ปฏิเสธ / ให้แก้ไขหลักฐาน</span>`;
-            reasonBox.innerText = 'เหตุผลที่ต้องแก้ไข: ' + (item.reject_reason || '-');
+            badgeContainer.innerHTML = `<span class="bg-indigo-100 text-indigo-800 text-xs font-extrabold px-3 py-1.5 rounded-xl">⚠️ ให้แก้ไขหลักฐานเพิ่มเติม</span>`;
+            reasonBox.innerText = 'รายละเอียดการแก้ไข: ' + (item.reject_reason || '-');
             reasonBox.classList.remove('hidden');
             actionBtn.href = '/student/edit_request/' + item.id;
             actionBtn.classList.remove('hidden');
@@ -909,7 +902,7 @@ def home():
                     labels: ['รอดำเนินการ', 'อนุมัติแล้ว', 'ต้องแก้ไข'],
                     datasets: [{
                         data: [pendingCount, approvedCount, needEditCount],
-                        backgroundColor: ['#f59e0b', '#10b981', '#f43f5e'],
+                        backgroundColor: ['#f59e0b', '#10b981', '#6366f1'],
                         borderWidth: 0,
                         hoverOffset: 6
                     }]
@@ -1044,7 +1037,7 @@ def all_courses():
     try:
         approved_reqs = CreditRequest.query.filter_by(user_id=session['user_id'], status='Approved').all()
         approved_courses = [r.course_name for r in approved_reqs]
-    except: approved_courses = []
+    except Exception: approved_courses = []
 
     rows = ""
     for idx, c in enumerate(course_data, 1):
@@ -1054,8 +1047,11 @@ def all_courses():
 
         prov_badge = f'<span class="px-2 py-0.5 rounded text-[10px] font-bold {"bg-sky-100 text-sky-700" if c["provider"] == "ThaiMOOC" else "bg-amber-100 text-amber-700"} border border-slate-100">{c["provider"]}</span>'
         
-        if c['name'] in approved_courses: btn = '<span class="text-[10px] font-bold text-emerald-600"><i class="fa-solid fa-check mr-1"></i>โอนแล้ว</span>'
-        else: btn = f'<a href="/submit_credit?selected_courses={c["code"]}" class="text-[11px] font-bold bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-sky-600 transition shadow-sm whitespace-nowrap">เลือกเทียบโอน</a>'
+        # ปรับปรุง: ถ้าอนุมัติแล้วโชว์ป้ายเขียว ถ้ายังไม่ผ่านให้โชว์เครื่องหมายขีด - (ไม่มีปุ่มเลือกเทียบโอน)
+        if c['name'] in approved_courses: 
+            status_display = '<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1"><i class="fa-solid fa-circle-check text-emerald-500"></i> เทียบโอนเรียบร้อย</span>'
+        else: 
+            status_display = '<span class="text-slate-400 font-medium text-xs">-</span>'
 
         rows += f"""
         <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs align-top">
@@ -1066,7 +1062,7 @@ def all_courses():
             <td class="py-3 px-4 font-medium text-slate-600"><div class="space-y-1">{mooc_items}</div></td>
             <td class="py-3 px-4 font-black text-sky-700 whitespace-nowrap">{c['total_hours']}</td>
             <td class="py-3 px-4 text-center font-black text-slate-800">{c['credits']}</td>
-            <td class="py-3 px-4 text-center">{btn if session.get('role') not in ['admin', 'superadmin'] else '-'}</td>
+            <td class="py-3 px-4 text-center">{status_display}</td>
         </tr>
         """
 
@@ -1076,14 +1072,14 @@ def all_courses():
             <h2 class="text-2xl font-black text-slate-900">หลักสูตรทั้งหมด <span class="text-sm font-bold text-sky-600 bg-sky-50 px-3 py-1 rounded-xl border border-sky-100 ml-2">รวมทั้งสิ้น {total_courses_count} รายวิชา</span></h2>
             <p class="text-slate-500 text-sm font-medium mt-1">แสดงรายวิชาทั้งหมดที่รองรับการเทียบโอนในระบบธนาคารหน่วยกิต</p>
         </div>
-        <a href="/available_courses" class="text-xs font-bold bg-white border border-sky-200 text-sky-600 px-4 py-2 rounded-xl hover:bg-sky-50 shadow-sm"><i class="fa-solid fa-magnifying-glass mr-1"></i> กลับไปหน้าค้นหา (Grid)</a>
+        <a href="/available_courses" class="text-xs font-bold bg-white border border-sky-200 text-sky-600 px-4 py-2 rounded-xl hover:bg-sky-50 shadow-sm"><i class="fa-solid fa-magnifying-glass mr-1"></i> ค้นหารายวิชา (Grid)</a>
     </div>
 
     <div class="bg-white rounded-3xl border border-sky-100 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left min-w-[950px]">
                 <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-black text-slate-500 uppercase tracking-wider">
-                    <tr><th class="py-4 px-4 w-10">#</th><th class="py-4 px-4">รหัสวิชา</th><th class="py-4 px-4">ชื่อวิชาหลักสูตร IS</th><th class="py-4 px-4">ระบบ</th><th class="py-4 px-4">ใบเกียรติบัตรย่อยที่ต้องใช้</th><th class="py-4 px-4">รวมชั่วโมง</th><th class="py-4 px-4 text-center">หน่วยกิต</th><th class="py-4 px-4 text-center">จัดการ</th></tr>
+                    <tr><th class="py-4 px-4 w-10">#</th><th class="py-4 px-4">รหัสวิชา</th><th class="py-4 px-4">ชื่อวิชาหลักสูตร IS</th><th class="py-4 px-4">ระบบ</th><th class="py-4 px-4">ใบเกียรติบัตรย่อยที่ต้องใช้</th><th class="py-4 px-4">รวมชั่วโมง</th><th class="py-4 px-4 text-center">หน่วยกิต</th><th class="py-4 px-4 text-center">สถานะ</th></tr>
                 </thead>
                 <tbody>{rows}</tbody>
             </table>
@@ -1121,12 +1117,11 @@ def submit_credit():
                             doc_imgs.append(filename)
                 
                 if doc_imgs:
-                    # สร้างวัตถุ CreditRequest ให้ตรงกับคลาสในภาพ
                     new_req = CreditRequest(
                         user_id=user.id,
-                        course_name=c_info['name'],   # ใช้ course_name (ไม่ส่ง course_code)
+                        course_name=c_info['name'],
                         credits=c_info['credits'],
-                        institution="ThaiMOOC",      # กำหนดค่าป้องกัน nullable=False
+                        institution="ThaiMOOC",
                         doc_img=doc_imgs[0] if len(doc_imgs) > 0 else None,
                         doc_img2=doc_imgs[1] if len(doc_imgs) > 1 else None,
                         doc_img3=doc_imgs[2] if len(doc_imgs) > 2 else None,
@@ -1138,7 +1133,9 @@ def submit_credit():
         flash('ยื่นคำขอเทียบโอนเรียบร้อยแล้ว', 'success')
         return redirect(url_for('history'))
 
-    # GET Request: ดึงข้อมูลวิชาและสร้างตาราง
+    # GET Request: เช็กว่ามีส่ง selected_courses มาใน URL หรือไม่
+    selected_from_url = request.args.get('selected_courses', '').strip()
+
     courses_data = get_courses()
     user_requests = CreditRequest.query.filter_by(user_id=session['user_id']).all()
     submitted_course_names = [r.course_name for r in user_requests]
@@ -1149,7 +1146,8 @@ def submit_credit():
         if already:
             cb_html = '<span class="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-lg font-bold inline-block">ยื่นแล้ว</span>'
         else:
-            cb_html = f'<input type="checkbox" name="selected_courses" value="{c["code"]}" class="course-checkbox w-4 h-4 text-sky-600 rounded cursor-pointer">'
+            is_checked = 'checked' if c['code'] == selected_from_url else ''
+            cb_html = f'<input type="checkbox" name="selected_courses" value="{c["code"]}" {is_checked} class="course-checkbox w-4 h-4 text-sky-600 rounded cursor-pointer">'
 
         moocs_html = "<br>".join([f'<span class="text-slate-600">• {m}</span>' for m in c['mooc_list']])
         
@@ -1166,7 +1164,6 @@ def submit_credit():
 
     html_part = f"""
     <div class="max-w-5xl mx-auto space-y-6">
-        <!-- ส่วนหัว -->
         <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h2 class="text-3xl font-black text-slate-800 mb-2">ยื่นคำขอเทียบโอน</h2>
@@ -1178,7 +1175,6 @@ def submit_credit():
             </div>
         </div>
 
-        <!-- ตารางรายวิชาหลักสูตร -->
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left">
@@ -1196,7 +1192,6 @@ def submit_credit():
                 </table>
             </div>
             
-            <!-- ปุ่มกดสร้างฟอร์ม -->
             <div class="p-6 bg-slate-50 border-t border-slate-100 text-center md:text-right">
                 <button type="button" onclick="generateDynamicUploads()" class="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 px-8 rounded-2xl shadow-md transition">
                     สร้างฟอร์มอัปโหลดหลักฐาน <i class="fa-solid fa-arrow-down ml-2"></i>
@@ -1204,7 +1199,6 @@ def submit_credit():
             </div>
         </div>
 
-        <!-- ส่วนฟอร์มอัปโหลดหลักฐานแบบไดนามิก -->
         <form method="POST" enctype="multipart/form-data" id="dynamic_upload_container" class="hidden space-y-6 mt-8">
             <div class="bg-white p-8 rounded-3xl shadow-sm border border-sky-100">
                 <div class="flex items-center gap-3 border-b border-slate-100 pb-5 mb-6">
@@ -1301,6 +1295,14 @@ def submit_credit():
         container.classList.remove('hidden');
         container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+
+    // ทำงานอัตโนมัติเมื่อกดมาจากหน้าค้นหารายวิชา
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('selected_courses')) {
+            generateDynamicUploads();
+        }
+    });
     </script>
     """
 
@@ -1510,8 +1512,16 @@ def credits():
 @app.route('/admin/requests')
 def admin_requests():
     if session.get('role') not in ['admin', 'superadmin']: return redirect(url_for('login'))
-    try: all_requests = CreditRequest.query.order_by(CreditRequest.id.desc()).all()
-    except: all_requests = []
+    
+    status_filter = request.args.get('status', '').strip()
+    
+    try:
+        query = CreditRequest.query
+        if status_filter:
+            query = query.filter_by(status=status_filter)
+        all_requests = query.order_by(CreditRequest.id.desc()).all()
+    except Exception: 
+        all_requests = []
 
     rows = ""
     for r in all_requests:
@@ -1522,12 +1532,9 @@ def admin_requests():
         elif status_val == 'Approved':
             status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">อนุมัติแล้ว</span>'
             action_col = f'<a href="/admin/review/{r.id}" class="text-xs font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-xl border border-sky-200">ดูรายละเอียด</a>'
-        elif status_val == 'Needs_Revision':
+        else:
             status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">ส่งกลับให้แก้</span>'
             action_col = f'<a href="/admin/review/{r.id}" class="text-xs font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-xl border border-sky-200">ตรวจสอบการแก้ไข</a>'
-        else:
-            status_badge = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800">ไม่อนุมัติ</span>'
-            action_col = f'<a href="/admin/review/{r.id}" class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">ดูรายละเอียด</a>'
 
         student_name = r.user.fullname if getattr(r, 'user', None) else '-'
         student_code = r.user.member_id if getattr(r, 'user', None) else '-'
@@ -1542,14 +1549,31 @@ def admin_requests():
             <td class="py-4 px-4">{action_col}</td>
         </tr>
         """
+        
+    filter_label = "ทั้งหมด"
+    if status_filter == 'Approved': filter_label = "อนุมัติแล้ว"
+    elif status_filter == 'Pending': filter_label = "รอดำเนินการ"
+    elif status_filter == 'Needs_Revision': filter_label = "ส่งกลับให้แก้ไข"
+
     content = f"""
-    <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
-        <h3 class="text-xl font-black text-slate-900 mb-6">รายการคำร้องเทียบโอนทั้งหมด (สาขาวิชาระบบสารสนเทศ)</h3>
+    <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto space-y-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h3 class="text-xl font-black text-slate-900">รายการคำร้องเทียบโอนทั้งหมด (สาขาวิชาระบบสารสนเทศ)</h3>
+                <p class="text-xs text-slate-400 mt-1">กำลังแสดงหมวด: <span class="font-bold text-sky-600">{filter_label}</span></p>
+            </div>
+            <div class="flex flex-wrap gap-2 text-xs font-bold">
+                <a href="/admin/requests" class="px-3 py-2 rounded-xl border {'bg-slate-900 text-white' if not status_filter else 'bg-slate-50 text-slate-600'}">ทั้งหมด</a>
+                <a href="/admin/requests?status=Pending" class="px-3 py-2 rounded-xl border {'bg-amber-500 text-white' if status_filter=='Pending' else 'bg-amber-50 text-amber-700 border-amber-200'}">รอดำเนินการ</a>
+                <a href="/admin/requests?status=Approved" class="px-3 py-2 rounded-xl border {'bg-emerald-600 text-white' if status_filter=='Approved' else 'bg-emerald-50 text-emerald-700 border-emerald-200'}">อนุมัติแล้ว</a>
+            </div>
+        </div>
+        
         <table class="w-full text-left min-w-[650px]">
             <thead class="bg-sky-50 border-b border-sky-100 text-xs font-bold text-sky-700 uppercase tracking-wider">
                 <tr><th class="py-3 px-4">รหัสคำร้อง</th><th class="py-3 px-4">ชื่อนักศึกษา</th><th class="py-3 px-4">วิชาที่ขอเทียบโอน</th><th class="py-3 px-4">วันที่ยื่น</th><th class="py-3 px-4">สถานะ</th><th class="py-3 px-4">จัดการ</th></tr>
             </thead>
-            <tbody>{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีคำร้องในระบบ</td></tr>'}</tbody>
+            <tbody>{rows if rows else '<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่มีคำร้องในรายการนี้</td></tr>'}</tbody>
         </table>
     </div>
     """
@@ -1958,3 +1982,50 @@ def secret_clear_all_requests():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+from flask import Response
+
+@app.route('/admin/export_csv')
+def admin_export_csv():
+    if session.get('role') not in ['admin', 'superadmin']:
+        return redirect(url_for('login'))
+    
+    # ดึงข้อมูลคำร้องทั้งหมด
+    requests = CreditRequest.query.order_by(CreditRequest.id.desc()).all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # เขียน Header รายงาน
+    writer.writerow(['รหัสคำร้อง', 'รหัสนักศึกษา', 'ชื่อ-นามสกุล', 'วิชาที่ขอเทียบโอน', 'หน่วยกิต', 'วันที่ยื่น', 'สถานะ', 'ผู้อนุมัติ'])
+    
+    status_map = {
+        'Pending': 'รอดำเนินการ',
+        'Approved': 'อนุมัติแล้ว',
+        'Needs_Revision': 'ส่งกลับให้แก้ไข'
+    }
+
+    for r in requests:
+        student_name = r.user.fullname if getattr(r, 'user', None) else '-'
+        student_code = r.user.member_id if getattr(r, 'user', None) else '-'
+        st_text = status_map.get(r.status, 'รอดำเนินการ')
+        
+        writer.writerow([
+            getattr(r, 'req_code', '-'),
+            student_code,
+            student_name,
+            getattr(r, 'course_name', '-'),
+            getattr(r, 'credits', 0),
+            getattr(r, 'date_submitted', '-'),
+            st_text,
+            getattr(r, 'approved_by', '-') or '-'
+        ])
+    
+    # ใส่ BOM (\ufeff) เพื่อให้ Excel เปิดภาษาไทยได้ถูกต้อง ไม่เป็นต่างดาว
+    csv_data = "\ufeff" + output.getvalue()
+    
+    return Response(
+        csv_data,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-disposition": f"attachment; filename=Credit_Bank_Report_{datetime.now().strftime('%Y%m')}.csv"}
+    )
