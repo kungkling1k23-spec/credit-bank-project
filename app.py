@@ -299,9 +299,9 @@ def home():
                             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                             ระบบธนาคารหน่วยกิตดิจิทัล (Credit Bank System)
                         </div>
-                        <h1 class="text-3xl sm:text-5xl font-black leading-tight tracking-tight">
-                            สะสมหน่วยกิตง่ายๆ <br>
-                            <span class="bg-gradient-to-r from-sky-300 via-indigo-200 to-emerald-300 bg-clip-text text-transparent">เชื่อมโลกการเรียนรู้สู่อนาคต</span>
+                        <h1 class="text-3xl sm:text-5xl font-black leading-relaxed tracking-tight">
+                            สะสมหน่วยกิตง่ายๆ
+                            <span class="block mt-2 bg-gradient-to-r from-sky-300 via-indigo-200 to-emerald-300 bg-clip-text text-transparent">เชื่อมโลกการเรียนรู้สู่อนาคต</span>
                         </h1>
                         <p class="text-slate-300 text-sm sm:text-base leading-relaxed font-medium">
                             สาขาวิชาระบบสารสนเทศ มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก (RMUTTO) <br>
