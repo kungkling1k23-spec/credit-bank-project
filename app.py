@@ -288,38 +288,76 @@ def home():
         return redirect(url_for('login'))
     
     # =============================================================
-    # 1. ฝั่งเจ้าหน้าที่ (Officer / Admin Dashboard)
+    # 1. ฝั่งเจ้าหน้าที่ (Officer / Admin Dashboard - Click for Summary Modal)
     # =============================================================
     if user.role in ['admin', 'superadmin']:
         try:
             pending_reqs = CreditRequest.query.filter_by(status='Pending').order_by(CreditRequest.id.asc()).all()
             pending_count = len(pending_reqs)
-            total_students = User.query.filter_by(role='student').count()
-            approved_count = CreditRequest.query.filter_by(status='Approved').count()
+            
+            students = User.query.filter_by(role='student').order_by(User.id.desc()).all()
+            total_students = len(students)
+            
+            approved_reqs = CreditRequest.query.filter_by(status='Approved').order_by(CreditRequest.id.desc()).all()
+            approved_count = len(approved_reqs)
+            
             revision_count = CreditRequest.query.filter_by(status='Needs_Revision').count()
-            total_approved_credits = sum(r.credits for r in CreditRequest.query.filter_by(status='Approved').all())
+            total_approved_credits = sum(r.credits for r in approved_reqs)
         except Exception:
-            pending_reqs, pending_count, total_students, approved_count, revision_count, total_approved_credits = [], 0, 0, 0, 0, 0
+            pending_reqs, pending_count, students, total_students, approved_reqs, approved_count, revision_count, total_approved_credits = [], 0, [], 0, [], 0, 0, 0
 
-        # แปลงข้อมูลคำร้องรอตรวจเป็น JSON สำหรับ Quick View Modal
-        admin_pending_json = []
-        for r in pending_reqs:
-            student_name = r.user.fullname if getattr(r, 'user', None) else '-'
-            student_code = r.user.member_id if getattr(r, 'user', None) else '-'
-            admin_pending_json.append({
-                'id': r.id,
-                'req_code': getattr(r, 'req_code', 'TR001'),
-                'course_name': getattr(r, 'course_name', '-'),
-                'credits': getattr(r, 'credits', 0),
-                'student_name': student_name,
-                'student_code': student_code,
-                'institution': getattr(r, 'institution', 'ThaiMOOC'),
-                'date_submitted': getattr(r, 'date_submitted', '-'),
-                'doc_img': getattr(r, 'doc_img', None),
-                'doc_img2': getattr(r, 'doc_img2', None),
-                'doc_img3': getattr(r, 'doc_img3', None)
+        # 1. เตรียมข้อมูล JSON สำหรับแต่ละหัวข้อ
+        pending_list = [{
+            'id': r.id,
+            'req_code': getattr(r, 'req_code', 'TR001'),
+            'student_name': r.user.fullname if getattr(r, 'user', None) else '-',
+            'student_code': r.user.member_id if getattr(r, 'user', None) else '-',
+            'course_name': getattr(r, 'course_name', '-'),
+            'credits': getattr(r, 'credits', 0),
+            'date': getattr(r, 'date_submitted', '-')
+        } for r in pending_reqs]
+
+        students_list = []
+        for s in students:
+            app_credits = sum(r.credits for r in CreditRequest.query.filter_by(user_id=s.id, status='Approved').all())
+            students_list.append({
+                'member_id': s.member_id or '-',
+                'fullname': s.fullname,
+                'phone': s.phone or '-',
+                'email': s.email or '-',
+                'credits': app_credits
             })
-        admin_pending_json_str = json.dumps(admin_pending_json, ensure_ascii=False)
+
+        approved_list = [{
+            'req_code': getattr(r, 'req_code', 'TR001'),
+            'student_name': r.user.fullname if getattr(r, 'user', None) else '-',
+            'course_name': getattr(r, 'course_name', '-'),
+            'credits': getattr(r, 'credits', 0),
+            'approved_by': getattr(r, 'approved_by', 'เจ้าหน้าที่') or 'เจ้าหน้าที่',
+            'date': getattr(r, 'date_submitted', '-')
+        } for r in approved_reqs]
+
+        from collections import defaultdict
+        course_map = defaultdict(lambda: {'count': 0, 'total_credits': 0, 'unit_credits': 0})
+        for r in approved_reqs:
+            c_name = r.course_name
+            course_map[c_name]['count'] += 1
+            course_map[c_name]['total_credits'] += r.credits
+            course_map[c_name]['unit_credits'] = r.credits
+
+        credits_summary_list = [{
+            'course_name': name,
+            'unit_credits': data['unit_credits'],
+            'approved_count': data['count'],
+            'total_credits': data['total_credits']
+        } for name, data in course_map.items()]
+
+        admin_summary_json = json.dumps({
+            'pending': pending_list,
+            'students': students_list,
+            'approved': approved_list,
+            'credits': credits_summary_list
+        }, ensure_ascii=False)
 
         html_part = f"""
         <div class="max-w-6xl mx-auto space-y-8">
@@ -340,17 +378,17 @@ def home():
                             <i class="fa-solid fa-file-excel"></i> ออกรายงานประจำเดือน (CSV)
                         </a>
                         <a href="/admin/requests" class="bg-sky-500 hover:bg-sky-600 text-white font-extrabold px-5 py-3 rounded-2xl shadow-lg transition text-xs flex items-center gap-2">
-                            <i class="fa-solid fa-file-signature"></i> ตรวจสอบคำร้อง ({pending_count})
+                            <i class="fa-solid fa-file-signature"></i> ตรวจสอบคำร้องทั้งหมด ({pending_count})
                         </a>
                     </div>
                 </div>
                 <div class="absolute -right-10 -bottom-10 w-56 h-56 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
             </div>
 
-            <!-- การ์ดสถิติตัวเลขใหญ่ 4 ช่อง (คลิกเปิดดูข้อมูลได้ทุกใบ) -->
+            <!-- การ์ดสถิติตัวเลขใหญ่ 4 ช่อง (คลิกแล้วขึ้น Pop-up สรุปข้อมูลทันที ไม่เปลี่ยนหน้า) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- คำร้องรอตรวจสอบ -->
-                <a href="/admin/requests?status=Pending" class="group bg-white p-6 rounded-3xl border border-amber-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <!-- 1. คำร้องรอตรวจสอบ -->
+                <div onclick="openStatSummaryModal('pending')" class="cursor-pointer group bg-white p-6 rounded-3xl border border-amber-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-3">
                         <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-clock-rotate-left"></i>
@@ -361,49 +399,48 @@ def home():
                         </span>
                     </div>
                     <p class="text-3xl font-black text-slate-800">{pending_count}</p>
-                    <p class="text-xs font-bold text-amber-700 mt-1">คำร้องรอตรวจสอบด่วน <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
-                </a>
+                    <p class="text-xs font-bold text-amber-700 mt-1">คำร้องรอตรวจสอบด่วน <i class="fa-solid fa-magnifying-glass-plus text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                </div>
 
-                <!-- นักศึกษาในระบบ -->
-                <a href="/admin/students" class="group bg-white p-6 rounded-3xl border border-sky-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <!-- 2. นักศึกษาในระบบ -->
+                <div onclick="openStatSummaryModal('students')" class="cursor-pointer group bg-white p-6 rounded-3xl border border-sky-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-3">
                         <div class="w-12 h-12 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-users"></i>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:text-sky-500 transition-colors"></i>
+                        <i class="fa-solid fa-ellipsis text-xs text-slate-300 group-hover:text-sky-500 transition-colors"></i>
                     </div>
                     <p class="text-3xl font-black text-slate-800">{total_students}</p>
-                    <p class="text-xs font-bold text-sky-700 mt-1">นักศึกษาในระบบทั้งหมด <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
-                </a>
+                    <p class="text-xs font-bold text-sky-700 mt-1">นักศึกษาในระบบทั้งหมด <i class="fa-solid fa-magnifying-glass-plus text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                </div>
 
-                <!-- อนุมัติสำเร็จ (คลิกไปดูรายการที่อนุมัติแล้วได้) -->
-                <a href="/admin/requests?status=Approved" class="group bg-white p-6 rounded-3xl border border-emerald-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <!-- 3. อนุมัติสำเร็จ -->
+                <div onclick="openStatSummaryModal('approved')" class="cursor-pointer group bg-white p-6 rounded-3xl border border-emerald-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-3">
                         <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-circle-check"></i>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:text-emerald-500 transition-colors"></i>
+                        <i class="fa-solid fa-ellipsis text-xs text-slate-300 group-hover:text-emerald-500 transition-colors"></i>
                     </div>
                     <p class="text-3xl font-black text-slate-800">{approved_count}</p>
-                    <p class="text-xs font-bold text-emerald-700 mt-1">รายการที่อนุมัติแล้ว <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
-                </a>
+                    <p class="text-xs font-bold text-emerald-700 mt-1">รายการที่อนุมัติแล้ว <i class="fa-solid fa-magnifying-glass-plus text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                </div>
 
-                <!-- หน่วยกิตอนุมัติรวม (คลิกไปดูหน้ารายการอนุมัติ) -->
-                <a href="/admin/requests?status=Approved" class="group bg-white p-6 rounded-3xl border border-indigo-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <!-- 4. หน่วยกิตอนุมัติรวม -->
+                <div onclick="openStatSummaryModal('credits')" class="cursor-pointer group bg-white p-6 rounded-3xl border border-indigo-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-3">
                         <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-award"></i>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
+                        <i class="fa-solid fa-ellipsis text-xs text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
                     </div>
                     <p class="text-3xl font-black text-slate-800">{total_approved_credits}</p>
-                    <p class="text-xs font-bold text-indigo-700 mt-1">หน่วยกิตสะสมรวมทั้งสาขา <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
-                </a>
+                    <p class="text-xs font-bold text-indigo-700 mt-1">หน่วยกิตสะสมรวมทั้งสาขา <i class="fa-solid fa-magnifying-glass-plus text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                </div>
             </div>
 
             <!-- กราฟ Bar Chart + รายการคำร้องรอตรวจเร่งด่วน -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                <!-- กราฟแสดงสถิติคำร้อง (ไม่มีคำว่าไม่อนุมัติ) -->
                 <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
                     <h3 class="text-base font-black text-slate-800 mb-1">ภาพรวมสถานะคำร้องเทียบโอน</h3>
                     <p class="text-xs text-slate-400 mb-6">จำแนกตามขั้นตอนการพิจารณา</p>
@@ -412,7 +449,6 @@ def home():
                     </div>
                 </div>
 
-                <!-- รายการคำร้องรอตรวจสอบเร่งด่วน -->
                 <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
                     <div class="flex justify-between items-center border-b border-slate-100 pb-4">
                         <div>
@@ -440,37 +476,33 @@ def home():
             </div>
         </div>
 
-        <!-- 🔍 Admin Quick Review Modal -->
-        <div id="adminQuickModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity">
-            <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-6 relative border border-slate-100">
-                <button onclick="closeAdminQuickModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-
-                <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
-                    <div class="p-3 bg-amber-100 text-amber-600 rounded-2xl"><i class="fa-solid fa-file-circle-exclamation text-xl"></i></div>
-                    <div>
-                        <h3 class="text-lg font-black text-slate-800" id="admin_modal_course_name">-</h3>
-                        <p class="text-xs font-bold text-slate-500" id="admin_modal_student_info">-</p>
+        <!-- 📊 Pop-up Modal สรุปข้อมูลแยกตามหัวข้อการ์ด (Stat Summary Modal) -->
+        <div id="statSummaryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity">
+            <div class="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl space-y-6 relative border border-slate-100 max-h-[85vh] flex flex-col">
+                
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center border-b border-slate-100 pb-4 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div id="modal_header_icon" class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-black bg-sky-100 text-sky-600">
+                            <i class="fa-solid fa-list"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800" id="modal_summary_title">สรุปข้อมูล</h3>
+                            <p class="text-xs font-bold text-slate-400" id="modal_summary_subtitle">รายละเอียดการ์ดสรุปสถิติ</p>
+                        </div>
                     </div>
+                    <button onclick="closeStatSummaryModal()" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
 
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs space-y-1">
-                    <p class="font-bold text-slate-700">รหัสคำร้อง: <span id="admin_modal_req_code" class="text-sky-600 font-mono"></span></p>
-                    <p class="font-bold text-slate-700">หน่วยกิตวิชา: <span id="admin_modal_credits" class="text-slate-900"></span></p>
-                    <p class="font-bold text-slate-700">วันที่ยื่นคำร้อง: <span id="admin_modal_date" class="text-slate-500"></span></p>
+                <!-- Modal Content Table (Scrollable) -->
+                <div class="overflow-y-auto flex-grow" id="modal_summary_content">
                 </div>
 
-                <div class="space-y-2">
-                    <label class="text-xs font-black uppercase text-slate-400">รูปหลักฐานใบประกาศที่แนบมา</label>
-                    <div id="admin_modal_images_container" class="grid grid-cols-3 gap-2"></div>
-                </div>
-
-                <div class="pt-4 border-t border-slate-100 flex gap-3">
-                    <button onclick="closeAdminQuickModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-xs transition">ปิด</button>
-                    <a id="admin_modal_full_review_btn" href="#" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3 rounded-2xl text-xs text-center transition flex items-center justify-center gap-2 shadow-md">
-                        <i class="fa-solid fa-check-to-slot"></i> เปิดหน้าตรวจพิจารณา
-                    </a>
+                <!-- Modal Footer -->
+                <div class="pt-4 border-t border-slate-100 flex justify-end shrink-0">
+                    <button onclick="closeStatSummaryModal()" class="bg-slate-900 hover:bg-black text-white font-bold px-6 py-2.5 rounded-xl text-xs transition">ปิดหน้าต่าง</button>
                 </div>
             </div>
         </div>
@@ -478,19 +510,139 @@ def home():
 
         js_template = """
         <script>
-        const pendingRequestsData = __ADMIN_PENDING_JSON__;
+        const summaryData = __ADMIN_SUMMARY_JSON__;
+
+        function openStatSummaryModal(type) {
+            const modal = document.getElementById('statSummaryModal');
+            const titleElem = document.getElementById('modal_summary_title');
+            const subtitleElem = document.getElementById('modal_summary_subtitle');
+            const iconElem = document.getElementById('modal_header_icon');
+            const contentElem = document.getElementById('modal_summary_content');
+
+            if (type === 'pending') {
+                titleElem.innerText = 'รายการคำร้องรอตรวจสอบด่วน';
+                subtitleElem.innerText = 'รวมทั้งสิ้น ' + summaryData.pending.length + ' รายการ';
+                iconElem.className = 'w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-black bg-amber-100 text-amber-600';
+                iconElem.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i>';
+
+                let rows = '';
+                summaryData.pending.forEach(item => {
+                    rows += `
+                    <tr class="border-b border-slate-100 text-xs hover:bg-slate-50 transition">
+                        <td class="py-3 px-3 font-mono font-bold text-sky-600">${item.req_code}</td>
+                        <td class="py-3 px-3 font-bold text-slate-800">${item.student_name}<br><span class="text-[10px] text-slate-400 font-normal">(${item.student_code})</span></td>
+                        <td class="py-3 px-3 font-medium text-slate-700">${item.course_name}</td>
+                        <td class="py-3 px-3 text-slate-400">${item.date}</td>
+                        <td class="py-3 px-3 text-right">
+                            <a href="/admin/review/${item.id}" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-[11px] font-bold px-3 py-1.5 rounded-xl border border-amber-200 transition inline-block">ตรวจเอกสาร</a>
+                        </td>
+                    </tr>`;
+                });
+
+                contentElem.innerHTML = `
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-wider sticky top-0">
+                        <tr><th class="py-2.5 px-3">รหัสคำร้อง</th><th class="py-2.5 px-3">นักศึกษา</th><th class="py-2.5 px-3">วิชาที่ยื่น</th><th class="py-2.5 px-3">วันที่ยื่น</th><th class="py-2.5 px-3 text-right">จัดการ</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">${rows || '<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">ไม่มีคำร้องรอดำเนินการ</td></tr>'}</tbody>
+                </table>`;
+
+            } else if (type === 'students') {
+                titleElem.innerText = 'สรุปรายชื่อนักศึกษาในระบบ';
+                subtitleElem.innerText = 'รวมทั้งสิ้น ' + summaryData.students.length + ' คน';
+                iconElem.className = 'w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-black bg-sky-100 text-sky-600';
+                iconElem.innerHTML = '<i class="fa-solid fa-users"></i>';
+
+                let rows = '';
+                summaryData.students.forEach((item, index) => {
+                    rows += `
+                    <tr class="border-b border-slate-100 text-xs hover:bg-slate-50 transition">
+                        <td class="py-3 px-3 font-mono font-bold text-slate-400">${index + 1}</td>
+                        <td class="py-3 px-3 font-mono font-bold text-sky-600">${item.member_id}</td>
+                        <td class="py-3 px-3 font-bold text-slate-800">${item.fullname}</td>
+                        <td class="py-3 px-3 text-slate-500">${item.phone}<br><span class="text-[10px] text-slate-400">${item.email}</span></td>
+                        <td class="py-3 px-3 text-center font-black text-emerald-600">${item.credits} หน่วยกิต</td>
+                    </tr>`;
+                });
+
+                contentElem.innerHTML = `
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-wider sticky top-0">
+                        <tr><th class="py-2.5 px-3">#</th><th class="py-2.5 px-3">รหัสนักศึกษา</th><th class="py-2.5 px-3">ชื่อ-นามสกุล</th><th class="py-2.5 px-3">การติดต่อ</th><th class="py-2.5 px-3 text-center">หน่วยกิตสะสม</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">${rows || '<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">ยังไม่มีข้อมูลนักศึกษา</td></tr>'}</tbody>
+                </table>`;
+
+            } else if (type === 'approved') {
+                titleElem.innerText = 'สรุปรายการที่อนุมัติแล้ว';
+                subtitleElem.innerText = 'รวมทั้งสิ้น ' + summaryData.approved.length + ' รายการ';
+                iconElem.className = 'w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-black bg-emerald-100 text-emerald-600';
+                iconElem.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+
+                let rows = '';
+                summaryData.approved.forEach(item => {
+                    rows += `
+                    <tr class="border-b border-slate-100 text-xs hover:bg-slate-50 transition">
+                        <td class="py-3 px-3 font-mono font-bold text-sky-600">${item.req_code}</td>
+                        <td class="py-3 px-3 font-bold text-slate-800">${item.student_name}</td>
+                        <td class="py-3 px-3 font-medium text-slate-700">${item.course_name}</td>
+                        <td class="py-3 px-3 text-center font-black text-emerald-600">${item.credits}</td>
+                        <td class="py-3 px-3 text-slate-500 font-medium">${item.approved_by}</td>
+                    </tr>`;
+                });
+
+                contentElem.innerHTML = `
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-wider sticky top-0">
+                        <tr><th class="py-2.5 px-3">รหัสคำร้อง</th><th class="py-2.5 px-3">นักศึกษา</th><th class="py-2.5 px-3">วิชาที่อนุมัติ</th><th class="py-2.5 px-3 text-center">หน่วยกิต</th><th class="py-2.5 px-3">ผู้อนุมัติ</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">${rows || '<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">ยังไม่มีรายการที่อนุมัติแล้ว</td></tr>'}</tbody>
+                </table>`;
+
+            } else if (type === 'credits') {
+                titleElem.innerText = 'สรุปการเทียบโอนหน่วยกิตแยกตามรายวิชา';
+                subtitleElem.innerText = 'แสดงจำนวนหน่วยกิตอนุมัติรวมแยกตามวิชา';
+                iconElem.className = 'w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-black bg-indigo-100 text-indigo-600';
+                iconElem.innerHTML = '<i class="fa-solid fa-award"></i>';
+
+                let rows = '';
+                summaryData.credits.forEach(item => {
+                    rows += `
+                    <tr class="border-b border-slate-100 text-xs hover:bg-slate-50 transition">
+                        <td class="py-3 px-3 font-extrabold text-slate-800">${item.course_name}</td>
+                        <td class="py-3 px-3 text-center font-bold text-slate-600">${item.unit_credits} หน่วยกิต</td>
+                        <td class="py-3 px-3 text-center font-bold text-sky-600">${item.approved_count} คน</td>
+                        <td class="py-3 px-3 text-center font-black text-indigo-600">${item.total_credits} หน่วยกิต</td>
+                    </tr>`;
+                });
+
+                contentElem.innerHTML = `
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-wider sticky top-0">
+                        <tr><th class="py-2.5 px-3">ชื่อรายวิชา</th><th class="py-2.5 px-3 text-center">หน่วยกิต/วิชา</th><th class="py-2.5 px-3 text-center">อนุมัติแล้ว (คน)</th><th class="py-2.5 px-3 text-center">หน่วยกิตรวมทั้งสาขา</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">${rows || '<tr><td colspan="4" class="py-8 text-center text-xs text-slate-400">ยังไม่มีข้อมูลการอนุมัติหน่วยกิต</td></tr>'}</tbody>
+                </table>`;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeStatSummaryModal() {
+            document.getElementById('statSummaryModal').classList.add('hidden');
+        }
 
         function renderAdminPendingTable() {
             const tbody = document.getElementById('admin_pending_tbody');
             if(!tbody) return;
             tbody.innerHTML = '';
 
-            if (pendingRequestsData.length === 0) {
+            if (summaryData.pending.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-xs font-bold text-slate-400"><i class="fa-solid fa-circle-check text-2xl mb-2 text-emerald-400 block"></i>ไม่มีคำร้องรอดำเนินการในขณะนี้</td></tr>`;
                 return;
             }
 
-            pendingRequestsData.slice(0, 5).forEach(item => {
+            summaryData.pending.slice(0, 5).forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition';
                 tr.innerHTML = `
@@ -501,45 +653,13 @@ def home():
                     <td class="px-4 py-3.5 font-bold text-slate-700 text-xs">${item.course_name}</td>
                     <td class="px-4 py-3.5 text-center font-black text-sky-600 text-xs">${item.credits}</td>
                     <td class="px-4 py-3.5 text-right">
-                        <button onclick="openAdminQuickModal(${item.id})" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1 border border-amber-200">
-                            <i class="fa-solid fa-eye"></i> ดูด่วน
-                        </button>
+                        <a href="/admin/review/${item.id}" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1 border border-amber-200">
+                            <i class="fa-solid fa-pen-to-square"></i> ตรวจ
+                        </a>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
-        }
-
-        function openAdminQuickModal(id) {
-            const item = pendingRequestsData.find(r => r.id === id);
-            if (!item) return;
-
-            document.getElementById('admin_modal_course_name').innerText = item.course_name;
-            document.getElementById('admin_modal_student_info').innerText = 'นักศึกษา: ' + item.student_name + ' (' + item.student_code + ')';
-            document.getElementById('admin_modal_req_code').innerText = item.req_code;
-            document.getElementById('admin_modal_credits').innerText = item.credits + ' หน่วยกิต';
-            document.getElementById('admin_modal_date').innerText = item.date_submitted;
-            document.getElementById('admin_modal_full_review_btn').href = '/admin/review/' + item.id;
-
-            const imgBox = document.getElementById('admin_modal_images_container');
-            imgBox.innerHTML = '';
-            let hasImg = false;
-            [item.doc_img, item.doc_img2, item.doc_img3].forEach(img => {
-                if (img) {
-                    hasImg = true;
-                    imgBox.innerHTML += `<a href="/static/uploads/${img}" target="_blank"><img src="/static/uploads/${img}" class="h-20 w-full object-cover rounded-xl border border-slate-200 hover:opacity-80 transition"></a>`;
-                }
-            });
-
-            if(!hasImg) {
-                imgBox.innerHTML = '<p class="text-xs text-slate-400 col-span-3 py-2">ไม่มีรูปภาพแนบ</p>';
-            }
-
-            document.getElementById('adminQuickModal').classList.remove('hidden');
-        }
-
-        function closeAdminQuickModal() {
-            document.getElementById('adminQuickModal').classList.add('hidden');
         }
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -571,7 +691,7 @@ def home():
         </script>
         """
 
-        js_code = js_template.replace('__ADMIN_PENDING_JSON__', admin_pending_json_str)\
+        js_code = js_template.replace('__ADMIN_SUMMARY_JSON__', admin_summary_json)\
                              .replace('__PENDING__', str(pending_count))\
                              .replace('__APPROVED__', str(approved_count))\
                              .replace('__REVISION__', str(revision_count))
@@ -580,7 +700,7 @@ def home():
         return render_layout(admin_content, active_page='home')
 
     # =============================================================
-    # 2. ฝั่งนักศึกษา (Student Dashboard - Interactive)
+    # 2. ฝั่งนักศึกษา (Student Dashboard)
     # =============================================================
     try:
         user_requests = CreditRequest.query.filter_by(user_id=user.id).order_by(CreditRequest.id.desc()).all()
@@ -614,7 +734,6 @@ def home():
 
     html_part = f"""
     <div class="max-w-6xl mx-auto space-y-8">
-        <!-- Banner ต้อนรับ -->
         <div class="relative overflow-hidden bg-gradient-to-r from-sky-600 via-indigo-600 to-slate-900 rounded-3xl p-8 text-white shadow-xl">
             <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
@@ -630,7 +749,6 @@ def home():
             <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
         </div>
 
-        <!-- Section: สรุปความก้าวหน้าหน่วยกิต & การ์ดสถิติ -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
                 <div>
@@ -694,7 +812,6 @@ def home():
             </div>
         </div>
 
-        <!-- Section: กราฟ Interactive Donut Chart + ตารางรายการคำร้อง -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center">
                 <h3 class="text-base font-black text-slate-800 mb-2 w-full text-left">สัดส่วนสถานะคำร้อง</h3>
@@ -737,7 +854,6 @@ def home():
         </div>
     </div>
 
-    <!-- 🔍 Pop-up Modal ดูรายละเอียดคำร้องด่วน -->
     <div id="quickViewModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity">
         <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6 relative border border-slate-100">
             <button onclick="closeQuickView()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
