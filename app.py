@@ -281,14 +281,262 @@ def render_layout(content, active_page=''):
 
 @app.route('/')
 def home():
-    if not session.get('user_id'): return redirect(url_for('login'))
+    # -------------------------------------------------------------
+    # 🌟 กรณีที่ยังไม่ได้เข้าสู่ระบบ: แสดงหน้า Landing Page ต้อนรับสุดพรีเมียม
+    # -------------------------------------------------------------
+    if not session.get('user_id'):
+        landing_content = """
+        <div class="max-w-6xl mx-auto space-y-16 py-4">
+            <!-- 🚀 Hero Banner Section -->
+            <div class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-sky-950 to-indigo-950 rounded-[2.5rem] p-8 sm:p-12 text-white shadow-2xl border border-sky-500/20">
+                <!-- Ambient Glow Background Effects -->
+                <div class="absolute -top-24 -left-24 w-96 h-96 bg-sky-500/20 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div class="lg:col-span-7 space-y-6">
+                        <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-sky-200 text-xs px-4 py-1.5 rounded-full font-extrabold uppercase tracking-wider">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            ระบบธนาคารหน่วยกิตดิจิทัล (Credit Bank System)
+                        </div>
+                        <h1 class="text-3xl sm:text-5xl font-black leading-tight tracking-tight">
+                            สะสมหน่วยกิตง่ายๆ <br>
+                            <span class="bg-gradient-to-r from-sky-300 via-indigo-200 to-emerald-300 bg-clip-text text-transparent">เชื่อมโลกการเรียนรู้สู่อนาคต</span>
+                        </h1>
+                        <p class="text-slate-300 text-sm sm:text-base leading-relaxed font-medium">
+                            สาขาวิชาระบบสารสนเทศ มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก (RMUTTO) <br>
+                            ระบบเทียบโอนคอร์สเรียนออนไลน์ ThaiMOOC & ChulaMOOC สะดวก รวดเร็ว โปร่งใส ตรวจสอบได้ตลอด 24 ชั่วโมง
+                        </p>
+
+                        <div class="pt-2 flex flex-wrap gap-3">
+                            <button onclick="openLoginModal('student')" class="bg-gradient-to-r from-sky-400 to-blue-600 hover:from-sky-500 hover:to-blue-700 text-white font-extrabold px-6 py-3.5 rounded-2xl shadow-lg hover:shadow-sky-500/30 transition-all duration-300 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-graduation-cap text-lg"></i> เข้าสู่ระบบนักศึกษา
+                            </button>
+                            <button onclick="openLoginModal('admin')" class="bg-white/10 hover:bg-white/20 text-white font-extrabold px-6 py-3.5 rounded-2xl backdrop-blur-md border border-white/20 transition-all duration-300 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-shield-halved text-sky-400"></i> เข้าสู่ระบบเจ้าหน้าที่
+                            </button>
+                            <a href="/register" class="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-bold px-6 py-3.5 rounded-2xl transition-all duration-300 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-user-plus"></i> สมัครสมาชิกใหม่
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Hero Visual Card -->
+                    <div class="lg:col-span-5 flex justify-center">
+                        <div class="bg-white/10 backdrop-blur-xl p-6 rounded-3xl border border-white/20 shadow-2xl space-y-4 w-full max-w-sm hover:scale-105 transition-transform duration-500">
+                            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-8 h-8 rounded-xl bg-sky-500/30 flex items-center justify-center text-sky-300"><i class="fa-solid fa-bolt"></i></div>
+                                    <span class="text-xs font-black text-slate-200">สถิติระบบเรียลไทม์</span>
+                                </div>
+                                <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full">Active</span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-white/5 p-4 rounded-2xl border border-white/10 text-center">
+                                    <p class="text-2xl font-black text-sky-300">120+</p>
+                                    <p class="text-[10px] text-slate-300 font-medium">หน่วยกิตที่รองรับ</p>
+                                </div>
+                                <div class="bg-white/5 p-4 rounded-2xl border border-white/10 text-center">
+                                    <p class="text-2xl font-black text-emerald-300">100%</p>
+                                    <p class="text-[10px] text-slate-300 font-medium">ยื่นเรื่องออนไลน์</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-sky-500/10 p-3 rounded-2xl border border-sky-400/20 flex items-center gap-3">
+                                <i class="fa-solid fa-circle-check text-sky-400 text-xl"></i>
+                                <p class="text-xs text-slate-200 font-medium">อนุมัติและปรับสมุดสะสมหน่วยกิตอัตโนมัติ</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🎯 Portal Selector Section (แบ่งแยก 2 ฝั่งชัดเจน) -->
+            <div class="space-y-6">
+                <div class="text-center max-w-2xl mx-auto space-y-2">
+                    <h2 class="text-2xl sm:text-3xl font-black text-slate-900">เลือกช่องทางเข้าใช้งานระบบ</h2>
+                    <p class="text-slate-500 text-xs sm:text-sm font-medium">ออกแบบเพื่อการใช้งานที่สะดวก รวดเร็ว เหมาะสมสำหรับทั้งนักศึกษาและเจ้าหน้าที่</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 🎓 ฝั่งนักศึกษา -->
+                    <div class="group bg-white p-8 rounded-[2rem] border border-sky-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
+                        <div class="space-y-4">
+                            <div class="w-14 h-14 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center text-2xl font-black group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-graduation-cap"></i>
+                            </div>
+                            <div>
+                                <span class="bg-sky-50 text-sky-700 text-[10px] font-black uppercase px-2.5 py-1 rounded-md">Student Portal</span>
+                                <h3 class="text-xl font-black text-slate-900 mt-1">บริการสำหรับนักศึกษา</h3>
+                                <p class="text-slate-500 text-xs mt-1 leading-relaxed">ค้นหารายวิชา ยื่นหลักฐานใบประกาศนียบัตร และติดตามผลสะสมหน่วยกิต</p>
+                            </div>
+
+                            <ul class="space-y-2 text-xs text-slate-600 font-medium pt-2">
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-sky-500"></i> ค้นหารายวิชาเทียบโอน ThaiMOOC / ChulaMOOC</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-sky-500"></i> ระบบยื่นคำขอเทียบโอนพร้อมแนบรูปภาพสะดวก</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-sky-500"></i> ดูหลอดความก้าวหน้าสะสมหน่วยกิตสู่เป้าหมาย 120 หน่วยกิต</li>
+                            </ul>
+                        </div>
+
+                        <div class="pt-6 border-t border-slate-100 mt-6 flex gap-3">
+                            <button onclick="openLoginModal('student')" class="flex-grow bg-slate-900 hover:bg-black text-white font-extrabold py-3.5 rounded-2xl transition text-xs text-center shadow-md">
+                                เข้าสู่ระบบนักศึกษา <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+                            <a href="/register" class="bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold px-4 py-3.5 rounded-2xl transition text-xs">
+                                ลงทะเบียน
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- 🛡️ ฝั่งเจ้าหน้าที่ -->
+                    <div class="group bg-white p-8 rounded-[2rem] border border-indigo-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
+                        <div class="space-y-4">
+                            <div class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl font-black group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div>
+                                <span class="bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase px-2.5 py-1 rounded-md">Officer Command Center</span>
+                                <h3 class="text-xl font-black text-slate-900 mt-1">บริการสำหรับเจ้าหน้าที่</h3>
+                                <p class="text-slate-500 text-xs mt-1 leading-relaxed">ศูนย์ควบคุมตรวจสอบคำร้อง อนุมัติหน่วยกิต และเรียกดูสถิติภาพรวม</p>
+                            </div>
+
+                            <ul class="space-y-2 text-xs text-slate-600 font-medium pt-2">
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-indigo-500"></i> ตรวจสอบพิจารณาคำร้องพร้อมพรีวิวรูปด่วนผ่าน Modal</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-indigo-500"></i> เรียกดูสรุปสถิตินักศึกษา คำร้อง และการเทียบโอนรายวิชา</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-indigo-500"></i> ส่งออกรายงานสรุปประจำเดือนเป็นไฟล์ CSV / Excel</li>
+                            </ul>
+                        </div>
+
+                        <div class="pt-6 border-t border-slate-100 mt-6">
+                            <button onclick="openLoginModal('admin')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3.5 rounded-2xl transition text-xs text-center shadow-md">
+                                เข้าสู่ระบบเจ้าหน้าที่ <i class="fa-solid fa-lock ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🔄 How It Works Section (ขั้นตอนง่ายๆ 4 สเต็ป) -->
+            <div class="bg-slate-900 rounded-[2.5rem] p-8 sm:p-12 text-white space-y-8 relative overflow-hidden">
+                <div class="text-center max-w-2xl mx-auto space-y-2 relative z-10">
+                    <span class="text-sky-400 font-black text-xs uppercase tracking-wider">Simple Workflow</span>
+                    <h2 class="text-2xl sm:text-3xl font-black">ขั้นตอนการเทียบโอนหน่วยกิตง่ายๆ</h2>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
+                    <div class="bg-white/5 p-6 rounded-3xl border border-white/10 hover:bg-white/10 transition">
+                        <div class="w-10 h-10 rounded-2xl bg-sky-500/20 text-sky-300 font-black flex items-center justify-center mb-4 text-base">1</div>
+                        <h4 class="font-bold text-sm mb-1">ค้นหารายวิชา</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">เลือกวิชาตามหลักสูตร IS ที่เปิดให้เทียบโอนผ่าน ThaiMOOC/ChulaMOOC</p>
+                    </div>
+
+                    <div class="bg-white/5 p-6 rounded-3xl border border-white/10 hover:bg-white/10 transition">
+                        <div class="w-10 h-10 rounded-2xl bg-sky-500/20 text-sky-300 font-black flex items-center justify-center mb-4 text-base">2</div>
+                        <h4 class="font-bold text-sm mb-1">แนบรูปใบประกาศ</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">อัปโหลดรูปหลักฐานการผ่านคอร์สออนไลน์เข้าสู่ระบบ</p>
+                    </div>
+
+                    <div class="bg-white/5 p-6 rounded-3xl border border-white/10 hover:bg-white/10 transition">
+                        <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-300 font-black flex items-center justify-center mb-4 text-base">3</div>
+                        <h4 class="font-bold text-sm mb-1">เจ้าหน้าที่ตรวจสอบ</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">เจ้าหน้าที่พิจารณาความถูกต้องของเอกสารหลักฐาน</p>
+                    </div>
+
+                    <div class="bg-white/5 p-6 rounded-3xl border border-white/10 hover:bg-white/10 transition">
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-300 font-black flex items-center justify-center mb-4 text-base">4</div>
+                        <h4 class="font-bold text-sm mb-1">สะสมหน่วยกิต</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">อนุมัติหน่วยกิตสะสมเข้าสู่บัญชีนักศึกษาทันที</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🔓 Pop-up Modal สลับเข้าสู่ระบบด่วน (Quick Login Modal) -->
+        <div id="quickLoginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity">
+            <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border border-slate-100 space-y-6">
+                <button onclick="closeLoginModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+                <div class="text-center space-y-2">
+                    <div id="modal_role_icon" class="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center text-2xl bg-sky-100 text-sky-600">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-900" id="modal_login_title">เข้าสู่ระบบ</h3>
+                    <p class="text-xs text-slate-400 font-medium">กรุณากรอก Username หรือ เลขบัตรประชาชน</p>
+                </div>
+
+                <!-- Tab สลับสิทธิ์ -->
+                <div class="flex bg-slate-100 p-1 rounded-2xl text-xs font-bold">
+                    <button type="button" onclick="switchLoginRole('student')" id="tab_login_student" class="flex-1 py-2 rounded-xl text-slate-600 transition">🎓 นักศึกษา</button>
+                    <button type="button" onclick="switchLoginRole('admin')" id="tab_login_admin" class="flex-1 py-2 rounded-xl text-slate-600 transition">🛡️ เจ้าหน้าที่</button>
+                </div>
+
+                <form method="POST" action="/login" class="space-y-4 text-left">
+                    <input type="hidden" name="login_role" id="input_login_role" value="student">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Username / เลขบัตรประชาชน</label>
+                        <input type="text" name="username" required placeholder="กรอกชื่อผู้ใช้ หรือ เลขบัตรประชาชน" class="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50 outline-none focus:border-sky-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">รหัสผ่าน</label>
+                        <input type="password" name="password" required placeholder="••••••••" class="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50 outline-none focus:border-sky-400">
+                    </div>
+                    <button type="submit" id="modal_submit_btn" class="w-full bg-slate-900 hover:bg-black text-white font-extrabold py-3.5 rounded-xl shadow-md transition text-xs">
+                        เข้าสู่ระบบนักศึกษา
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <script>
+        function openLoginModal(role) {
+            switchLoginRole(role);
+            document.getElementById('quickLoginModal').classList.remove('hidden');
+        }
+
+        function closeLoginModal() {
+            document.getElementById('quickLoginModal').classList.add('hidden');
+        }
+
+        function switchLoginRole(role) {
+            document.getElementById('input_login_role').value = role;
+            const studentTab = document.getElementById('tab_login_student');
+            const adminTab = document.getElementById('tab_login_admin');
+            const iconElem = document.getElementById('modal_role_icon');
+            const titleElem = document.getElementById('modal_login_title');
+            const submitBtn = document.getElementById('modal_submit_btn');
+
+            if (role === 'student') {
+                studentTab.className = 'flex-1 py-2 rounded-xl bg-white text-sky-700 shadow-sm font-extrabold';
+                adminTab.className = 'flex-1 py-2 rounded-xl text-slate-500 font-bold';
+                iconElem.className = 'w-14 h-14 mx-auto rounded-2xl flex items-center justify-center text-2xl bg-sky-100 text-sky-600';
+                iconElem.innerHTML = '<i class="fa-solid fa-graduation-cap"></i>';
+                titleElem.innerText = 'เข้าสู่ระบบนักศึกษา';
+                submitBtn.className = 'w-full bg-sky-600 hover:bg-sky-700 text-white font-extrabold py-3.5 rounded-xl shadow-md transition text-xs';
+                submitBtn.innerText = 'เข้าสู่ระบบนักศึกษา';
+            } else {
+                adminTab.className = 'flex-1 py-2 rounded-xl bg-white text-indigo-700 shadow-sm font-extrabold';
+                studentTab.className = 'flex-1 py-2 rounded-xl text-slate-500 font-bold';
+                iconElem.className = 'w-14 h-14 mx-auto rounded-2xl flex items-center justify-center text-2xl bg-indigo-100 text-indigo-600';
+                iconElem.innerHTML = '<i class="fa-solid fa-shield-halved"></i>';
+                titleElem.innerText = 'เข้าสู่ระบบเจ้าหน้าที่';
+                submitBtn.className = 'w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3.5 rounded-xl shadow-md transition text-xs';
+                submitBtn.innerText = 'เข้าสู่ระบบเจ้าหน้าที่';
+            }
+        }
+        </script>
+        """
+        return render_layout(landing_content, active_page='home')
+
     user = User.query.get(session['user_id'])
     if not user:
         session.clear()
         return redirect(url_for('login'))
     
     # =============================================================
-    # 1. ฝั่งเจ้าหน้าที่ (Officer / Admin Dashboard - Click for Summary Modal)
+    # 1. ฝั่งเจ้าหน้าที่ (Officer / Admin Dashboard)
     # =============================================================
     if user.role in ['admin', 'superadmin']:
         try:
@@ -306,7 +554,6 @@ def home():
         except Exception:
             pending_reqs, pending_count, students, total_students, approved_reqs, approved_count, revision_count, total_approved_credits = [], 0, [], 0, [], 0, 0, 0
 
-        # 1. เตรียมข้อมูล JSON สำหรับแต่ละหัวข้อ
         pending_list = [{
             'id': r.id,
             'req_code': getattr(r, 'req_code', 'TR001'),
@@ -361,7 +608,6 @@ def home():
 
         html_part = f"""
         <div class="max-w-6xl mx-auto space-y-8">
-            <!-- Banner เจ้าหน้าที่แบบ Command Center -->
             <div class="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-8 text-white shadow-xl">
                 <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div>
@@ -385,9 +631,7 @@ def home():
                 <div class="absolute -right-10 -bottom-10 w-56 h-56 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
             </div>
 
-            <!-- การ์ดสถิติตัวเลขใหญ่ 4 ช่อง (คลิกแล้วขึ้น Pop-up สรุปข้อมูลทันที ไม่เปลี่ยนหน้า) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- 1. คำร้องรอตรวจสอบ -->
                 <div onclick="openStatSummaryModal('pending')" class="cursor-pointer group bg-white p-6 rounded-3xl border border-amber-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-3">
                         <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
@@ -402,7 +646,6 @@ def home():
                     <p class="text-xs font-bold text-amber-700 mt-1">คำร้องรอตรวจสอบด่วน <i class="fa-solid fa-magnifying-glass-plus text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
                 </div>
 
-                <!-- 2. นักศึกษาในระบบ -->
                 <div onclick="openStatSummaryModal('students')" class="cursor-pointer group bg-white p-6 rounded-3xl border border-sky-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-3">
                         <div class="w-12 h-12 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
@@ -414,7 +657,6 @@ def home():
                     <p class="text-xs font-bold text-sky-700 mt-1">นักศึกษาในระบบทั้งหมด <i class="fa-solid fa-magnifying-glass-plus text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
                 </div>
 
-                <!-- 3. อนุมัติสำเร็จ -->
                 <div onclick="openStatSummaryModal('approved')" class="cursor-pointer group bg-white p-6 rounded-3xl border border-emerald-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-3">
                         <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
@@ -426,7 +668,6 @@ def home():
                     <p class="text-xs font-bold text-emerald-700 mt-1">รายการที่อนุมัติแล้ว <i class="fa-solid fa-magnifying-glass-plus text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
                 </div>
 
-                <!-- 4. หน่วยกิตอนุมัติรวม -->
                 <div onclick="openStatSummaryModal('credits')" class="cursor-pointer group bg-white p-6 rounded-3xl border border-indigo-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-3">
                         <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
@@ -439,7 +680,6 @@ def home():
                 </div>
             </div>
 
-            <!-- กราฟ Bar Chart + รายการคำร้องรอตรวจเร่งด่วน -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
                     <h3 class="text-base font-black text-slate-800 mb-1">ภาพรวมสถานะคำร้องเทียบโอน</h3>
@@ -476,11 +716,8 @@ def home():
             </div>
         </div>
 
-        <!-- 📊 Pop-up Modal สรุปข้อมูลแยกตามหัวข้อการ์ด (Stat Summary Modal) -->
         <div id="statSummaryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity">
             <div class="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl space-y-6 relative border border-slate-100 max-h-[85vh] flex flex-col">
-                
-                <!-- Modal Header -->
                 <div class="flex justify-between items-center border-b border-slate-100 pb-4 shrink-0">
                     <div class="flex items-center gap-3">
                         <div id="modal_header_icon" class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-black bg-sky-100 text-sky-600">
@@ -496,11 +733,8 @@ def home():
                     </button>
                 </div>
 
-                <!-- Modal Content Table (Scrollable) -->
-                <div class="overflow-y-auto flex-grow" id="modal_summary_content">
-                </div>
+                <div class="overflow-y-auto flex-grow" id="modal_summary_content"></div>
 
-                <!-- Modal Footer -->
                 <div class="pt-4 border-t border-slate-100 flex justify-end shrink-0">
                     <button onclick="closeStatSummaryModal()" class="bg-slate-900 hover:bg-black text-white font-bold px-6 py-2.5 rounded-xl text-xs transition">ปิดหน้าต่าง</button>
                 </div>
@@ -1046,6 +1280,59 @@ def home():
     student_content = html_part + js_code
 
     return render_layout(student_content, active_page='home')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        login_input = request.form.get('username', '').strip()
+        password_input = request.form.get('password', '').strip()
+        user = User.query.filter((User.username == login_input) | (User.id_card == login_input)).first()
+        if user and check_password_hash(user.password, password_input):
+            session['user_id'] = user.id
+            session['fullname'] = user.fullname
+            session['role'] = user.role
+            session['member_id'] = user.member_id
+            return redirect(url_for('home'))
+        flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error')
+
+    role_param = request.args.get('role', 'student')
+    is_admin_mode = role_param in ['admin', 'officer']
+
+    content = f"""
+    <div class="max-w-md mx-auto my-8 bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-2xl text-center border border-sky-100 relative overflow-hidden">
+        <div class="w-16 h-16 {'bg-indigo-100 text-indigo-600' if is_admin_mode else 'bg-sky-100 text-sky-600'} rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4 font-black">
+            <i class="fa-solid {'fa-shield-halved' if is_admin_mode else 'fa-graduation-cap'}"></i>
+        </div>
+
+        <h2 class="text-2xl font-black text-slate-900 mb-1">{'เข้าสู่ระบบเจ้าหน้าที่' if is_admin_mode else 'เข้าสู่ระบบนักศึกษา'}</h2>
+        <p class="text-xs text-slate-400 font-medium mb-6">ระบบธนาคารหน่วยกิต (Credit Bank) IS RMUTTO</p>
+
+        <form method="POST" class="space-y-4 text-left">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Username / เลขบัตรประชาชน</label>
+                <input type="text" name="username" required placeholder="กรอกชื่อผู้ใช้ หรือ เลขบัตรประชาชน" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-sky-400">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">รหัสผ่าน</label>
+                <input type="password" name="password" required placeholder="••••••••" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-sky-400">
+            </div>
+            <button type="submit" class="w-full {'bg-indigo-600 hover:bg-indigo-700' if is_admin_mode else 'bg-sky-600 hover:bg-sky-700'} text-white font-extrabold py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm mt-4">
+                เข้าสู่ระบบ
+            </button>
+        </form>
+
+        <div class="mt-6 pt-6 border-t border-slate-100 flex justify-between items-center text-xs font-bold">
+            <a href="/login?role={'student' if is_admin_mode else 'admin'}" class="text-slate-500 hover:text-slate-800">
+                สลับเป็น{'สิทธิ์นักศึกษา' if is_admin_mode else 'สิทธิ์เจ้าหน้าที่'}
+            </a>
+            <a href="/register" class="text-sky-600 hover:underline">
+                ลงทะเบียนนักศึกษาใหม่
+            </a>
+        </div>
+    </div>
+    """
+    return render_layout(content, active_page='login')
 
 @app.route('/available_courses')
 def available_courses():
