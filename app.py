@@ -294,7 +294,7 @@ def home():
                 <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
                 <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                    <div class="lg:col-span-7 space-y-5">
+                    <div class="lg:col-span-7 space-y-6">
                         <!-- Badge -->
                         <div>
                             <span class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-sky-200 text-xs px-4 py-1.5 rounded-full font-extrabold uppercase tracking-wider">
@@ -303,16 +303,14 @@ def home():
                             </span>
                         </div>
 
-                        <!-- Title Line 1 & Line 2 (แยก Block ชัดเจน ป้องกันสระและวรรณยุกต์ไทยทับกัน) -->
-                        <div class="space-y-2">
-                            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-normal tracking-tight">
+                        <!-- Title Line 1 & Line 2 (แก้ไขปัญหาสระบน-ล่างแหว่ง ให้แสดงผลคมชัดสมบูรณ์) -->
+                        <div class="space-y-3">
+                            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-relaxed tracking-tight">
                                 สะสมหน่วยกิตง่ายๆ
                             </h1>
-                            <div class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight py-1">
-                                <span class="bg-gradient-to-r from-sky-300 via-indigo-200 to-emerald-300 bg-clip-text text-transparent inline-block pb-1">
-                                    เชื่อมโลกการเรียนรู้สู่อนาคต
-                                </span>
-                            </div>
+                            <p class="text-2xl sm:text-3xl lg:text-4xl font-black text-sky-300 leading-relaxed tracking-tight">
+                                เชื่อมโลกการเรียนรู้สู่อนาคต
+                            </p>
                         </div>
 
                         <!-- Description -->
