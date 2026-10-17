@@ -1281,59 +1281,6 @@ def home():
 
     return render_layout(student_content, active_page='home')
 
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        login_input = request.form.get('username', '').strip()
-        password_input = request.form.get('password', '').strip()
-        user = User.query.filter((User.username == login_input) | (User.id_card == login_input)).first()
-        if user and check_password_hash(user.password, password_input):
-            session['user_id'] = user.id
-            session['fullname'] = user.fullname
-            session['role'] = user.role
-            session['member_id'] = user.member_id
-            return redirect(url_for('home'))
-        flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error')
-
-    role_param = request.args.get('role', 'student')
-    is_admin_mode = role_param in ['admin', 'officer']
-
-    content = f"""
-    <div class="max-w-md mx-auto my-8 bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-2xl text-center border border-sky-100 relative overflow-hidden">
-        <div class="w-16 h-16 {'bg-indigo-100 text-indigo-600' if is_admin_mode else 'bg-sky-100 text-sky-600'} rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4 font-black">
-            <i class="fa-solid {'fa-shield-halved' if is_admin_mode else 'fa-graduation-cap'}"></i>
-        </div>
-
-        <h2 class="text-2xl font-black text-slate-900 mb-1">{'เข้าสู่ระบบเจ้าหน้าที่' if is_admin_mode else 'เข้าสู่ระบบนักศึกษา'}</h2>
-        <p class="text-xs text-slate-400 font-medium mb-6">ระบบธนาคารหน่วยกิต (Credit Bank) IS RMUTTO</p>
-
-        <form method="POST" class="space-y-4 text-left">
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Username / เลขบัตรประชาชน</label>
-                <input type="text" name="username" required placeholder="กรอกชื่อผู้ใช้ หรือ เลขบัตรประชาชน" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-sky-400">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">รหัสผ่าน</label>
-                <input type="password" name="password" required placeholder="••••••••" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-sky-400">
-            </div>
-            <button type="submit" class="w-full {'bg-indigo-600 hover:bg-indigo-700' if is_admin_mode else 'bg-sky-600 hover:bg-sky-700'} text-white font-extrabold py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm mt-4">
-                เข้าสู่ระบบ
-            </button>
-        </form>
-
-        <div class="mt-6 pt-6 border-t border-slate-100 flex justify-between items-center text-xs font-bold">
-            <a href="/login?role={'student' if is_admin_mode else 'admin'}" class="text-slate-500 hover:text-slate-800">
-                สลับเป็น{'สิทธิ์นักศึกษา' if is_admin_mode else 'สิทธิ์เจ้าหน้าที่'}
-            </a>
-            <a href="/register" class="text-sky-600 hover:underline">
-                ลงทะเบียนนักศึกษาใหม่
-            </a>
-        </div>
-    </div>
-    """
-    return render_layout(content, active_page='login')
-
 @app.route('/available_courses')
 def available_courses():
     if 'user_id' not in session: return redirect(url_for('login'))
@@ -2348,17 +2295,42 @@ def login():
             session['role'] = user.role
             session['member_id'] = user.member_id
             return redirect(url_for('home'))
-        flash('ข้อมูลไม่ถูกต้อง', 'error')
-    
-    content = """
-    <div class="max-w-md mx-auto my-12 bg-white p-10 rounded-[2rem] shadow-xl text-center border border-sky-100">
-        <div class="w-16 h-16 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4"><i class="fa-solid fa-lock"></i></div>
-        <h2 class="text-2xl font-black text-slate-900 mb-8">เข้าสู่ระบบ (Login)</h2>
+        flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error')
+
+    role_param = request.args.get('role', 'student')
+    is_admin_mode = role_param in ['admin', 'officer']
+
+    content = f"""
+    <div class="max-w-md mx-auto my-8 bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-2xl text-center border border-sky-100 relative overflow-hidden">
+        <div class="w-16 h-16 {'bg-indigo-100 text-indigo-600' if is_admin_mode else 'bg-sky-100 text-sky-600'} rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4 font-black">
+            <i class="fa-solid {'fa-shield-halved' if is_admin_mode else 'fa-graduation-cap'}"></i>
+        </div>
+
+        <h2 class="text-2xl font-black text-slate-900 mb-1">{'เข้าสู่ระบบเจ้าหน้าที่' if is_admin_mode else 'เข้าสู่ระบบนักศึกษา'}</h2>
+        <p class="text-xs text-slate-400 font-medium mb-6">ระบบธนาคารหน่วยกิต (Credit Bank) IS RMUTTO</p>
+
         <form method="POST" class="space-y-4 text-left">
-            <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Username / บัตรประชาชน</label><input type="text" name="username" required class="w-full border rounded-xl p-3 text-sm bg-slate-50 outline-none"></div>
-            <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">รหัสผ่าน</label><input type="password" name="password" required class="w-full border rounded-xl p-3 text-sm bg-slate-50 outline-none"></div>
-            <button type="submit" class="w-full bg-slate-900 text-white font-bold py-3.5 rounded-xl shadow-md mt-4 hover:bg-black transition">เข้าสู่ระบบ</button>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Username / เลขบัตรประชาชน</label>
+                <input type="text" name="username" required placeholder="กรอกชื่อผู้ใช้ หรือ เลขบัตรประชาชน" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-sky-400">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">รหัสผ่าน</label>
+                <input type="password" name="password" required placeholder="••••••••" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-sky-400">
+            </div>
+            <button type="submit" class="w-full {'bg-indigo-600 hover:bg-indigo-700' if is_admin_mode else 'bg-sky-600 hover:bg-sky-700'} text-white font-extrabold py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm mt-4">
+                เข้าสู่ระบบ
+            </button>
         </form>
+
+        <div class="mt-6 pt-6 border-t border-slate-100 flex justify-between items-center text-xs font-bold">
+            <a href="/login?role={'student' if is_admin_mode else 'admin'}" class="text-slate-500 hover:text-slate-800">
+                สลับเป็น{'สิทธิ์นักศึกษา' if is_admin_mode else 'สิทธิ์เจ้าหน้าที่'}
+            </a>
+            <a href="/register" class="text-sky-600 hover:underline">
+                ลงทะเบียนนักศึกษาใหม่
+            </a>
+        </div>
     </div>
     """
     return render_layout(content, active_page='login')
