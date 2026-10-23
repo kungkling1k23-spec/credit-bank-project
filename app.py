@@ -51,7 +51,7 @@ class User(db.Model):
     role = db.Column(db.String(20), default='student')
 
 class Course(db.Model):
-    __tablename__ = 'course'  # กำหนดชื่อตารางให้ตรงกับใน DBeaver (ไม่มี s)
+    __tablename__ = 'course'
 
     course_code = db.Column(db.String(50), primary_key=True)
     course_name = db.Column(db.String(255), nullable=False)
@@ -59,7 +59,7 @@ class Course(db.Model):
     institution = db.Column(db.String(100))
     online_lesson = db.Column(db.Text)
     hours = db.Column(db.Integer)
-    credits = db.Column(db.Integer)                                       # หน่วยกิต
+    credits = db.Column(db.Integer)                                  # หน่วยกิต
 
 class CreditRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
