@@ -50,6 +50,17 @@ class User(db.Model):
     password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(20), default='student')
 
+class Course(db.Model):
+    __tablename__ = 'courses'
+
+    course_code = db.Column('course_cod', db.String(50), primary_key=True)  # หรือ 'course_code' ตามชื่อคอลัมน์จริงใน DB
+    course_name = db.Column('course_nam', db.String(64), nullable=False)    # ชื่อวิชา
+    category = db.Column(db.String(50))                                     # หมวดวิชา
+    institution = db.Column(db.String(50))                                  # ระบบ (เช่น ThaiMOOC)
+    online_lesson = db.Column('online_lesso', db.String(256))               # บทเรียนออนไลน์
+    hours = db.Column(db.Integer)                                           # ชั่วโมงเรียน
+    credits = db.Column(db.Integer)                                         # หน่วยกิต
+
 class CreditRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     req_code = db.Column(db.String(20), default="TR2569001")
