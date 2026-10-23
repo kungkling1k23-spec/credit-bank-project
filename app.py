@@ -51,7 +51,7 @@ class User(db.Model):
     role = db.Column(db.String(20), default='student')
 
 class Course(db.Model):
-    __tablename__ = 'courses'
+    __tablename__ = 'course'
 
     course_code = db.Column('course_cod', db.String(50), primary_key=True)  # หรือ 'course_code' ตามชื่อคอลัมน์จริงใน DB
     course_name = db.Column('course_nam', db.String(64), nullable=False)    # ชื่อวิชา
@@ -1406,50 +1406,52 @@ def all_courses():
     if not session.get('user_id'):
         return redirect(url_for('login'))
 
-    # ดึงข้อมูลรายวิชาทั้งหมดจาก DBeaver
-    courses_list = Course.query.order_by(Course.course_code.asc()).all()
+    try:
+        # ดึงรายวิชาทั้งหมด
+        course_list = Course.query.all()
 
-    # สร้างแถวตารางแสดงผล
-    rows = ""
-    for idx, c in enumerate(courses_list, start=1):
-        rows += f"""
-        <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
-            <td class="py-3 px-4 font-mono text-slate-400">{idx}</td>
-            <td class="py-3 px-4 font-mono font-bold text-sky-600">{c.course_code}</td>
-            <td class="py-3 px-4 font-bold text-slate-800">{c.course_name}</td>
-            <td class="py-3 px-4 text-slate-500">{c.category or '-'}</td>
-            <td class="py-3 px-4 text-slate-500">{c.institution or '-'}</td>
-            <td class="py-3 px-4 text-center font-bold text-slate-700">{c.credits or 0}</td>
-        </tr>
-        """
+        rows = ""
+        for idx, c in enumerate(course_list, start=1):
+            rows += f"""
+            <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
+                <td class="py-3 px-4 font-mono text-slate-400">{idx}</td>
+                <td class="py-3 px-4 font-mono font-bold text-sky-600">{c.course_code}</td>
+                <td class="py-3 px-4 font-bold text-slate-800">{c.course_name}</td>
+                <td class="py-3 px-4 text-slate-500">{c.category or '-'}</td>
+                <td class="py-3 px-4 text-slate-500">{c.institution or '-'}</td>
+                <td class="py-3 px-4 text-center font-bold text-slate-700">{c.credits or 0}</td>
+            </tr>
+            """
 
-    content = f"""
-    <div class="max-w-6xl mx-auto space-y-6">
-        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex justify-between items-center">
-            <div>
-                <h1 class="text-2xl font-black text-slate-800">รายวิชาเทียบโอนทั้งหมด</h1>
-                <p class="text-xs text-slate-400 mt-1">รวมวิชาจากระบบ DBeaver ทั้งหมด {len(courses_list)} วิชา</p>
+        content = f"""
+        <div class="max-w-6xl mx-auto space-y-6">
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-black text-slate-800">รายวิชาเทียบโอนทั้งหมด</h1>
+                    <p class="text-xs text-slate-400 mt-1">รวมวิชาในระบบทั้งหมด {len(courses_list)} วิชา</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-xs font-black text-slate-400 uppercase">
+                        <tr>
+                            <th class="py-3 px-4">#</th>
+                            <th class="py-3 px-4">รหัสวิชา</th>
+                            <th class="py-3 px-4">ชื่อวิชา</th>
+                            <th class="py-3 px-4">หมวดวิชา</th>
+                            <th class="py-3 px-4">สถาบัน/ระบบ</th>
+                            <th class="py-3 px-4 text-center">หน่วยกิต</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">{rows}</tbody>
+                </table>
             </div>
         </div>
-
-        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
-            <table class="w-full text-left">
-                <thead class="bg-slate-50 text-[11px] font-black text-slate-400 uppercase">
-                    <tr>
-                        <th class="py-3 px-4">#</th>
-                        <th class="py-3 px-4">รหัสวิชา</th>
-                        <th class="py-3 px-4">ชื่อวิชา</th>
-                        <th class="py-3 px-4">หมวดวิชา</th>
-                        <th class="py-3 px-4">สถาบัน/ระบบ</th>
-                        <th class="py-3 px-4 text-center">หน่วยกิต</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">{rows}</tbody>
-            </table>
-        </div>
-    </div>
-    """
-    return render_layout(content, active_page='all_courses')
+        """
+        return render_layout(content, active_page='all_courses')
+    except Exception as e:
+        return f"<div style='padding:20px; color:red;'><h3>Database Query Error:</h3><p>{str(e)}</p></div>"
 
 @app.route('/submit_credit', methods=['GET', 'POST'])
 def submit_credit():
