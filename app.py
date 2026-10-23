@@ -1453,43 +1453,85 @@ def all_courses():
     except Exception as e:
         return f"<div style='padding:20px; color:red;'><h3>Database Query Error:</h3><p>{str(e)}</p></div>"
 
+import os
+from werkzeug.utils import secure_filename
+
 @app.route('/submit_credit', methods=['GET', 'POST'])
 def submit_credit():
     if not session.get('user_id'):
         return redirect(url_for('login'))
 
+    user_id = session['user_id']
     success_msg = ""
-    
-    # เมื่อมีการกดส่งฟอร์ม (POST)
+
+    # 1. เมื่อกดส่งฟอร์ม (POST) บันทึกข้อมูลและไฟล์รูปภาพ
     if request.method == 'POST':
-        # --- (ใส่โค้ดบันทึกข้อมูลคำขอเทียบโอนลงฐานข้อมูลตามโครงสร้างเดิมของคุณได้ที่นี่) ---
-        
-        # แสดงข้อความแจ้งเตือนทำรายการสำเร็จบนหน้าเดิม (ไม่ redirect ไปหน้าอื่น)
+        course_code = request.form.get('course_code')
+        file = request.files.get('evidence_img')
+
+        filename = None
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            upload_folder = os.path.join(app.root_path, 'static', 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+            file.save(os.path.join(upload_folder, filename))
+
+        # บันทึกข้อมูลการยื่นลงฐานข้อมูล CreditRequest
+        new_request = CreditRequest(
+            user_id=user_id,
+            course_code=course_code,
+            id_card_img=filename,  # หรือชื่อคอลัมน์เก็บรูปหลักฐานของคุณ
+            status='รอดำเนินการ'
+        )
+        db.session.add(new_request)
+        db.session.commit()
+
         success_msg = """
         <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center space-x-2">
-            <span>✅ ยื่นคำขอเทียบโอนเรียบร้อยแล้ว</span>
+            <span>✅ ยื่นคำขอเทียบโอนและอัปโหลดรูปหลักฐานเรียบร้อยแล้ว</span>
         </div>
         """
 
     try:
-        # ดึงรายวิชาทั้งหมดจากฐานข้อมูล DBeaver
+        # 2. ดึงรายวิชาทั้งหมดจากฐานข้อมูลสำหรับ Dropdown
         courses = Course.query.order_by(Course.course_code.asc()).all()
+        course_options = "".join([
+            f'<option value="{c.course_code}">{c.course_code} - {c.course_name} ({c.credits or 0} หน่วยกิต)</option>'
+            for c in courses
+        ])
 
-        # วนลูปสร้างตัวเลือกรายวิชาทั้งหมดใส่ Dropdown
-        course_options = ""
-        for c in courses:
-            course_options += f'<option value="{c.course_code}">{c.course_code} - {c.course_name} ({c.credits or 0} หน่วยกิต)</option>'
+        # 3. ดึงรายการวิชาที่ผู้ใช้นี้เคยยื่นเทียบโอนแล้วมาแสดงผล
+        user_requests = CreditRequest.query.filter_by(user_id=user_id).all()
+        history_rows = ""
+        for req in user_requests:
+            c_info = Course.query.get(req.course_code)
+            c_name = c_info.course_name if c_info else "-"
+            img_preview = f'<a href="/static/uploads/{req.id_card_img}" target="_blank" class="text-sky-600 underline font-bold">ดูรูปหลักฐาน</a>' if req.id_card_img else 'ไม่มีรูป'
+            
+            history_rows += f"""
+            <tr class="border-b border-slate-100 text-xs">
+                <td class="py-3 px-4 font-bold text-sky-600">{req.course_code}</td>
+                <td class="py-3 px-4 font-bold text-slate-800">{c_name}</td>
+                <td class="py-3 px-4">{img_preview}</td>
+                <td class="py-3 px-4"><span class="px-3 py-1 bg-amber-50 text-amber-600 rounded-full font-bold">{req.status or 'รอดำเนินการ'}</span></td>
+            </tr>
+            """
+
+        if not history_rows:
+            history_rows = '<tr><td colspan="4" class="py-4 text-center text-slate-400 text-xs">ยังไม่มีรายการวิชาที่เคยยื่นขอเทียบโอน</td></tr>'
 
         content = f"""
-        <div class="max-w-4xl mx-auto space-y-6">
+        <div class="max-w-4xl mx-auto space-y-8">
             {success_msg}
+
+            <!-- ส่วนที่ 1: ฟอร์มยื่นคำขอเทียบโอน -->
             <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
                 <div>
                     <h1 class="text-2xl font-black text-slate-800">ยื่นคำขอเทียบโอนหน่วยกิต</h1>
-                    <p class="text-xs text-slate-400 mt-1">เลือกรายวิชาจากระบบเพื่อยื่นขอเทียบโอน</p>
+                    <p class="text-xs text-slate-400 mt-1">เลือกรายวิชาและอัปโหลดรูปหลักฐานประกอบการขอเทียบโอน</p>
                 </div>
                 
-                <form method="POST" action="/submit_credit" class="space-y-5">
+                <form method="POST" action="/submit_credit" enctype="multipart/form-data" class="space-y-5">
                     <div>
                         <label class="block text-xs font-black uppercase text-slate-400 mb-2">เลือกรายวิชาที่ต้องการเทียบโอน <span class="text-rose-500">*</span></label>
                         <select name="course_code" required class="w-full border border-slate-200 rounded-2xl p-4 text-sm bg-slate-50 outline-none focus:border-sky-500 font-bold text-slate-700">
@@ -1498,17 +1540,48 @@ def submit_credit():
                         </select>
                     </div>
 
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-2">
+                            แนบรูปภาพหลักฐานการเรียน / วุฒิบัตร <span class="text-rose-500">* (บังคับแนบอย่างน้อย 1 รูป)</span>
+                        </label>
+                        <input type="file" name="evidence_img" accept="image/*" required class="w-full border border-slate-200 rounded-2xl p-3 text-xs bg-slate-50 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100">
+                        <p class="text-[11px] text-slate-400 mt-2">📌 ข้อกำหนด: แนบรูปภาพวุฒิบัตรหรือใบแสดงผลการเรียน (.jpg, .png) จำนวน 1 รูปภาพต่อรายวิชา</p>
+                    </div>
+
                     <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-extrabold py-4 rounded-2xl shadow-lg transition text-xs">
                         ส่งคำขอเทียบโอน
                     </button>
                 </form>
+            </div>
+
+            <!-- ส่วนที่ 2: ตารางแสดงรายวิชาที่เคยยื่นขอเทียบโอนแล้ว -->
+            <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800">รายวิชาที่เคยยื่นขอเทียบโอนแล้ว</h2>
+                    <p class="text-xs text-slate-400 mt-1">ประวัติรายการเทียบโอนของคุณทั้งหมด</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 text-[11px] font-black text-slate-400 uppercase">
+                            <tr>
+                                <th class="py-3 px-4">รหัสวิชา</th>
+                                <th class="py-3 px-4">ชื่อวิชา</th>
+                                <th class="py-3 px-4">รูปหลักฐาน</th>
+                                <th class="py-3 px-4">สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {history_rows}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         """
         return render_layout(content, active_page='submit_credit')
     except Exception as e:
         return f"<div style='padding:20px; color:red;'><h3>Database Query Error:</h3><p>{str(e)}</p></div>"
-
+    
 @app.route('/history')
 def student_history():
     if not session.get('user_id'): 
