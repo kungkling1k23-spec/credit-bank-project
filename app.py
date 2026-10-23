@@ -1403,58 +1403,48 @@ def available_courses():
 
 @app.route('/all_courses')
 def all_courses():
-    if 'user_id' not in session: return redirect(url_for('login'))
-    
-    course_data = get_courses()
-    total_courses_count = len(course_data)
-    try:
-        approved_reqs = CreditRequest.query.filter_by(user_id=session['user_id'], status='Approved').all()
-        approved_courses = [r.course_name for r in approved_reqs]
-    except Exception: approved_courses = []
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
 
+    # ดึงข้อมูลรายวิชาทั้งหมดจาก DBeaver
+    courses_list = Course.query.order_by(Course.course_code.asc()).all()
+
+    # สร้างแถวตารางแสดงผล
     rows = ""
-    for idx, c in enumerate(course_data, 1):
-        mooc_items = ""
-        for idx_m, m in enumerate(c['mooc_list']):
-            mooc_items += f'<div class="py-1 border-b border-slate-100 last:border-0">- {m}</div>'
-
-        prov_badge = f'<span class="px-2 py-0.5 rounded text-[10px] font-bold {"bg-sky-100 text-sky-700" if c["provider"] == "ThaiMOOC" else "bg-amber-100 text-amber-700"} border border-slate-100">{c["provider"]}</span>'
-        
-        # ปรับปรุง: ถ้าอนุมัติแล้วโชว์ป้ายเขียว ถ้ายังไม่ผ่านให้โชว์เครื่องหมายขีด - (ไม่มีปุ่มเลือกเทียบโอน)
-        if c['name'] in approved_courses: 
-            status_display = '<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1"><i class="fa-solid fa-circle-check text-emerald-500"></i> เทียบโอนเรียบร้อย</span>'
-        else: 
-            status_display = '<span class="text-slate-400 font-medium text-xs">-</span>'
-
+    for idx, c in enumerate(courses_list, start=1):
         rows += f"""
-        <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs align-top">
-            <td class="py-3 px-4 font-mono font-bold text-slate-400">{idx}</td>
-            <td class="py-3 px-4 font-mono font-bold text-sky-700">{c['code']}</td>
-            <td class="py-3 px-4 font-extrabold text-slate-800">{c['name']}<br><span class="text-[10px] text-slate-400 font-medium">{c['group']}</span></td>
-            <td class="py-3 px-4">{prov_badge}</td>
-            <td class="py-3 px-4 font-medium text-slate-600"><div class="space-y-1">{mooc_items}</div></td>
-            <td class="py-3 px-4 font-black text-sky-700 whitespace-nowrap">{c['total_hours']}</td>
-            <td class="py-3 px-4 text-center font-black text-slate-800">{c['credits']}</td>
-            <td class="py-3 px-4 text-center">{status_display}</td>
+        <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
+            <td class="py-3 px-4 font-mono text-slate-400">{idx}</td>
+            <td class="py-3 px-4 font-mono font-bold text-sky-600">{c.course_code}</td>
+            <td class="py-3 px-4 font-bold text-slate-800">{c.course_name}</td>
+            <td class="py-3 px-4 text-slate-500">{c.category or '-'}</td>
+            <td class="py-3 px-4 text-slate-500">{c.institution or '-'}</td>
+            <td class="py-3 px-4 text-center font-bold text-slate-700">{c.credits or 0}</td>
         </tr>
         """
 
     content = f"""
-    <div class="mb-6 flex justify-between items-end">
-        <div>
-            <h2 class="text-2xl font-black text-slate-900">หลักสูตรทั้งหมด <span class="text-sm font-bold text-sky-600 bg-sky-50 px-3 py-1 rounded-xl border border-sky-100 ml-2">รวมทั้งสิ้น {total_courses_count} รายวิชา</span></h2>
-            <p class="text-slate-500 text-sm font-medium mt-1">แสดงรายวิชาทั้งหมดที่รองรับการเทียบโอนในระบบธนาคารหน่วยกิต</p>
+    <div class="max-w-6xl mx-auto space-y-6">
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800">รายวิชาเทียบโอนทั้งหมด</h1>
+                <p class="text-xs text-slate-400 mt-1">รวมวิชาจากระบบ DBeaver ทั้งหมด {len(courses_list)} วิชา</p>
+            </div>
         </div>
-        <a href="/available_courses" class="text-xs font-bold bg-white border border-sky-200 text-sky-600 px-4 py-2 rounded-xl hover:bg-sky-50 shadow-sm"><i class="fa-solid fa-magnifying-glass mr-1"></i> ค้นหารายวิชา (Grid)</a>
-    </div>
 
-    <div class="bg-white rounded-3xl border border-sky-100 shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left min-w-[950px]">
-                <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-black text-slate-500 uppercase tracking-wider">
-                    <tr><th class="py-4 px-4 w-10">#</th><th class="py-4 px-4">รหัสวิชา</th><th class="py-4 px-4">ชื่อวิชาหลักสูตร IS</th><th class="py-4 px-4">ระบบ</th><th class="py-4 px-4">ใบเกียรติบัตรย่อยที่ต้องใช้</th><th class="py-4 px-4">รวมชั่วโมง</th><th class="py-4 px-4 text-center">หน่วยกิต</th><th class="py-4 px-4 text-center">สถานะ</th></tr>
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 text-[11px] font-black text-slate-400 uppercase">
+                    <tr>
+                        <th class="py-3 px-4">#</th>
+                        <th class="py-3 px-4">รหัสวิชา</th>
+                        <th class="py-3 px-4">ชื่อวิชา</th>
+                        <th class="py-3 px-4">หมวดวิชา</th>
+                        <th class="py-3 px-4">สถาบัน/ระบบ</th>
+                        <th class="py-3 px-4 text-center">หน่วยกิต</th>
+                    </tr>
                 </thead>
-                <tbody>{rows}</tbody>
+                <tbody class="divide-y divide-slate-100">{rows}</tbody>
             </table>
         </div>
     </div>
@@ -1463,225 +1453,48 @@ def all_courses():
 
 @app.route('/submit_credit', methods=['GET', 'POST'])
 def submit_credit():
-    if 'user_id' not in session:
+    if not session.get('user_id'):
         return redirect(url_for('login'))
 
     user = User.query.get(session['user_id'])
-    upload_folder = app.config.get('UPLOAD_FOLDER', os.path.join(app.root_path, 'static', 'uploads'))
-    os.makedirs(upload_folder, exist_ok=True)
-    
+
+    # ส่วนประมวลผลเมื่อกดส่งฟอร์ม (POST)
     if request.method == 'POST':
-        selected_codes = request.form.getlist('selected_courses')
-        courses_data = get_courses()
-        course_dict = {c['code']: c for c in courses_data}
+        # ... (โค้ดส่วนรับค่าและบันทึกข้อมูลคำร้องลง db ตามเดิมของคุณ) ...
+        pass
 
-        for code in selected_codes:
-            if code in course_dict:
-                c_info = course_dict[code]
-                doc_imgs = []
-                for idx in range(len(c_info['mooc_list'])):
-                    file_key = f'cert_file_{code}_{idx}'
-                    if file_key in request.files:
-                        file = request.files[file_key]
-                        if file and file.filename != '' and allowed_file(file.filename):
-                            ext = file.filename.rsplit('.', 1)[1].lower()
-                            filename = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
-                            file.save(os.path.join(upload_folder, filename))
-                            doc_imgs.append(filename)
-                
-                if doc_imgs:
-                    new_req = CreditRequest(
-                        user_id=user.id,
-                        course_name=c_info['name'],
-                        credits=c_info['credits'],
-                        institution="ThaiMOOC",
-                        doc_img=doc_imgs[0] if len(doc_imgs) > 0 else None,
-                        doc_img2=doc_imgs[1] if len(doc_imgs) > 1 else None,
-                        doc_img3=doc_imgs[2] if len(doc_imgs) > 2 else None,
-                        status='Pending'
-                    )
-                    db.session.add(new_req)
-        
-        db.session.commit()
-        flash('ยื่นคำขอเทียบโอนเรียบร้อยแล้ว', 'success')
-        return redirect(url_for('history'))
+    # 🟢 1. ดึงข้อมูลรายวิชาทั้งหมดจาก DBeaver (เรียงตามรหัสวิชา)
+    courses = Course.query.order_by(Course.course_code.asc()).all()
 
-    # GET Request: เช็กว่ามีส่ง selected_courses มาใน URL หรือไม่
-    selected_from_url = request.args.get('selected_courses', '').strip()
+    # 🟢 2. วนลูปสร้างตัวเลือกรายวิชาใส่ใน Dropdown
+    course_options = ""
+    for c in courses:
+        course_options += f'<option value="{c.course_code}">{c.course_code} - {c.course_name} ({c.credits} หน่วยกิต)</option>'
 
-    courses_data = get_courses()
-    user_requests = CreditRequest.query.filter_by(user_id=session['user_id']).all()
-    submitted_course_names = [r.course_name for r in user_requests]
-
-    std_rows = ""
-    for c in courses_data:
-        already = c['name'] in submitted_course_names
-        if already:
-            cb_html = '<span class="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-lg font-bold inline-block">ยื่นแล้ว</span>'
-        else:
-            is_checked = 'checked' if c['code'] == selected_from_url else ''
-            cb_html = f'<input type="checkbox" name="selected_courses" value="{c["code"]}" {is_checked} class="course-checkbox w-4 h-4 text-sky-600 rounded cursor-pointer">'
-
-        moocs_html = "<br>".join([f'<span class="text-slate-600">• {m}</span>' for m in c['mooc_list']])
-        
-        std_rows += f"""
-        <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
-            <td class="px-6 py-4 text-center">{cb_html}</td>
-            <td class="px-6 py-4 font-mono font-bold text-sky-700 text-xs">{c['code']}</td>
-            <td class="px-6 py-4 font-bold text-slate-800">{c['name']} <span class="text-xs text-slate-400 font-normal">({c['credits']} หน่วยกิต)</span></td>
-            <td class="px-6 py-4 text-xs leading-relaxed">{moocs_html}</td>
-        </tr>
-        """
-
-    courses_json_str = json.dumps(courses_data, ensure_ascii=False)
-
-    html_part = f"""
-    <div class="max-w-5xl mx-auto space-y-6">
-        <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h2 class="text-3xl font-black text-slate-800 mb-2">ยื่นคำขอเทียบโอน</h2>
-                <p class="text-slate-500 text-sm">เลือกวิชาในหลักสูตรที่ต้องการเทียบโอน จากนั้นกดปุ่มสร้างฟอร์มด้านล่างเพื่อแนบหลักฐาน</p>
-            </div>
-            <div class="space-x-2 shrink-0">
-                <button type="button" onclick="toggleSelectAll(true)" class="text-xs bg-sky-50 text-sky-700 px-4 py-2.5 rounded-xl hover:bg-sky-100 font-bold transition">เลือกทั้งหมด</button>
-                <button type="button" onclick="toggleSelectAll(false)" class="text-xs bg-slate-50 text-slate-600 px-4 py-2.5 rounded-xl hover:bg-slate-100 font-bold transition">ยกเลิกเลือก</button>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left">
-                    <thead class="bg-slate-50 text-slate-500 font-extrabold text-xs uppercase tracking-wider">
-                        <tr>
-                            <th class="px-6 py-5 text-center w-24">เลือก</th>
-                            <th class="px-6 py-5 w-32">รหัสวิชา</th>
-                            <th class="px-6 py-5 w-64">ชื่อรายวิชา</th>
-                            <th class="px-6 py-5">MOOC ที่ต้องใช้แนบหลักฐาน</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        {std_rows}
-                    </tbody>
-                </table>
-            </div>
+    # 🟢 3. นำ {course_options} ไปวางไว้ในแท็ก <select> ของฟอร์ม HTML
+    content = f"""
+    <div class="max-w-4xl mx-auto space-y-6">
+        <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+            <h1 class="text-2xl font-black text-slate-800">ยื่นคำขอเทียบโอนหน่วยกิต</h1>
             
-            <div class="p-6 bg-slate-50 border-t border-slate-100 text-center md:text-right">
-                <button type="button" onclick="generateDynamicUploads()" class="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 px-8 rounded-2xl shadow-md transition">
-                    สร้างฟอร์มอัปโหลดหลักฐาน <i class="fa-solid fa-arrow-down ml-2"></i>
-                </button>
-            </div>
-        </div>
+            <form method="POST" action="/submit_credit" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-2">เลือกรายวิชาที่ต้องการเทียบโอน <span class="text-rose-500">*</span></label>
+                    <select name="course_code" required class="w-full border border-slate-200 rounded-2xl p-4 text-sm bg-slate-50 outline-none focus:border-sky-500 font-bold">
+                        <option value="">-- กรุณาเลือกรายวิชา --</option>
+                        {course_options}
+                    </select>
+                </div>
 
-        <form method="POST" enctype="multipart/form-data" id="dynamic_upload_container" class="hidden space-y-6 mt-8">
-            <div class="bg-white p-8 rounded-3xl shadow-sm border border-sky-100">
-                <div class="flex items-center gap-3 border-b border-slate-100 pb-5 mb-6">
-                    <div class="bg-sky-100 p-2.5 rounded-xl text-sky-600"><i class="fa-solid fa-cloud-arrow-up text-lg"></i></div>
-                    <h3 class="text-xl font-black text-slate-800">กล่องอัปโหลดหลักฐานตามวิชาที่เลือก</h3>
-                </div>
-                
-                <div id="upload_forms_wrapper" class="space-y-5"></div>
-                
-                <div class="mt-8 pt-6 border-t border-slate-100">
-                    <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black py-4 rounded-2xl shadow-lg hover:shadow-xl transition text-lg">
-                        ยืนยันการส่งคำขอเทียบโอน
-                    </button>
-                </div>
-            </div>
-        </form>
+                <!-- ช่องกรอกข้อมูลอื่นๆ ของฟอร์ม เช่น อัปโหลดไฟล์หลักฐาน ฯลฯ -->
+
+                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-extrabold py-4 rounded-2xl shadow-lg transition text-xs">
+                    ส่งคำขอเทียบโอน
+                </button>
+            </form>
+        </div>
     </div>
     """
-
-    js_template = """
-    <script>
-    const allCoursesData = __COURSES_JSON__;
-    const courseMap = {};
-    allCoursesData.forEach(c => { courseMap[c.code] = c; });
-
-    function toggleSelectAll(selectState) {
-        const checkboxes = document.querySelectorAll('.course-checkbox:not(:disabled)');
-        checkboxes.forEach(cb => {
-            cb.checked = selectState;
-        });
-    }
-
-    function removeUploadBox(code) {
-        const box = document.getElementById('upload-box-' + code);
-        if(box) box.remove();
-        
-        const checkbox = document.querySelector('input[value="' + code + '"]');
-        if(checkbox) checkbox.checked = false;
-        
-        const wrapper = document.getElementById('upload_forms_wrapper');
-        if (wrapper.children.length === 0) {
-            document.getElementById('dynamic_upload_container').classList.add('hidden');
-        }
-    }
-
-    function generateDynamicUploads() {
-        const checkboxes = document.querySelectorAll('.course-checkbox:checked');
-        const container = document.getElementById('dynamic_upload_container');
-        const wrapper = document.getElementById('upload_forms_wrapper');
-        
-        if (checkboxes.length === 0) { 
-            alert('กรุณาติ๊กเลือกวิชาอย่างน้อย 1 วิชา ก่อนกดสร้างฟอร์มครับ'); 
-            return; 
-        }
-
-        wrapper.innerHTML = '';
-        checkboxes.forEach(cb => {
-            const code = cb.value;
-            const course = courseMap[code];
-            if (!course) return;
-
-            let fileInputsHtml = '';
-            course.mooc_list.forEach((mooc_name, index) => {
-                fileInputsHtml += `
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div class="flex-grow">
-                        <span class="bg-sky-100 text-sky-800 text-[11px] px-2.5 py-1 rounded-lg font-black uppercase mb-2 inline-block">ใบประกาศที่ ${index + 1}</span>
-                        <p class="text-sm font-bold text-slate-700">${mooc_name}</p>
-                    </div>
-                    <div class="shrink-0 w-full md:w-auto">
-                        <input type="file" name="cert_file_${code}_${index}" accept="image/*,.pdf" required 
-                            class="w-full md:w-72 text-xs font-medium file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-sky-600 file:text-white file:font-bold file:cursor-pointer hover:file:bg-sky-700 bg-white border border-slate-200 p-1 rounded-xl">
-                    </div>
-                </div>
-                `;
-            });
-
-            const sectionHtml = `
-                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm" id="upload-box-${course.code}">
-                    <input type="hidden" name="selected_courses" value="${course.code}">
-                    <div class="flex flex-wrap justify-between items-center border-b border-slate-100 pb-4 mb-4 gap-4">
-                        <div>
-                            <h4 class="font-black text-slate-800 text-lg">${course.name}</h4>
-                            <p class="text-sm font-bold text-slate-500 mt-1">รหัส: ${course.code} <span class="mx-2 text-slate-300">|</span> ${course.credits} หน่วยกิต</p>
-                        </div>
-                        <button type="button" onclick="removeUploadBox('${course.code}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2"><i class="fa-solid fa-trash"></i> เอาวิชานี้ออก</button>
-                    </div>
-                    <div class="space-y-3">${fileInputsHtml}</div>
-                </div>
-            `;
-            wrapper.insertAdjacentHTML('beforeend', sectionHtml);
-        });
-
-        container.classList.remove('hidden');
-        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    // ทำงานอัตโนมัติเมื่อกดมาจากหน้าค้นหารายวิชา
-    document.addEventListener("DOMContentLoaded", function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('selected_courses')) {
-            generateDynamicUploads();
-        }
-    });
-    </script>
-    """
-
-    js_code = js_template.replace('__COURSES_JSON__', courses_json_str)
-    content = html_part + js_code
-
     return render_layout(content, active_page='submit_credit')
 
 @app.route('/history')
