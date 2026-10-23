@@ -1508,7 +1508,7 @@ def submit_credit():
                     if uploaded_filenames:
                         saved_str = ",".join(uploaded_filenames)
 
-                        # ตรวจสอบและบันทึกข้อมูลแบบยืดหยุ่น
+                        # ค้นหาคำร้องเดิม
                         existing_req = None
                         if hasattr(CreditRequest, 'course_code'):
                             existing_req = CreditRequest.query.filter_by(user_id=user_id, course_code=course_code).first()
@@ -1520,13 +1520,22 @@ def submit_credit():
                                 existing_req.id_card_img = saved_str
                             elif hasattr(existing_req, 'evidence_img'):
                                 existing_req.evidence_img = saved_str
+                            
+                            if hasattr(existing_req, 'course_name'):
+                                existing_req.course_name = course_info.course_name
+
                             existing_req.status = 'รอดำเนินการ'
                         else:
+                            # สร้างคำร้องใหม่พร้อมแก้ปัญหา NOT NULL ของ course_name
                             req_kwargs = {'user_id': user_id, 'status': 'รอดำเนินการ'}
+                            
                             if hasattr(CreditRequest, 'course_code'):
                                 req_kwargs['course_code'] = course_code
                             elif hasattr(CreditRequest, 'course_id'):
                                 req_kwargs['course_id'] = course_code
+
+                            if hasattr(CreditRequest, 'course_name'):
+                                req_kwargs['course_name'] = course_info.course_name
 
                             if hasattr(CreditRequest, 'id_card_img'):
                                 req_kwargs['id_card_img'] = saved_str
@@ -1614,11 +1623,13 @@ def submit_credit():
             {msg}
 
             <!-- ขั้นตอนที่ 1: ตารางเลือกรายวิชา -->
-            <div id="step-1-container" class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-                <div class="flex justify-between items-center">
+            <div id="step-1-container" class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6 relative">
+                
+                <!-- ตรึงแถบส่วนหัวด้านบนตลอดเวลาด้วย Sticky -->
+                <div class="sticky top-4 z-30 bg-white/95 backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-md flex justify-between items-center transition-all">
                     <div>
-                        <h1 class="text-2xl font-black text-slate-800">1. เลือกรายวิชาที่ต้องการเทียบโอน</h1>
-                        <p class="text-xs text-slate-400 mt-1">ติ๊กเลือกรายวิชาที่ต้องการยื่น แล้วกดปุ่มดำเนินการแนบหลักฐาน</p>
+                        <h1 class="text-xl font-black text-slate-800">1. เลือกรายวิชาที่ต้องการเทียบโอน</h1>
+                        <p class="text-xs text-slate-400 mt-0.5">ติ๊กเลือกรายวิชาที่ต้องการยื่น แล้วกดปุ่มดำเนินการแนบหลักฐาน</p>
                     </div>
                     <button id="btn-to-step2" onclick="goToStep2()" disabled class="bg-slate-200 text-slate-400 font-bold py-2.5 px-6 rounded-2xl text-xs transition shadow-sm cursor-not-allowed">
                         ถัดไป: แนบหลักฐาน (<span id="selected-count">0</span> วิชา)
@@ -1710,6 +1721,22 @@ def submit_credit():
                 }}
             }}
 
+            // ฟังก์ชันพรีวิวตัวอย่างรูปภาพเมื่อมีการเลือกไฟล์
+            function previewImage(input, previewId) {{
+                const previewImg = document.getElementById(previewId);
+                if (input.files && input.files[0]) {{
+                    const reader = new FileReader();
+                    reader.onload = function(e) {{
+                        previewImg.src = e.target.result;
+                        previewImg.classList.remove('hidden');
+                    }}
+                    reader.readAsDataURL(input.files[0]);
+                }} else {{
+                    previewImg.src = '';
+                    previewImg.classList.add('hidden');
+                }}
+            }}
+
             function renderUploadCards() {{
                 const container = document.getElementById('upload-cards-container');
                 container.innerHTML = '';
@@ -1721,22 +1748,32 @@ def submit_credit():
                     let lessonsHTML = '';
                     if (course.lessons && course.lessons.length > 0) {{
                         course.lessons.forEach((l, idx) => {{
+                            const previewId = `prev_${{course.code}}_${{l.id}}`;
                             lessonsHTML += `
-                                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+                                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
                                     <label class="block text-xs font-bold text-slate-700">
                                         📌 บทเรียนที่ ${{idx + 1}}: ${{l.name}} (${{l.hours}} ชม.)
                                     </label>
                                     <input type="file" name="file_${{course.code}}_${{l.id}}" accept="image/*" required
+                                        onchange="previewImage(this, '${{previewId}}')"
                                         class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 cursor-pointer">
+                                    <div class="mt-2">
+                                        <img id="${{previewId}}" src="" alt="ตัวอย่างหลักฐาน" class="hidden max-h-48 rounded-xl border border-slate-200 shadow-sm object-contain bg-white p-1">
+                                    </div>
                                 </div>
                             `;
                         }});
                     }} else {{
+                        const previewId = `prev_${{course.code}}_default`;
                         lessonsHTML = `
-                            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+                            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
                                 <label class="block text-xs font-bold text-slate-700">📌 หลักฐานการเรียน (วิชานี้ไม่มีบทเรียนย่อย):</label>
                                 <input type="file" name="file_${{course.code}}_default" accept="image/*" required
+                                    onchange="previewImage(this, '${{previewId}}')"
                                     class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 cursor-pointer">
+                                <div class="mt-2">
+                                    <img id="${{previewId}}" src="" alt="ตัวอย่างหลักฐาน" class="hidden max-h-48 rounded-xl border border-slate-200 shadow-sm object-contain bg-white p-1">
+                                </div>
                             </div>
                         `;
                     }}
@@ -1785,7 +1822,7 @@ def submit_credit():
     except Exception as e:
         db.session.rollback()
         return f"<div style='padding:20px; color:red;'><h3>System Error:</h3><p>{str(e)}</p></div>"
-                           
+                               
 @app.route('/history')
 def student_history():
     if not session.get('user_id'): 
