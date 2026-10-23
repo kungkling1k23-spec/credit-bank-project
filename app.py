@@ -6,7 +6,7 @@ import io
 import urllib.request
 import re
 from datetime import datetime
-from flask import Flask, request, redirect, url_for, session, flash, get_flashed_messages
+from flask import Flask, request, redirect, url_for, session, flash, get_flashed_messages, Response
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -77,14 +77,23 @@ class CreditRequest(db.Model):
     __tablename__ = 'credit_request'
 
     id = db.Column(db.Integer, primary_key=True)
+    req_code = db.Column(db.String(50), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user = db.relationship('User', backref='credit_requests')
     course_code = db.Column(db.String(50))
     course_name = db.Column(db.String(255))
     category = db.Column(db.String(100))
     institution = db.Column(db.String(100))
     credits = db.Column(db.Integer)
     id_card_img = db.Column(db.String(500))
-    status = db.Column(db.String(50), default='รอดำเนินการ')
+    doc_img = db.Column(db.Text, nullable=True)
+    doc_img2 = db.Column(db.Text, nullable=True)
+    doc_img3 = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(50), default='Pending')
+    reject_reason = db.Column(db.Text, nullable=True)
+    approved_by = db.Column(db.String(100), nullable=True)
+    date_submitted = db.Column(db.String(50), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M'))
+
 with app.app_context():
     db.create_all()
     try:
@@ -92,6 +101,10 @@ with app.app_context():
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS doc_img TEXT;"))
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS doc_img2 TEXT;"))
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS doc_img3 TEXT;"))
+            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS req_code VARCHAR(50);"))
+            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS reject_reason TEXT;"))
+            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100);"))
+            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS date_submitted VARCHAR(50);"))
             conn.commit()
     except Exception:
         pass
@@ -296,21 +309,15 @@ def render_layout(content, active_page=''):
 
 @app.route('/')
 def home():
-    # -------------------------------------------------------------
-    # 🌟 กรณีที่ยังไม่ได้เข้าสู่ระบบ: แสดงหน้า Landing Page ต้อนรับสุดพรีเมียม
-    # -------------------------------------------------------------
     if not session.get('user_id'):
         landing_content = """
         <div class="max-w-6xl mx-auto space-y-16 py-4">
-            <!-- 🚀 Hero Banner Section -->
             <div class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-sky-950 to-indigo-950 rounded-[2.5rem] p-8 sm:p-12 text-white shadow-2xl border border-sky-500/20">
-                <!-- Ambient Glow Background Effects -->
                 <div class="absolute -top-24 -left-24 w-96 h-96 bg-sky-500/20 rounded-full blur-3xl pointer-events-none"></div>
                 <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
                 <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                     <div class="lg:col-span-7 space-y-6">
-                        <!-- Badge -->
                         <div>
                             <span class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-sky-200 text-xs px-4 py-1.5 rounded-full font-extrabold uppercase tracking-wider">
                                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -318,7 +325,6 @@ def home():
                             </span>
                         </div>
 
-                        <!-- Title Line 1 & Line 2 (แก้ไขปัญหาสระบน-ล่างแหว่ง ให้แสดงผลคมชัดสมบูรณ์) -->
                         <div class="space-y-3">
                             <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-relaxed tracking-tight">
                                 สะสมหน่วยกิตง่ายๆ
@@ -328,13 +334,11 @@ def home():
                             </p>
                         </div>
 
-                        <!-- Description -->
                         <p class="text-slate-300 text-sm sm:text-base leading-relaxed font-medium pt-1 max-w-xl">
                             สาขาวิชาระบบสารสนเทศ มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก (RMUTTO)<br>
                             ระบบเทียบโอนคอร์สเรียนออนไลน์ ThaiMOOC & ChulaMOOC สะดวก รวดเร็ว โปร่งใส ตรวจสอบได้ตลอด 24 ชั่วโมง
                         </p>
 
-                        <!-- Action Buttons -->
                         <div class="pt-3 flex flex-wrap gap-3">
                             <button onclick="openLoginModal('student')" class="bg-gradient-to-r from-sky-400 to-blue-600 hover:from-sky-500 hover:to-blue-700 text-white font-extrabold px-6 py-3.5 rounded-2xl shadow-lg hover:shadow-sky-500/30 transition-all duration-300 text-sm flex items-center gap-2">
                                 <i class="fa-solid fa-graduation-cap text-lg"></i> เข้าสู่ระบบนักศึกษา
@@ -348,7 +352,6 @@ def home():
                         </div>
                     </div>
 
-                    <!-- Hero Visual Card -->
                     <div class="lg:col-span-5 flex justify-center">
                         <div class="bg-white/10 backdrop-blur-xl p-6 rounded-3xl border border-white/20 shadow-2xl space-y-4 w-full max-w-sm hover:scale-105 transition-transform duration-500">
                             <div class="flex items-center justify-between border-b border-white/10 pb-3">
@@ -379,7 +382,6 @@ def home():
                 </div>
             </div>
 
-            <!-- 🎯 Portal Selector Section (แบ่งแยก 2 ฝั่งชัดเจน) -->
             <div class="space-y-6">
                 <div class="text-center max-w-2xl mx-auto space-y-2">
                     <h2 class="text-2xl sm:text-3xl font-black text-slate-900">เลือกช่องทางเข้าใช้งานระบบ</h2>
@@ -387,7 +389,6 @@ def home():
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- 🎓 ฝั่งนักศึกษา -->
                     <div class="group bg-white p-8 rounded-[2rem] border border-sky-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
                         <div class="space-y-4">
                             <div class="w-14 h-14 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center text-2xl font-black group-hover:scale-110 transition-transform">
@@ -416,7 +417,6 @@ def home():
                         </div>
                     </div>
 
-                    <!-- 🛡️ ฝั่งเจ้าหน้าที่ -->
                     <div class="group bg-white p-8 rounded-[2rem] border border-indigo-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
                         <div class="space-y-4">
                             <div class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl font-black group-hover:scale-110 transition-transform">
@@ -444,7 +444,6 @@ def home():
                 </div>
             </div>
 
-            <!-- 🔄 How It Works Section (ขั้นตอนง่ายๆ 4 สเต็ป) -->
             <div class="bg-slate-900 rounded-[2.5rem] p-8 sm:p-12 text-white space-y-8 relative overflow-hidden">
                 <div class="text-center max-w-2xl mx-auto space-y-2 relative z-10">
                     <span class="text-sky-400 font-black text-xs uppercase tracking-wider">Simple Workflow</span>
@@ -479,7 +478,6 @@ def home():
             </div>
         </div>
 
-        <!-- 🔓 Pop-up Modal สลับเข้าสู่ระบบด่วน (Quick Login Modal) -->
         <div id="quickLoginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity">
             <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border border-slate-100 space-y-6">
                 <button onclick="closeLoginModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
@@ -494,7 +492,6 @@ def home():
                     <p class="text-xs text-slate-400 font-medium">กรุณากรอก Username หรือ เลขบัตรประชาชน</p>
                 </div>
 
-                <!-- Tab สลับสิทธิ์ -->
                 <div class="flex bg-slate-100 p-1 rounded-2xl text-xs font-bold">
                     <button type="button" onclick="switchLoginRole('student')" id="tab_login_student" class="flex-1 py-2 rounded-xl text-slate-600 transition">🎓 นักศึกษา</button>
                     <button type="button" onclick="switchLoginRole('admin')" id="tab_login_admin" class="flex-1 py-2 rounded-xl text-slate-600 transition">🛡️ เจ้าหน้าที่</button>
@@ -562,9 +559,7 @@ def home():
         session.clear()
         return redirect(url_for('login'))
     
-    # =============================================================
     # 1. ฝั่งเจ้าหน้าที่ (Officer / Admin Dashboard)
-    # =============================================================
     if user.role in ['admin', 'superadmin']:
         try:
             pending_reqs = CreditRequest.query.filter_by(status='Pending').order_by(CreditRequest.id.asc()).all()
@@ -577,13 +572,13 @@ def home():
             approved_count = len(approved_reqs)
             
             revision_count = CreditRequest.query.filter_by(status='Needs_Revision').count()
-            total_approved_credits = sum(r.credits for r in approved_reqs)
+            total_approved_credits = sum(r.credits for r in approved_reqs if r.credits)
         except Exception:
             pending_reqs, pending_count, students, total_students, approved_reqs, approved_count, revision_count, total_approved_credits = [], 0, [], 0, [], 0, 0, 0
 
         pending_list = [{
             'id': r.id,
-            'req_code': getattr(r, 'req_code', 'TR001'),
+            'req_code': getattr(r, 'req_code', f'TR{r.id:04d}'),
             'student_name': r.user.fullname if getattr(r, 'user', None) else '-',
             'student_code': r.user.member_id if getattr(r, 'user', None) else '-',
             'course_name': getattr(r, 'course_name', '-'),
@@ -593,7 +588,7 @@ def home():
 
         students_list = []
         for s in students:
-            app_credits = sum(r.credits for r in CreditRequest.query.filter_by(user_id=s.id, status='Approved').all())
+            app_credits = sum(r.credits for r in CreditRequest.query.filter_by(user_id=s.id, status='Approved').all() if r.credits)
             students_list.append({
                 'member_id': s.member_id or '-',
                 'fullname': s.fullname,
@@ -603,7 +598,7 @@ def home():
             })
 
         approved_list = [{
-            'req_code': getattr(r, 'req_code', 'TR001'),
+            'req_code': getattr(r, 'req_code', f'TR{r.id:04d}'),
             'student_name': r.user.fullname if getattr(r, 'user', None) else '-',
             'course_name': getattr(r, 'course_name', '-'),
             'credits': getattr(r, 'credits', 0),
@@ -615,9 +610,10 @@ def home():
         course_map = defaultdict(lambda: {'count': 0, 'total_credits': 0, 'unit_credits': 0})
         for r in approved_reqs:
             c_name = r.course_name
+            cred = r.credits or 0
             course_map[c_name]['count'] += 1
-            course_map[c_name]['total_credits'] += r.credits
-            course_map[c_name]['unit_credits'] = r.credits
+            course_map[c_name]['total_credits'] += cred
+            course_map[c_name]['unit_credits'] = cred
 
         credits_summary_list = [{
             'course_name': name,
@@ -960,9 +956,7 @@ def home():
         admin_content = html_part + js_code
         return render_layout(admin_content, active_page='home')
 
-    # =============================================================
     # 2. ฝั่งนักศึกษา (Student Dashboard)
-    # =============================================================
     try:
         user_requests = CreditRequest.query.filter_by(user_id=user.id).order_by(CreditRequest.id.desc()).all()
     except Exception:
@@ -970,10 +964,10 @@ def home():
 
     pending_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Pending')
     approved_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Approved')
-    revision_count = sum(1 for r in user_requests if getattr(r, 'status', '') == 'Needs_Revision')
+    revision_count = sum(1 for r in user_requests if getattr(r, 'status', '') in ['Needs_Revision', 'Need_Edit'])
     need_edit_count = revision_count
 
-    approved_credits = sum(getattr(r, 'credits', 0) for r in user_requests if getattr(r, 'status', '') == 'Approved')
+    approved_credits = sum(getattr(r, 'credits', 0) or 0 for r in user_requests if getattr(r, 'status', '') == 'Approved')
     target_credits = 120
     credit_percent = min(100, round((approved_credits / target_credits) * 100, 1))
 
@@ -981,7 +975,7 @@ def home():
     for r in user_requests:
         req_list_json.append({
             'id': r.id,
-            'req_code': getattr(r, 'req_code', '-'),
+            'req_code': getattr(r, 'req_code', f'TR{r.id:04d}'),
             'course_name': getattr(r, 'course_name', '-'),
             'credits': getattr(r, 'credits', 0),
             'status': getattr(r, 'status', 'Pending'),
@@ -1411,7 +1405,6 @@ def all_courses():
         return redirect(url_for('login'))
 
     try:
-        # ดึงรายวิชาทั้งหมดจากฐานข้อมูล (ตั้งชื่อตัวแปร courses_list ให้ตรงกันทุกจุด)
         courses_list = Course.query.order_by(Course.course_code.asc()).all()
 
         rows = ""
@@ -1456,10 +1449,6 @@ def all_courses():
         return render_layout(content, active_page='all_courses')
     except Exception as e:
         return f"<div style='padding:20px; color:red;'><h3>Database Query Error:</h3><p>{str(e)}</p></div>"
-
-import os
-import json
-from werkzeug.utils import secure_filename
 
 @app.route('/submit_credit', methods=['GET', 'POST'])
 def submit_credit():
@@ -1511,23 +1500,35 @@ def submit_credit():
 
                     if uploaded_filenames:
                         saved_str = ",".join(uploaded_filenames)
+                        doc1 = uploaded_filenames[0] if len(uploaded_filenames) > 0 else None
+                        doc2 = uploaded_filenames[1] if len(uploaded_filenames) > 1 else None
+                        doc3 = uploaded_filenames[2] if len(uploaded_filenames) > 2 else None
 
                         existing_req = CreditRequest.query.filter_by(user_id=user_id, course_code=course_code).first()
 
                         if existing_req:
                             existing_req.id_card_img = saved_str
+                            existing_req.doc_img = doc1
+                            existing_req.doc_img2 = doc2
+                            existing_req.doc_img3 = doc3
                             if hasattr(existing_req, 'course_name'): existing_req.course_name = course_info.course_name
                             if hasattr(existing_req, 'category'): existing_req.category = course_info.category or ''
                             if hasattr(existing_req, 'institution'): existing_req.institution = course_info.institution or ''
                             if hasattr(existing_req, 'credits'): existing_req.credits = course_info.credits or 0
-                            existing_req.status = 'รอดำเนินการ'
+                            existing_req.status = 'Pending'
+                            existing_req.date_submitted = datetime.now().strftime('%Y-%m-%d %H:%M')
                         else:
-                            # ใส่ค่าครบทุกช่องเพื่อส่งบันทึกเข้าฐานข้อมูล
+                            generated_req_code = f"TR{uuid.uuid4().hex[:6].upper()}"
                             req_data = {
+                                'req_code': generated_req_code,
                                 'user_id': user_id,
                                 'course_code': course_code,
                                 'id_card_img': saved_str,
-                                'status': 'รอดำเนินการ'
+                                'doc_img': doc1,
+                                'doc_img2': doc2,
+                                'doc_img3': doc3,
+                                'status': 'Pending',
+                                'date_submitted': datetime.now().strftime('%Y-%m-%d %H:%M')
                             }
                             if hasattr(CreditRequest, 'course_name'): req_data['course_name'] = course_info.course_name or ''
                             if hasattr(CreditRequest, 'category'): req_data['category'] = course_info.category or ''
@@ -1574,7 +1575,7 @@ def submit_credit():
                 lesson_list_html = f"<ul class='mt-1 space-y-0.5'>{lessons_items}</ul>"
 
             if req:
-                status_val = req.status or 'รอดำเนินการ'
+                status_val = req.status or 'Pending'
                 status_badge = f'<span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xs">ยื่นแล้ว ({status_val})</span>'
                 img_str = req.id_card_img or ''
                 imgs = img_str.split(",") if img_str else []
@@ -1609,7 +1610,6 @@ def submit_credit():
         <div class="max-w-6xl mx-auto space-y-6">
             {msg}
 
-            <!-- ขั้นตอนที่ 1: ตารางเลือกรายวิชา -->
             <div id="step-1-container" class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6 relative">
                 <div class="sticky top-4 z-30 bg-white/95 backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-md flex justify-between items-center transition-all">
                     <div>
@@ -1640,7 +1640,6 @@ def submit_credit():
                 </div>
             </div>
 
-            <!-- ขั้นตอนที่ 2: ฟอร์มแนบรูปภาพตามรายบทเรียน -->
             <form id="step-2-form" method="POST" action="/submit_credit" enctype="multipart/form-data" class="hidden space-y-6">
                 <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
                     <div class="flex justify-between items-center border-b border-slate-100 pb-4">
@@ -1806,7 +1805,7 @@ def submit_credit():
     except Exception as e:
         db.session.rollback()
         return f"<div style='padding:20px; color:red;'><h3>System Error:</h3><p>{str(e)}</p></div>"
-                                           
+
 @app.route('/history')
 def student_history():
     if not session.get('user_id'): 
@@ -1815,7 +1814,6 @@ def student_history():
     user = User.query.get(session['user_id'])
     requests = CreditRequest.query.filter_by(user_id=user.id).order_by(CreditRequest.id.desc()).all()
 
-    # นับจำนวนแต่ละสถานะ
     pending_count = sum(1 for r in requests if r.status == 'Pending')
     approved_count = sum(1 for r in requests if r.status == 'Approved')
     revision_count = sum(1 for r in requests if r.status in ['Needs_Revision', 'Need_Edit'])
@@ -1832,7 +1830,6 @@ def student_history():
 
     content = f"""
     <div class="max-w-6xl mx-auto space-y-6">
-        <!-- Header -->
         <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 class="text-2xl font-black text-slate-800">ประวัติการยื่นขอเทียบโอนหน่วยกิต</h1>
@@ -1843,7 +1840,6 @@ def student_history():
             </a>
         </div>
 
-        <!-- Stat Summary Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div onclick="filterHistory('ALL')" class="cursor-pointer bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-400 transition">
                 <p class="text-xs font-extrabold text-slate-400 uppercase">ทั้งหมด</p>
@@ -1863,7 +1859,6 @@ def student_history():
             </div>
         </div>
 
-        <!-- Status Filter Tabs & Table -->
         <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
             <div class="flex flex-wrap gap-2 border-b border-slate-100 pb-4">
                 <button onclick="filterHistory('ALL')" id="tab-ALL" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white">ทั้งหมด ({len(requests)})</button>
@@ -2006,61 +2001,10 @@ def student_edit_request(req_id):
         <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขหลักฐานคำร้อง: {req.course_name}</h3>
         <p class="text-xs text-rose-600 mb-6 font-bold">เหตุผลที่ต้องแก้ไข: {req.reject_reason or "-"}</p>
         <form method="POST" enctype="multipart/form-data" class="space-y-6">
-            <div class="space-y-4">{ev_html}</div>
+            <div class="space-y-4">{ev_html if ev_html else '<p class="text-xs text-slate-400">ยังไม่มีหลักฐานเดิม</p>'}</div>
             <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm">บันทึกและส่งให้เจ้าหน้าที่ตรวจสอบอีกครั้ง</button>
         </form>
     </div>
-    """
-    
-    # แก้ปัญหาเครื่องหมายปีกกาของสคริปต์ตีกัน โดยแยกเป็นสตริงปกติ
-    content += """
-    <script>
-        function previewImage(event, imgId) {
-            var input = event.target;
-            if (input.files && input.files[0]) {
-                var reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById(imgId).src = e.target.result;
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-    </script>
-    """
-    
-    return render_layout(content, active_page='history')
-
-    course_data_list = get_courses()
-    matched_course = next((c for c in course_data_list if c['name'] == req.course_name), None)
-    mooc_names = matched_course['mooc_list'] if matched_course else []
-
-    def get_mooc_title(index, default_title):
-        if index < len(mooc_names): return f"{default_title} : {mooc_names[index]}"
-        return default_title
-
-    evidence_html = ""
-    # เพิ่ม id ให้รูปภาพ และ onchange ให้ input สำหรับเปลี่ยนรูปเรียลไทม์
-    if getattr(req, 'doc_img', None):
-        title = get_mooc_title(0, "หลักฐานที่ 1")
-        evidence_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img id="preview-img-0" src="/static/uploads/{req.doc_img}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_0" onchange="previewImage(event, \'preview-img-0\')" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
-    if getattr(req, 'doc_img2', None):
-        title = get_mooc_title(1, "หลักฐานที่ 2")
-        evidence_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img id="preview-img-1" src="/static/uploads/{req.doc_img2}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_1" onchange="previewImage(event, \'preview-img-1\')" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
-    if getattr(req, 'doc_img3', None):
-        title = get_mooc_title(2, "หลักฐานที่ 3")
-        evidence_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img id="preview-img-2" src="/static/uploads/{req.doc_img3}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_2" onchange="previewImage(event, \'preview-img-2\')" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
-
-        content = f"""
-    <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
-        <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขหลักฐานคำร้อง: {req.course_name}</h3>
-        <p class="text-xs text-rose-600 mb-6 font-bold">เหตุผลที่ต้องแก้ไข: {req.reject_reason or "-"}</p>
-        <form method="POST" enctype="multipart/form-data" class="space-y-6">
-            <!-- แก้ไขตรงนี้เป็นปีกกาเดี่ยว จะโชว์รูปได้แล้วครับ -->
-            <div class="space-y-4">{evidence_html}</div>
-            <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm">บันทึกและส่งให้เจ้าหน้าที่ตรวจสอบอีกครั้ง</button>
-        </form>
-    </div>
-    
     <script>
         function previewImage(event, imgId) {{
             var input = event.target;
@@ -2074,7 +2018,8 @@ def student_edit_request(req_id):
         }}
     </script>
     """
-        return render_layout(content, active_page='history')
+    
+    return render_layout(content, active_page='history')
 
 @app.route('/credits')
 def credits():
@@ -2082,7 +2027,7 @@ def credits():
     try: approved_requests = CreditRequest.query.filter_by(user_id=session['user_id'], status='Approved').all()
     except: approved_requests = []
 
-    total_approved = sum(getattr(r, 'credits', 0) for r in approved_requests)
+    total_approved = sum(getattr(r, 'credits', 0) or 0 for r in approved_requests)
     rows = ""
     for r in approved_requests:
         rows += f"""
@@ -2136,7 +2081,7 @@ def admin_requests():
 
         rows += f"""
         <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
-            <td class="py-4 px-4 font-mono font-bold text-sky-600">{getattr(r, 'req_code', 'TR001')}</td>
+            <td class="py-4 px-4 font-mono font-bold text-sky-600">{getattr(r, 'req_code', f'TR{r.id:04d}')}</td>
             <td class="py-4 px-4 font-bold text-slate-900">{student_name}<br><span class="text-xs text-sky-600 font-semibold">({student_code})</span></td>
             <td class="py-4 px-4 text-slate-700 font-medium">{getattr(r, 'course_name', '-')}</td>
             <td class="py-4 px-4 text-slate-500 text-xs font-medium">{getattr(r, 'date_submitted', '-')}</td>
@@ -2148,7 +2093,7 @@ def admin_requests():
     filter_label = "ทั้งหมด"
     if status_filter == 'Approved': filter_label = "อนุมัติแล้ว"
     elif status_filter == 'Pending': filter_label = "รอดำเนินการ"
-    elif status_filter == 'Needs_Revision': filter_label = "ส่งกลับให้แก้ไข"
+    elif status_filter in ['Needs_Revision', 'Need_Edit']: filter_label = "ส่งกลับให้แก้ไข"
 
     content = f"""
     <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto space-y-6">
@@ -2184,21 +2129,21 @@ def admin_review(req_id):
         admin_user = User.query.get(session['user_id'])
         if action == 'approve':
             req.status = 'Approved'
-            req.approved_by = admin_user.fullname
+            req.approved_by = admin_user.fullname if admin_user else 'เจ้าหน้าที่'
             db.session.commit()
             flash('อนุมัติผ่านเรียบร้อย', 'success')
             return redirect(url_for('admin_requests'))
         elif action == 'reject':
             req.status = 'Rejected'
             req.reject_reason = request.form.get('reject_reason', '-')
-            req.approved_by = admin_user.fullname
+            req.approved_by = admin_user.fullname if admin_user else 'เจ้าหน้าที่'
             db.session.commit()
             flash('ปฏิเสธคำร้องเรียบร้อย', 'success')
             return redirect(url_for('admin_requests'))
         elif action == 'revision':
             req.status = 'Needs_Revision'
             req.reject_reason = request.form.get('reject_reason', 'กรุณาแก้ไขรูปหลักฐานให้ถูกต้อง')
-            req.approved_by = admin_user.fullname
+            req.approved_by = admin_user.fullname if admin_user else 'เจ้าหน้าที่'
             db.session.commit()
             flash('ส่งกลับให้นักศึกษาแก้ไขหลักฐานเรียบร้อยแล้ว', 'success')
             return redirect(url_for('admin_requests'))
@@ -2227,7 +2172,7 @@ def admin_review(req_id):
     <div class="max-w-4xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-xl font-black text-slate-900">พิจารณาคำร้อง: {req.course_name}</h3>
-            <span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-xs font-bold">{getattr(req, 'req_code', '')}</span>
+            <span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-xs font-bold">{getattr(req, 'req_code', f'TR{req.id:04d}')}</span>
         </div>
 
         <div class="bg-sky-50/50 p-6 rounded-2xl border border-sky-100 mb-6 flex gap-8 text-sm">
@@ -2339,7 +2284,7 @@ def admin_students():
 
     rows = ""
     for s in students:
-        try: approved_credits = sum(r.credits for r in CreditRequest.query.filter_by(user_id=s.id, status='Approved').all())
+        try: approved_credits = sum(r.credits for r in CreditRequest.query.filter_by(user_id=s.id, status='Approved').all() if r.credits)
         except: approved_credits = 0
         rows += f"""
         <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
@@ -2363,7 +2308,6 @@ def admin_students():
     return render_layout(content, active_page='admin_students')
 
 def generate_next_officer_id():
-    """ฟังก์ชันคำนวณออโต้รันรหัสเจ้าหน้าที่ rmutto001, rmutto002..."""
     last_officer = User.query.filter(
         User.role.in_(['admin', 'officer', 'superadmin']),
         User.username.like('rmutto%')
@@ -2380,13 +2324,10 @@ def generate_next_officer_id():
 
     return f"rmutto{next_num:03d}"
 
-
 def generate_next_officer_password():
-    """ฟังก์ชันคำนวณรหัสผ่านเริ่มต้นแบบออโต้รัน rmutto001, rmutto002..."""
     officer_count = User.query.filter(User.role.in_(['admin', 'officer', 'superadmin'])).count()
     next_num = officer_count + 1
     return f"rmutto{next_num:03d}"
-
 
 @app.route('/admin/manage_admins', methods=['GET', 'POST'])
 def manage_admins():
@@ -2398,37 +2339,33 @@ def manage_admins():
         flash('ไม่มีสิทธิ์เข้าถึงส่วนงานนี้', 'error')
         return redirect(url_for('home'))
 
-    # บันทึกข้อมูลเจ้าหน้าที่ใหม่
     if request.method == 'POST':
         prefix = request.form.get('prefix', '').strip()
-        username_input = request.form.get('username', '').strip()  # เลขบัตรประชาชน 13 หลัก
+        username_input = request.form.get('username', '').strip()
         fullname = request.form.get('fullname', '').strip()
         email = request.form.get('email', '').strip()
         phone = request.form.get('phone', '').strip()
         address = request.form.get('address', '').strip()
 
-        # ตรวจสอบว่ามี Username / เลขบัตรประชาชนนี้ในระบบแล้วหรือยัง
         existing_user = User.query.filter((User.username == username_input) | (User.id_card == username_input)).first()
         if existing_user:
             flash('เลขบัตรประชาชน / Username นี้มีอยู่ในระบบแล้ว', 'error')
             return redirect(url_for('manage_admins'))
 
-        # 1. รันรหัสผ่านและรหัสประจำตัวเจ้าหน้าที่ให้อัตโนมัติ (rmutto001, rmutto002...)
         auto_officer_code = generate_next_officer_password()
         hashed_password = generate_password_hash(auto_officer_code)
 
-        # 2. บันทึกลงฐานข้อมูล (เพิ่ม prefix และ address)
         new_officer = User(
             prefix=prefix,
-            username=username_input,      # Username เป็นเลขบัตรประชาชน
-            id_card=username_input,       # เลขบัตรประชาชน
-            password=hashed_password,     # รหัสผ่านแฮช (rmutto001...)
+            username=username_input,
+            id_card=username_input,
+            password=hashed_password,
             fullname=fullname,
             email=email,
             phone=phone,
             address=address,
             role='admin',
-            member_id=auto_officer_code   # รหัสประจำตัวเจ้าหน้าที่ (rmutto001...)
+            member_id=auto_officer_code
         )
 
         try:
@@ -2441,7 +2378,6 @@ def manage_admins():
 
         return redirect(url_for('manage_admins'))
 
-    # คำนวณรหัสสำหรับแสดงตัวอย่างในฟอร์ม
     next_auto_password = generate_next_officer_password()
     officers = User.query.filter(User.role.in_(['admin', 'superadmin'])).order_by(User.id.asc()).all()
 
@@ -2462,7 +2398,6 @@ def manage_admins():
 
     content = f"""
     <div class="max-w-6xl mx-auto space-y-8">
-        <!-- Header -->
         <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <span class="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1 rounded-full font-black uppercase">Admin Management</span>
@@ -2472,7 +2407,6 @@ def manage_admins():
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <!-- Form เพิ่มพนักงาน -->
             <div class="lg:col-span-5 bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-5">
                 <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
                     <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-lg">
@@ -2492,7 +2426,6 @@ def manage_admins():
                                 <option value="นาย">นาย</option>
                                 <option value="นาง">นาง</option>
                                 <option value="นางสาว">นางสาว</option>
-                               
                             </select>
                         </div>
                         <div class="col-span-2">
@@ -2535,7 +2468,6 @@ def manage_admins():
                 </form>
             </div>
 
-            <!-- ตารางรายชื่อเจ้าหน้าที่ -->
             <div class="lg:col-span-7 bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-100 pb-4">
                     <div>
@@ -2738,7 +2670,6 @@ def logout():
 
 @app.route('/secret_clear_all_requests')
 def secret_clear_all_requests():
-    # ป้องกันไม่ให้คนอื่นเข้าถึงได้ ให้เฉพาะ superadmin เท่านั้น
     if session.get('role') != 'superadmin': 
         return "คุณไม่มีสิทธิ์เข้าถึงหน้านี้"
     
@@ -2751,29 +2682,24 @@ def secret_clear_all_requests():
         db.session.rollback()
         return f"เกิดข้อผิดพลาด: {e}"
 
-if __name__ == '__main__':
-    app.run(debug=True)
-
-from flask import Response
-
 @app.route('/admin/export_csv')
 def admin_export_csv():
     if session.get('role') not in ['admin', 'superadmin']:
         return redirect(url_for('login'))
     
-    # ดึงข้อมูลคำร้องทั้งหมด
     requests = CreditRequest.query.order_by(CreditRequest.id.desc()).all()
     
     output = io.StringIO()
     writer = csv.writer(output)
     
-    # เขียน Header รายงาน
     writer.writerow(['รหัสคำร้อง', 'รหัสนักศึกษา', 'ชื่อ-นามสกุล', 'วิชาที่ขอเทียบโอน', 'หน่วยกิต', 'วันที่ยื่น', 'สถานะ', 'ผู้อนุมัติ'])
     
     status_map = {
         'Pending': 'รอดำเนินการ',
         'Approved': 'อนุมัติแล้ว',
-        'Needs_Revision': 'ส่งกลับให้แก้ไข'
+        'Needs_Revision': 'ส่งกลับให้แก้ไข',
+        'Need_Edit': 'ส่งกลับให้แก้ไข',
+        'Rejected': 'ปฏิเสธ'
     }
 
     for r in requests:
@@ -2782,7 +2708,7 @@ def admin_export_csv():
         st_text = status_map.get(r.status, 'รอดำเนินการ')
         
         writer.writerow([
-            getattr(r, 'req_code', '-'),
+            getattr(r, 'req_code', f'TR{r.id:04d}'),
             student_code,
             student_name,
             getattr(r, 'course_name', '-'),
@@ -2792,11 +2718,13 @@ def admin_export_csv():
             getattr(r, 'approved_by', '-') or '-'
         ])
     
-    # ใส่ BOM (\ufeff) เพื่อให้ Excel เปิดภาษาไทยได้ถูกต้อง ไม่เป็นต่างดาว
     csv_data = "\ufeff" + output.getvalue()
     
     return Response(
         csv_data,
         mimetype="text/csv; charset=utf-8",
-        headers={"Content-disposition": f"attachment; filename=Credit_Bank_Report_{datetime.now().strftime('%Y%m')}.csv"}
+        headers={"Content-disposition": f"attachment; filename=Credit_Bank_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"}
     )
+
+if __name__ == '__main__':
+    app.run(debug=True)
