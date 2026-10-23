@@ -105,7 +105,6 @@ with app.app_context():
         with db.engine.connect() as conn:
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS faculty VARCHAR(200);"))
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS major VARCHAR(200);"))
-            # ... โค้ด ALTER TABLE เดิม ...
             conn.commit()
     except Exception:
         pass
@@ -1457,12 +1456,12 @@ def submit_credit():
         return redirect(url_for('login'))
 
     user_id = session['user_id']
-msg = ""
+    msg = ""
 
-# ดึงข้อมูลคณะและสาขาของผู้ใช้
-user_info = User.query.get(user_id)
-user_faculty = getattr(user_info, 'faculty', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ') or 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ'
-user_major = getattr(user_info, 'major', 'สาขาวิชาระบบสารสนเทศ') or 'สาขาวิชาระบบสารสนเทศ'
+    # ดึงข้อมูลคณะและสาขาของผู้ใช้
+    user_info = User.query.get(user_id)
+    user_faculty = getattr(user_info, 'faculty', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ') or 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ'
+    user_major = getattr(user_info, 'major', 'สาขาวิชาระบบสารสนเทศ') or 'สาขาวิชาระบบสารสนเทศ'
 
     try:
         # 1. จัดการการส่งฟอร์มอัปโหลดหลักฐาน (POST)
@@ -1539,7 +1538,7 @@ user_major = getattr(user_info, 'major', 'สาขาวิชาระบบ�
                                 'faculty': user_faculty,
                                 'major': user_major,
                                 'date_submitted': datetime.now().strftime('%Y-%m-%d %H:%M')
-                         }
+                            }
                             if hasattr(CreditRequest, 'course_name'): req_data['course_name'] = course_info.course_name or ''
                             if hasattr(CreditRequest, 'category'): req_data['category'] = course_info.category or ''
                             if hasattr(CreditRequest, 'institution'): req_data['institution'] = course_info.institution or ''
@@ -1962,7 +1961,7 @@ def student_edit_request(req_id):
         
     req = CreditRequest.query.get_or_404(req_id)
     if req.user_id != session['user_id']: 
-        return redirect(url_for('student_history'))  # แก้จุดที่ 1: เปลี่ยนจาก 'history' เป็น 'student_history'
+        return redirect(url_for('student_history'))
 
     # ดึงรูปภาพหลักฐานเดิม (รองรับทั้ง doc_img และ id_card_img)
     existing_imgs = []
@@ -2004,7 +2003,7 @@ def student_edit_request(req_id):
             db.session.commit()
             
             flash('✅ อัปเดตหลักฐานและส่งกลับให้เจ้าหน้าที่ตรวจสอบเรียบร้อยแล้ว', 'success')
-            return redirect(url_for('student_history'))  # แก้จุดที่ 2: เปลี่ยนจาก 'history' เป็น 'student_history'
+            return redirect(url_for('student_history'))
 
         except Exception as e:
             db.session.rollback()
