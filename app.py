@@ -2266,7 +2266,7 @@ def manage_admins():
 
     # บันทึกข้อมูลเจ้าหน้าที่ใหม่
     if request.method == 'POST':
-        username_input = request.form.get('username', '').strip()  # รับค่าเลขบัตรประชาชน
+        username_input = request.form.get('username', '').strip()  # เลขบัตรประชาชน 13 หลัก
         fullname = request.form.get('fullname', '').strip()
         email = request.form.get('email', '').strip()
         phone = request.form.get('phone', '').strip()
@@ -2277,33 +2277,33 @@ def manage_admins():
             flash('เลขบัตรประชาชน / Username นี้มีอยู่ในระบบแล้ว', 'error')
             return redirect(url_for('manage_admins'))
 
-        # 1. รันรหัสผ่านให้อัตโนมัติ (rmutto001, rmutto002...)
-        auto_password = generate_next_officer_password()
-        hashed_password = generate_password_hash(auto_password)
+        # 1. รันรหัสผ่านและรหัสประจำตัวเจ้าหน้าที่ให้อัตโนมัติ (rmutto001, rmutto002...)
+        auto_officer_code = generate_next_officer_password()
+        hashed_password = generate_password_hash(auto_officer_code)
 
-        # 2. บันทึกลงฐานข้อมูล โดยใช้เลขบัตรประชาชนเป็น Username และ id_card
+        # 2. บันทึกลงฐานข้อมูล (กำหนดให้ member_id เป็นรหัสเจ้าหน้าที่ เช่น rmutto001)
         new_officer = User(
-            username=username_input,
-            id_card=username_input,
-            password=hashed_password,
+            username=username_input,      # Username เป็นเลขบัตรประชาชน
+            id_card=username_input,       # เลขบัตรประชาชน
+            password=hashed_password,     # รหัสผ่านแฮช (rmutto001...)
             fullname=fullname,
             email=email,
             phone=phone,
             role='admin',
-            member_id=username_input
+            member_id=auto_officer_code   # 🟢 แก้ไขตรงนี้: ให้เป็นรหัสเจ้าหน้าที่ (rmutto001, rmutto002...) แทนเลขบัตรประชาชน
         )
 
         try:
             db.session.add(new_officer)
             db.session.commit()
-            flash(f'เพิ่มเจ้าหน้าที่สำเร็จ! Username (เลขบัตรประชาชน): {username_input} | รหัสผ่านเข้าสู่ระบบ: {auto_password}', 'success')
+            flash(f'เพิ่มเจ้าหน้าที่สำเร็จ! Username (เลขบัตร): {username_input} | รหัสพนักงาน/รหัสผ่าน: {auto_officer_code}', 'success')
         except Exception as e:
             db.session.rollback()
             flash('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error')
 
         return redirect(url_for('manage_admins'))
 
-    # คำนวณรหัสผ่านออโต้สำหรับแสดงตัวอย่างในฟอร์ม
+    # คำนวณรหัสสำหรับแสดงตัวอย่างในฟอร์ม
     next_auto_password = generate_next_officer_password()
     officers = User.query.filter(User.role.in_(['admin', 'superadmin'])).order_by(User.id.asc()).all()
 
@@ -2312,9 +2312,9 @@ def manage_admins():
         officers_rows += f"""
         <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
             <td class="py-3 px-4 font-mono font-bold text-slate-400">{idx}</td>
-            <td class="py-3 px-4 font-mono font-black text-indigo-600 bg-indigo-50/50 rounded-xl">{off.username}</td>
+            <td class="py-3 px-4 font-mono font-black text-indigo-600 bg-indigo-50/50 rounded-xl">{off.member_id or off.username}</td>
             <td class="py-3 px-4 font-bold text-slate-800">{off.fullname}</td>
-            <td class="py-3 px-4 text-slate-500">{off.email or '-'}</td>
+            <td class="py-3 px-4 font-mono text-slate-500">{off.username}</td>
             <td class="py-3 px-4 text-slate-500">{off.phone or '-'}</td>
             <td class="py-3 px-4"><span class="bg-slate-100 text-slate-700 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase">{off.role}</span></td>
         </tr>
@@ -2327,7 +2327,7 @@ def manage_admins():
             <div>
                 <span class="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1 rounded-full font-black uppercase">Admin Management</span>
                 <h1 class="text-2xl font-black mt-2">จัดการข้อมูลเจ้าหน้าที่ & สิทธิ์การใช้งาน</h1>
-                <p class="text-xs text-slate-300 mt-1">กรอก Username ด้วยเลขบัตรประชาชน โดยระบบจะเจนรหัสผ่านให้อัตโนมัติ (rmutto001, rmutto002...)</p>
+                <p class="text-xs text-slate-300 mt-1">กรอก Username ด้วยเลขบัตรประชาชน โดยระบบจะเจนรหัสประจำตัว/รหัสผ่านให้อัตโนมัติ (rmutto001, rmutto002...)</p>
             </div>
         </div>
 
@@ -2340,13 +2340,13 @@ def manage_admins():
                     </div>
                     <div>
                         <h3 class="text-base font-black text-slate-800">ลงทะเบียนเจ้าหน้าที่ใหม่</h3>
-                        <p class="text-xs font-bold text-slate-400">กรอกเลขบัตรประชาชน + รหัสผ่านระบบเจนออโต้</p>
+                        <p class="text-xs font-bold text-slate-400">กรอกเลขบัตรประชาชน + รหัสพนักงานเจนออโต้</p>
                     </div>
                 </div>
 
                 <form method="POST" class="space-y-4">
                     <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">Username / เลขบัตรประชาชน <span class="text-rose-500">*</span></label>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">เลขบัตรประชาชน (Username) <span class="text-rose-500">*</span></label>
                         <input type="text" name="username" required placeholder="กรอกเลขบัตรประชาชน 13 หลัก" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-indigo-500 font-mono font-bold">
                         <p class="text-[10px] text-slate-400 mt-1">* ใช้สำหรับเข้าสู่ระบบในช่อง Username / เลขบัตรประชาชน</p>
                     </div>
@@ -2368,9 +2368,9 @@ def manage_admins():
                     </div>
 
                     <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">รหัสผ่านระบบเจนให้อัตโนมัติ (Auto Password)</label>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">รหัสพนักงาน / รหัสผ่านออโต้</label>
                         <input type="text" value="{next_auto_password}" disabled class="w-full border border-indigo-100 bg-indigo-50/50 text-indigo-700 font-mono font-black rounded-2xl p-3.5 text-sm cursor-not-allowed">
-                        <p class="text-[10px] text-slate-400 mt-1">* รหัสผ่านจะถูกบันทึกและรันลำดับเป็น {next_auto_password} โดยอัตโนมัติ</p>
+                        <p class="text-[10px] text-slate-400 mt-1">* รหัสจะถูกบันทึกลงคอลัมน์ member_id และใช้เป็นรหัสผ่านเริ่มต้นในการล็อกอิน</p>
                     </div>
 
                     <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-4 rounded-2xl shadow-lg transition text-xs flex items-center justify-center gap-2">
@@ -2393,9 +2393,9 @@ def manage_admins():
                         <thead class="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-wider">
                             <tr>
                                 <th class="py-3 px-4">#</th>
-                                <th class="py-3 px-4">Username (เลขบัตรประชาชน)</th>
+                                <th class="py-3 px-4">รหัสพนักงาน (member_id)</th>
                                 <th class="py-3 px-4">ชื่อ-นามสกุล</th>
-                                <th class="py-3 px-4">อีเมล</th>
+                                <th class="py-3 px-4">เลขบัตรประชาชน</th>
                                 <th class="py-3 px-4">เบอร์โทร</th>
                                 <th class="py-3 px-4">สิทธิ์</th>
                             </tr>
