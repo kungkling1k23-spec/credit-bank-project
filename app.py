@@ -1407,11 +1407,11 @@ def all_courses():
         return redirect(url_for('login'))
 
     try:
-        # ดึงรายวิชาทั้งหมด
-        course_list = Course.query.all()
+        # ดึงรายวิชาทั้งหมดจากฐานข้อมูล (ตั้งชื่อตัวแปร courses_list ให้ตรงกันทุกจุด)
+        courses_list = Course.query.order_by(Course.course_code.asc()).all()
 
         rows = ""
-        for idx, c in enumerate(course_list, start=1):
+        for idx, c in enumerate(courses_list, start=1):
             rows += f"""
             <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
                 <td class="py-3 px-4 font-mono text-slate-400">{idx}</td>
