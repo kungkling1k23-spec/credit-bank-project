@@ -1465,77 +1465,95 @@ def submit_credit():
     user_id = session['user_id']
     msg = ""
 
-    # 1. จัดการการส่งฟอร์มอัปโหลดหลักฐาน (POST)
-    if request.method == 'POST':
-        selected_courses = request.form.getlist('selected_courses')
-        
-        if not selected_courses:
-            msg = """
-            <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold mb-4">
-                ❌ กรุณาเลือกรายวิชาอย่างน้อย 1 วิชาเพื่อยื่นเทียบโอน
-            </div>
-            """
-        else:
-            success_count = 0
-            upload_folder = os.path.join(app.root_path, 'static', 'uploads')
-            os.makedirs(upload_folder, exist_ok=True)
+    try:
+        # 1. จัดการการส่งฟอร์มอัปโหลดหลักฐาน (POST)
+        if request.method == 'POST':
+            selected_courses = request.form.getlist('selected_courses')
+            
+            if not selected_courses:
+                msg = """
+                <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold mb-4">
+                    ❌ กรุณาเลือกรายวิชาอย่างน้อย 1 วิชาเพื่อยื่นเทียบโอน
+                </div>
+                """
+            else:
+                success_count = 0
+                upload_folder = os.path.join(app.root_path, 'static', 'uploads')
+                os.makedirs(upload_folder, exist_ok=True)
 
-            for course_code in selected_courses:
-                course_info = db.session.get(Course, course_code)
-                if not course_info:
-                    continue
+                for course_code in selected_courses:
+                    course_info = db.session.get(Course, course_code)
+                    if not course_info:
+                        continue
 
-                uploaded_filenames = []
-                lessons = course_info.lessons if hasattr(course_info, 'lessons') and course_info.lessons else []
+                    uploaded_filenames = []
+                    lessons = course_info.lessons if hasattr(course_info, 'lessons') and course_info.lessons else []
 
-                if lessons:
-                    # กรณีมีบทเรียนย่อย: วนลูปรับไฟล์แยกตามบทเรียน (file_{course_code}_{lesson_id})
-                    for lesson in lessons:
-                        file_key = f'file_{course_code}_{lesson.id}'
+                    if lessons:
+                        for lesson in lessons:
+                            file_key = f'file_{course_code}_{lesson.id}'
+                            file = request.files.get(file_key)
+                            if file and file.filename != '':
+                                filename = secure_filename(f"{course_code}_{lesson.id}_{file.filename}")
+                                file.save(os.path.join(upload_folder, filename))
+                                uploaded_filenames.append(filename)
+                    else:
+                        file_key = f'file_{course_code}_default'
                         file = request.files.get(file_key)
                         if file and file.filename != '':
-                            filename = secure_filename(f"{course_code}_{lesson.id}_{file.filename}")
+                            filename = secure_filename(f"{course_code}_default_{file.filename}")
                             file.save(os.path.join(upload_folder, filename))
                             uploaded_filenames.append(filename)
-                else:
-                    # กรณีไม่มีบทเรียนย่อย: รับไฟล์รูปทั่วไป
-                    file_key = f'file_{course_code}_default'
-                    file = request.files.get(file_key)
-                    if file and file.filename != '':
-                        filename = secure_filename(f"{course_code}_default_{file.filename}")
-                        file.save(os.path.join(upload_folder, filename))
-                        uploaded_filenames.append(filename)
 
-                if uploaded_filenames:
-                    saved_str = ",".join(uploaded_filenames)
+                    if uploaded_filenames:
+                        saved_str = ",".join(uploaded_filenames)
 
-                    # บันทึกลงฐานข้อมูล credit_request
-                    existing_req = CreditRequest.query.filter_by(user_id=user_id, course_code=course_code).first()
-                    if existing_req:
-                        existing_req.id_card_img = saved_str
-                        existing_req.status = 'รอดำเนินการ'
-                    else:
-                        new_req = CreditRequest(
-                            user_id=user_id,
-                            course_code=course_code,
-                            id_card_img=saved_str,
-                            status='รอดำเนินการ'
-                        )
-                        db.session.add(new_req)
-                    success_count += 1
+                        # ตรวจสอบและบันทึกข้อมูลแบบยืดหยุ่น
+                        existing_req = None
+                        if hasattr(CreditRequest, 'course_code'):
+                            existing_req = CreditRequest.query.filter_by(user_id=user_id, course_code=course_code).first()
+                        elif hasattr(CreditRequest, 'course_id'):
+                            existing_req = CreditRequest.query.filter_by(user_id=user_id, course_id=course_code).first()
 
-            db.session.commit()
-            msg = f"""
-            <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold mb-4">
-                ✅ ยื่นคำขอเทียบโอนสำเร็จรวม {success_count} รายวิชา เรียบร้อยแล้ว
-            </div>
-            """
+                        if existing_req:
+                            if hasattr(existing_req, 'id_card_img'):
+                                existing_req.id_card_img = saved_str
+                            elif hasattr(existing_req, 'evidence_img'):
+                                existing_req.evidence_img = saved_str
+                            existing_req.status = 'รอดำเนินการ'
+                        else:
+                            req_kwargs = {'user_id': user_id, 'status': 'รอดำเนินการ'}
+                            if hasattr(CreditRequest, 'course_code'):
+                                req_kwargs['course_code'] = course_code
+                            elif hasattr(CreditRequest, 'course_id'):
+                                req_kwargs['course_id'] = course_code
 
-    try:
+                            if hasattr(CreditRequest, 'id_card_img'):
+                                req_kwargs['id_card_img'] = saved_str
+                            elif hasattr(CreditRequest, 'evidence_img'):
+                                req_kwargs['evidence_img'] = saved_str
+
+                            new_req = CreditRequest(**req_kwargs)
+                            db.session.add(new_req)
+
+                        success_count += 1
+
+                db.session.commit()
+                msg = f"""
+                <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold mb-4">
+                    ✅ ยื่นคำขอเทียบโอนสำเร็จรวม {success_count} รายวิชา เรียบร้อยแล้ว
+                </div>
+                """
+
         # 2. ดึงข้อมูลรายวิชาและประวัติการยื่นคำร้อง
         courses = Course.query.order_by(Course.course_code.asc()).all()
         user_requests = CreditRequest.query.filter_by(user_id=user_id).all()
-        existing_requests = {req.course_code: req for req in user_requests if hasattr(req, 'course_code')}
+        
+        existing_requests = {}
+        for req in user_requests:
+            c_code = getattr(req, 'course_code', getattr(req, 'course_id', None))
+            if c_code:
+                existing_requests[c_code] = req
 
         courses_data = []
         table_rows = ""
@@ -1544,7 +1562,6 @@ def submit_credit():
             req = existing_requests.get(c.course_code)
             lessons = c.lessons if hasattr(c, 'lessons') and c.lessons else []
             
-            # แปลงข้อมูลบทเรียนย่อยเป็น JSON ไว้ใช้ใน JavaScript
             lessons_json = [{'id': l.id, 'name': l.lesson_name, 'hours': l.hours} for l in lessons]
             courses_data.append({
                 'code': c.course_code,
@@ -1561,8 +1578,10 @@ def submit_credit():
                 lesson_list_html = f"<ul class='mt-1 space-y-0.5'>{lessons_items}</ul>"
 
             if req:
-                status_badge = f'<span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xs">ยื่นแล้ว ({req.status or "รอดำเนินการ"})</span>'
-                imgs = req.id_card_img.split(",") if req.id_card_img else []
+                status_val = getattr(req, 'status', 'รอดำเนินการ')
+                status_badge = f'<span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xs">ยื่นแล้ว ({status_val})</span>'
+                img_str = getattr(req, 'id_card_img', getattr(req, 'evidence_img', ''))
+                imgs = img_str.split(",") if img_str else []
                 img_links = " ".join([f'<a href="/static/uploads/{img.strip()}" target="_blank" class="text-sky-600 underline font-bold text-xs">รูปที่ {i+1}</a>' for i, img in enumerate(imgs) if img.strip()]) if imgs else "ไม่มีรูป"
                 action_area = f'<div class="text-xs text-slate-500">หลักฐานที่แนบไว้: {img_links}</div>'
                 checkbox_html = '<input type="checkbox" disabled class="w-4 h-4 rounded text-slate-300 cursor-not-allowed">'
@@ -1625,7 +1644,7 @@ def submit_credit():
                 </div>
             </div>
 
-            <!-- ขั้นตอนที่ 2: ฟอร์มแนบรูปภาพตามรายบทเรียน (ซ่อนไว้ก่อน) -->
+            <!-- ขั้นตอนที่ 2: ฟอร์มแนบรูปภาพตามรายบทเรียน -->
             <form id="step-2-form" method="POST" action="/submit_credit" enctype="multipart/form-data" class="hidden space-y-6">
                 <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
                     <div class="flex justify-between items-center border-b border-slate-100 pb-4">
@@ -1638,7 +1657,6 @@ def submit_credit():
                         </button>
                     </div>
 
-                    <!-- กล่องบรรจุรายการวิชาที่เลือก -->
                     <div id="upload-cards-container" class="space-y-6"></div>
 
                     <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
@@ -1681,7 +1699,6 @@ def submit_credit():
 
             function removeCourse(code) {{
                 selectedCourseCodes.delete(code);
-                // Uncheck checkbox in Step 1
                 const cb = document.querySelector(`.course-select-cb[value="${{code}}"]`);
                 if (cb) cb.checked = false;
                 
@@ -1764,9 +1781,11 @@ def submit_credit():
         </script>
         """
         return render_layout(content, active_page='submit_credit')
+
     except Exception as e:
-        return f"<div style='padding:20px; color:red;'><h3>Database Query Error:</h3><p>{str(e)}</p></div>"
-                       
+        db.session.rollback()
+        return f"<div style='padding:20px; color:red;'><h3>System Error:</h3><p>{str(e)}</p></div>"
+                           
 @app.route('/history')
 def student_history():
     if not session.get('user_id'): 
