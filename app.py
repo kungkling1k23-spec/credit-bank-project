@@ -74,25 +74,13 @@ class CourseLesson(db.Model):
     hours = db.Column(db.Integer, default=0)
 
 class CreditRequest(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    req_code = db.Column(db.String(20), default="TR2569001")
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    course_name = db.Column(db.String(150), nullable=False)
-    credits = db.Column(db.Integer, nullable=False)
-    institution = db.Column(db.String(100), nullable=False)
-    category = db.Column(db.String(50), default="ThaiMOOC")
-    faculty = db.Column(db.String(100), default="คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ")
-    major = db.Column(db.String(100), default="สาขาวิชาระบบสารสนเทศ")
-    date_submitted = db.Column(db.String(20), default="2026-08-26")
-    doc_img = db.Column(db.String(200), nullable=True)
-    doc_img2 = db.Column(db.String(200), nullable=True)
-    doc_img3 = db.Column(db.String(200), nullable=True)
-    evidence_data = db.Column(db.Text, nullable=True) # เก็บไว้กัน error เวลาอ่านฐานข้อมูลเก่า
-    status = db.Column(db.String(20), default='Pending') 
-    reject_reason = db.Column(db.Text, nullable=True)
-    approved_by = db.Column(db.String(100), nullable=True)
-    user = db.relationship('User', backref=db.backref('credits_list', lazy=True))
+    __tablename__ = 'credit_request'
 
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    course_code = db.Column(db.String(50))  # เพิ่มหรือเปลี่ยนบรรทัดนี้
+    id_card_img = db.Column(db.String(200))
+    status = db.Column(db.String(50), default='รอดำเนินการ')
 with app.app_context():
     db.create_all()
     try:
@@ -1481,14 +1469,12 @@ def submit_credit():
         course_code = request.form.get('course_code')
         files = request.files.getlist('evidence_imgs')
 
-        # ดึงข้อมูลรายวิชาและนับจำนวนบทเรียนย่อยที่ต้องแนบรูป
+        # ดึงข้อมูลรายวิชาและคำนวณจำนวนบทเรียนที่ต้องแนบรูป
         course_info = db.session.get(Course, course_code)
-        required_count = len(course_info.lessons) if (course_info and course_info.lessons) else 1
+        required_count = len(course_info.lessons) if (course_info and hasattr(course_info, 'lessons') and course_info.lessons) else 1
 
-        # กรองไฟล์ที่มีการเลือกจริง
         valid_files = [f for f in files if f and f.filename != '']
 
-        # ตรวจสอบจำนวนรูปภาพกับจำนวนบทเรียนย่อย
         if len(valid_files) < required_count:
             msg = f"""
             <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold mb-4">
@@ -1507,18 +1493,32 @@ def submit_credit():
 
             saved_str = ",".join(uploaded_filenames)
 
-            # บันทึกหรืออัปเดตคำขอเทียบโอน
-            existing_req = CreditRequest.query.filter_by(user_id=user_id, course_code=course_code).first()
+            # ค้นหาคำขอเดิมแบบปลอดภัย (เช็กทั้ง course_code และ course_id)
+            existing_req = None
+            if hasattr(CreditRequest, 'course_code'):
+                existing_req = CreditRequest.query.filter_by(user_id=user_id, course_code=course_code).first()
+            elif hasattr(CreditRequest, 'course_id'):
+                existing_req = CreditRequest.query.filter_by(user_id=user_id, course_id=course_code).first()
+
             if existing_req:
-                existing_req.id_card_img = saved_str
+                if hasattr(existing_req, 'id_card_img'):
+                    existing_req.id_card_img = saved_str
+                elif hasattr(existing_req, 'evidence_img'):
+                    existing_req.evidence_img = saved_str
                 existing_req.status = 'รอดำเนินการ'
             else:
-                new_req = CreditRequest(
-                    user_id=user_id,
-                    course_code=course_code,
-                    id_card_img=saved_str,
-                    status='รอดำเนินการ'
-                )
+                req_kwargs = {'user_id': user_id, 'status': 'รอดำเนินการ'}
+                if hasattr(CreditRequest, 'course_code'):
+                    req_kwargs['course_code'] = course_code
+                elif hasattr(CreditRequest, 'course_id'):
+                    req_kwargs['course_id'] = course_code
+
+                if hasattr(CreditRequest, 'id_card_img'):
+                    req_kwargs['id_card_img'] = saved_str
+                elif hasattr(CreditRequest, 'evidence_img'):
+                    req_kwargs['evidence_img'] = saved_str
+
+                new_req = CreditRequest(**req_kwargs)
                 db.session.add(new_req)
 
             db.session.commit()
@@ -1529,27 +1529,37 @@ def submit_credit():
             """
 
     try:
-        # 2. ดึงข้อมูลรายวิชาทั้งหมดและประวัติการยื่นของผู้ใช้
+        # 2. ดึงข้อมูลรายวิชาและทำ Dictionary จับคู่คำร้องย้อนหลังแบบปลอดภัย
         courses = Course.query.order_by(Course.course_code.asc()).all()
-        existing_requests = {req.course_code: req for req in CreditRequest.query.filter_by(user_id=user_id).all()}
+        user_requests = CreditRequest.query.filter_by(user_id=user_id).all()
+        
+        existing_requests = {}
+        for req in user_requests:
+            c_code = getattr(req, 'course_code', getattr(req, 'course_id', None))
+            if c_code:
+                existing_requests[c_code] = req
 
         table_rows = ""
         for idx, c in enumerate(courses, start=1):
             req = existing_requests.get(c.course_code)
-            lesson_count = len(c.lessons)
+            
+            # คำนวณจำนวนรูปที่ต้องใช้อิงตามบทเรียนย่อย
+            lessons_list = getattr(c, 'lessons', [])
+            lesson_count = len(lessons_list)
             required_img_count = lesson_count if lesson_count > 0 else 1
 
-            # สร้าง HTML แสดงรายการบทเรียนย่อยและจำนวนชั่วโมง
             lesson_list_html = ""
-            if c.lessons:
-                lessons_items = "".join([f"<li class='text-[11px] text-slate-500'>• {l.lesson_name} ({l.hours} ชม.)</li>" for l in c.lessons])
+            if lessons_list:
+                lessons_items = "".join([f"<li class='text-[11px] text-slate-500'>• {l.lesson_name} ({l.hours} ชม.)</li>" for l in lessons_list])
                 lesson_list_html = f"<ul class='mt-1 space-y-0.5'>{lessons_items}</ul>"
 
-            # แสดงสถานะการยื่นและฟอร์มอัปโหลดรูปภาพ
             if req:
-                status_badge = f'<span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xs">ยื่นแล้ว ({req.status or "รอดำเนินการ"})</span>'
-                imgs = req.id_card_img.split(",") if req.id_card_img else []
-                img_links = " ".join([f'<a href="/static/uploads/{img.strip()}" target="_blank" class="text-sky-600 underline font-bold text-xs">รูปที่ {i+1}</a>' for i, img in enumerate(imgs)]) if imgs else "ไม่มีรูป"
+                status_val = getattr(req, 'status', 'รอดำเนินการ')
+                status_badge = f'<span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xs">ยื่นแล้ว ({status_val})</span>'
+                
+                img_str = getattr(req, 'id_card_img', getattr(req, 'evidence_img', ''))
+                imgs = img_str.split(",") if img_str else []
+                img_links = " ".join([f'<a href="/static/uploads/{img.strip()}" target="_blank" class="text-sky-600 underline font-bold text-xs">รูปที่ {i+1}</a>' for i, img in enumerate(imgs) if img.strip()]) if imgs else "ไม่มีรูป"
                 action_area = f'<div class="text-xs text-slate-500">หลักฐานที่แนบไว้: {img_links}</div>'
             else:
                 status_badge = '<span class="px-3 py-1 bg-slate-100 text-slate-400 rounded-full font-bold text-xs">ยังไม่ได้ยื่น</span>'
@@ -1618,7 +1628,7 @@ def submit_credit():
         return render_layout(content, active_page='submit_credit')
     except Exception as e:
         return f"<div style='padding:20px; color:red;'><h3>Database Query Error:</h3><p>{str(e)}</p></div>"
-               
+                   
 @app.route('/history')
 def student_history():
     if not session.get('user_id'): 
