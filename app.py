@@ -1674,46 +1674,145 @@ def submit_credit():
     return render_layout(content, active_page='submit_credit')
 
 @app.route('/history')
-def history():
-    if 'user_id' not in session: return redirect(url_for('login'))
-    
-    try:
-        user_requests = CreditRequest.query.filter_by(user_id=session['user_id']).order_by(CreditRequest.id.desc()).all()
-    except: user_requests = []
-
-    rows = ""
-    for r in user_requests:
-        status = getattr(r, 'status', 'Pending')
-        if status == 'Pending': badge = '<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-700">รอตรวจ</span>'
-        elif status == 'Approved': badge = '<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-700">อนุมัติแล้ว</span>'
-        elif status == 'Needs_Revision': badge = f'<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-100 text-indigo-700">ให้แก้ไข: {r.reject_reason or "-"}</span> <a href="/student/edit_request/{r.id}" class="ml-2 bg-indigo-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-indigo-700"><i class="fa-solid fa-pen-to-square"></i> แก้ไขรูปหลักฐาน</a>'
-        else: badge = f'<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-100 text-rose-700">ไม่อนุมัติ ({r.reject_reason or "-"})</span>'
+def student_history():
+    if not session.get('user_id'): 
+        return redirect(url_for('login'))
         
-        img_preview = ""
-        if getattr(r, 'doc_img', None): img_preview += f'<a href="/static/uploads/{r.doc_img}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2"><i class="fa-solid fa-image"></i> รูปที่ 1</a>'
-        if getattr(r, 'doc_img2', None): img_preview += f'<a href="/static/uploads/{r.doc_img2}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2"><i class="fa-solid fa-image"></i> รูปที่ 2</a>'
-        if getattr(r, 'doc_img3', None): img_preview += f'<a href="/static/uploads/{r.doc_img3}" target="_blank" class="text-[10px] text-sky-600 underline font-bold whitespace-nowrap mr-2"><i class="fa-solid fa-image"></i> รูปที่ 3</a>'
-        
-        if not img_preview: img_preview = '<span class="text-[10px] text-slate-400">ไม่มีรูป</span>'
+    user = User.query.get(session['user_id'])
+    requests = CreditRequest.query.filter_by(user_id=user.id).order_by(CreditRequest.id.desc()).all()
 
-        rows += f"""
-        <tr class="border-b border-slate-100 text-xs hover:bg-slate-50 transition">
-            <td class="py-4 px-4 font-mono font-bold text-slate-400">{getattr(r, 'req_code', '-')}</td>
-            <td class="py-4 px-4 font-extrabold text-slate-800">{getattr(r, 'course_name', '-')}<div class="mt-1 flex gap-2 flex-wrap">{img_preview}</div></td>
-            <td class="py-4 px-4 font-bold text-sky-600 text-center">{getattr(r, 'credits', 0)}</td>
-            <td class="py-4 px-4">{badge}</td>
-        </tr>
-        """
+    # นับจำนวนแต่ละสถานะ
+    pending_count = sum(1 for r in requests if r.status == 'Pending')
+    approved_count = sum(1 for r in requests if r.status == 'Approved')
+    revision_count = sum(1 for r in requests if r.status in ['Needs_Revision', 'Need_Edit'])
+
+    requests_json = json.dumps([{
+        'id': r.id,
+        'req_code': getattr(r, 'req_code', f'TR{r.id:04d}'),
+        'course_name': r.course_name,
+        'credits': r.credits,
+        'status': r.status,
+        'reject_reason': getattr(r, 'reject_reason', '') or '-',
+        'date_submitted': getattr(r, 'date_submitted', '-')
+    } for r in requests], ensure_ascii=False)
+
     content = f"""
-    <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto max-w-5xl mx-auto">
-        <h3 class="text-2xl font-black text-slate-900 mb-6">ประวัติคำร้องเทียบโอน</h3>
-        <table class="w-full text-left min-w-[500px]">
-            <thead class="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                <tr><th class="py-3 px-4">รหัส</th><th class="py-3 px-4">วิชาที่ขอ / รูปหลักฐาน</th><th class="py-3 px-4 text-center">หน่วยกิต</th><th class="py-3 px-4">สถานะ</th></tr>
-            </thead>
-            <tbody>{rows if rows else '<tr><td colspan="4" class="py-12 text-center text-slate-400">ไม่มีประวัติคำร้องเทียบโอน</td></tr>'}</tbody>
-        </table>
+    <div class="max-w-6xl mx-auto space-y-6">
+        <!-- Header -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800">ประวัติการยื่นขอเทียบโอนหน่วยกิต</h1>
+                <p class="text-xs text-slate-400 mt-1">ตรวจสอบสถานะและประวัติคำร้องทั้งหมดของคุณ</p>
+            </div>
+            <a href="/submit_credit" class="bg-sky-600 hover:bg-sky-700 text-white font-extrabold px-5 py-2.5 rounded-2xl text-xs transition flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> ยื่นคำขอใหม่
+            </a>
+        </div>
+
+        <!-- Stat Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div onclick="filterHistory('ALL')" class="cursor-pointer bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-slate-400 transition">
+                <p class="text-xs font-extrabold text-slate-400 uppercase">ทั้งหมด</p>
+                <p class="text-2xl font-black text-slate-800 mt-1">{len(requests)}</p>
+            </div>
+            <div onclick="filterHistory('Pending')" class="cursor-pointer bg-white p-5 rounded-2xl border border-amber-200 shadow-sm hover:bg-amber-50/50 transition">
+                <p class="text-xs font-extrabold text-amber-600 uppercase">⏳ รอดำเนินการ</p>
+                <p class="text-2xl font-black text-amber-700 mt-1">{pending_count}</p>
+            </div>
+            <div onclick="filterHistory('Approved')" class="cursor-pointer bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm hover:bg-emerald-50/50 transition">
+                <p class="text-xs font-extrabold text-emerald-600 uppercase">✅ อนุมัติแล้ว</p>
+                <p class="text-2xl font-black text-emerald-700 mt-1">{approved_count}</p>
+            </div>
+            <div onclick="filterHistory('Revision')" class="cursor-pointer bg-white p-5 rounded-2xl border border-indigo-200 shadow-sm hover:bg-indigo-50/50 transition">
+                <p class="text-xs font-extrabold text-indigo-600 uppercase">⚠️ ต้องแก้ไขหลักฐาน</p>
+                <p class="text-2xl font-black text-indigo-700 mt-1">{revision_count}</p>
+            </div>
+        </div>
+
+        <!-- Status Filter Tabs & Table -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+            <div class="flex flex-wrap gap-2 border-b border-slate-100 pb-4">
+                <button onclick="filterHistory('ALL')" id="tab-ALL" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white">ทั้งหมด ({len(requests)})</button>
+                <button onclick="filterHistory('Pending')" id="tab-Pending" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">รอดำเนินการ ({pending_count})</button>
+                <button onclick="filterHistory('Approved')" id="tab-Approved" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">อนุมัติแล้ว ({approved_count})</button>
+                <button onclick="filterHistory('Revision')" id="tab-Revision" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">ต้องแก้ไข ({revision_count})</button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-slate-400 font-extrabold uppercase bg-slate-50 rounded-xl">
+                        <tr>
+                            <th class="px-4 py-3 rounded-l-xl">รหัสคำร้อง</th>
+                            <th class="px-4 py-3">รายวิชาที่ยื่นเทียบโอน</th>
+                            <th class="px-4 py-3 text-center">หน่วยกิต</th>
+                            <th class="px-4 py-3">วันที่ยื่น</th>
+                            <th class="px-4 py-3 text-center">สถานะ</th>
+                            <th class="px-4 py-3 text-right rounded-r-xl">การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history_tbody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
+
+    <script>
+    const historyData = {requests_json};
+
+    function filterHistory(status) {{
+        const tbody = document.getElementById('history_tbody');
+        tbody.innerHTML = '';
+
+        document.querySelectorAll('.tab-btn').forEach(b => {{
+            b.className = 'tab-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100';
+        }});
+        const activeTab = document.getElementById('tab-' + status);
+        if(activeTab) activeTab.className = 'tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white';
+
+        const filtered = historyData.filter(r => {{
+            if (status === 'ALL') return true;
+            if (status === 'Pending') return r.status === 'Pending';
+            if (status === 'Approved') return r.status === 'Approved';
+            if (status === 'Revision') return r.status === 'Needs_Revision' || r.status === 'Need_Edit';
+            return true;
+        }});
+
+        if (filtered.length === 0) {{
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-xs font-bold text-slate-400">ไม่พบคำร้องในสถานะนี้</td></tr>`;
+            return;
+        }}
+
+        filtered.forEach(item => {{
+            let badge = '';
+            if (item.status === 'Pending') {{
+                badge = `<span class="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold px-2.5 py-1 rounded-full">⏳ รอดำเนินการ</span>`;
+            }} else if (item.status === 'Approved') {{
+                badge = `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-2.5 py-1 rounded-full">✅ อนุมัติแล้ว</span>`;
+            }} else {{
+                badge = `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2.5 py-1 rounded-full">⚠️ ให้แก้ไข</span>`;
+            }}
+
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-50 transition';
+            tr.innerHTML = `
+                <td class="px-4 py-3.5 font-mono font-bold text-sky-600">${{item.req_code}}</td>
+                <td class="px-4 py-3.5 font-bold text-slate-800">${{item.course_name}}</td>
+                <td class="px-4 py-3.5 text-center font-bold text-slate-600">${{item.credits}}</td>
+                <td class="px-4 py-3.5 text-xs text-slate-400">${{item.date_submitted}}</td>
+                <td class="px-4 py-3.5 text-center">${{badge}}</td>
+                <td class="px-4 py-3.5 text-right">
+                    ${{item.status !== 'Approved' && item.status !== 'Pending' ? 
+                        `<a href="/student/edit_request/${{item.id}}" class="bg-indigo-50 text-indigo-600 font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-indigo-100 transition">แก้ไขหลักฐาน</a>` : 
+                        `<span class="text-xs text-slate-300">-</span>`
+                    }}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }});
+    }}
+
+    document.addEventListener('DOMContentLoaded', () => filterHistory('ALL'));
+    </script>
     """
     return render_layout(content, active_page='history')
 
@@ -2129,54 +2228,170 @@ def admin_students():
     """
     return render_layout(content, active_page='admin_students')
 
+def generate_next_officer_id():
+    """ฟังก์ชันคำนวณออโต้รันรหัสเจ้าหน้าที่ rmutto001, rmutto002..."""
+    last_officer = User.query.filter(
+        User.role.in_(['admin', 'officer', 'superadmin']),
+        User.username.like('rmutto%')
+    ).order_by(User.id.desc()).first()
+
+    if last_officer and last_officer.username.startswith('rmutto'):
+        try:
+            current_num = int(last_officer.username.replace('rmutto', ''))
+            next_num = current_num + 1
+        except ValueError:
+            next_num = 1
+    else:
+        next_num = 1
+
+    return f"rmutto{next_num:03d}"
+
+
 @app.route('/admin/manage_admins', methods=['GET', 'POST'])
 def manage_admins():
-    if session.get('role') != 'superadmin':
-        flash('คุณไม่มีสิทธิ์เข้าถึงหน้าจัดการเจ้าหน้าที่ (เฉพาะผู้ดูแลหลักเท่านั้น)', 'error')
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+    
+    current_user = User.query.get(session['user_id'])
+    if current_user.role not in ['admin', 'superadmin']:
+        flash('ไม่มีสิทธิ์เข้าถึงส่วนงานนี้', 'error')
         return redirect(url_for('home'))
 
+    # บันทึกข้อมูลเจ้าหน้าที่ใหม่
     if request.method == 'POST':
         fullname = request.form.get('fullname', '').strip()
-        id_card = request.form.get('id_card', '').strip()
-        password = request.form.get('password', '').strip()
-        role_type = request.form.get('role_type', 'admin')
-        new_admin = User(member_id=f"ADM{uuid.uuid4().hex[:3].upper()}", prefix="เจ้าหน้าที่", fullname=fullname, id_card=id_card, username=id_card, password=generate_password_hash(password), role=role_type)
-        db.session.add(new_admin)
-        db.session.commit()
-        flash('เพิ่มเจ้าหน้าที่เรียบร้อยแล้ว', 'success')
+        email = request.form.get('email', '').strip()
+        phone = request.form.get('phone', '').strip()
+        raw_password = request.form.get('password', '').strip()
+
+        # 1. รันรหัส Username อัตโนมัติ (rmutto001, rmutto002...)
+        auto_username = generate_next_officer_id()
+
+        # 2. หากไม่ได้กรอกรหัสผ่านมา ให้ใช้ auto_username เป็นรหัสผ่านเริ่มต้น
+        password_to_hash = raw_password if raw_password else auto_username
+        hashed_password = generate_password_hash(password_to_hash)
+
+        # 3. บันทึกลงฐานข้อมูล บันทึกแยก Username และ Password ชัดเจน
+        new_officer = User(
+            username=auto_username,
+            password=hashed_password,
+            fullname=fullname,
+            email=email,
+            phone=phone,
+            role='admin',
+            member_id=auto_username
+        )
+
+        try:
+            db.session.add(new_officer)
+            db.session.commit()
+            flash(f'เพิ่มเจ้าหน้าที่สำเร็จ! รหัสพนักงาน (Username): {auto_username}', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error')
+
         return redirect(url_for('manage_admins'))
 
-    admin_list = User.query.filter(User.role.in_(['admin', 'superadmin'])).all()
-    rows = ""
-    for a in admin_list:
-        rows += f"""
-        <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
-            <td class="py-4 px-4 font-bold"><a href="/admin/manage_admin_detail/{a.id}" class="text-sky-600 hover:underline">{a.fullname}</a></td>
-            <td class="py-4 px-4 font-mono text-xs">{a.username}</td>
-            <td class="py-4 px-4"><span class="px-2 py-1 rounded text-xs font-bold {'bg-purple-100 text-purple-700' if a.role=='superadmin' else 'bg-sky-100 text-sky-700'}">{'ผู้ดูแลหลัก (Super Admin)' if a.role=='superadmin' else 'เจ้าหน้าที่ทั่วไป'}</span></td>
+    # ดึงรหัสถัดไปสำหรับแสดงบนฟอร์ม
+    next_officer_code = generate_next_officer_id()
+    officers = User.query.filter(User.role.in_(['admin', 'superadmin'])).order_by(User.id.asc()).all()
+
+    officers_rows = ""
+    for idx, off in enumerate(officers, start=1):
+        officers_rows += f"""
+        <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
+            <td class="py-3 px-4 font-mono font-bold text-slate-400">{idx}</td>
+            <td class="py-3 px-4 font-mono font-black text-indigo-600 bg-indigo-50/50 rounded-xl">{off.username}</td>
+            <td class="py-3 px-4 font-bold text-slate-800">{off.fullname}</td>
+            <td class="py-3 px-4 text-slate-500">{off.email or '-'}</td>
+            <td class="py-3 px-4 text-slate-500">{off.phone or '-'}</td>
+            <td class="py-3 px-4"><span class="bg-slate-100 text-slate-700 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase">{off.role}</span></td>
         </tr>
         """
 
     content = f"""
-    <div class="max-w-4xl mx-auto space-y-8">
-        <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
-            <h3 class="text-xl font-black text-slate-900 mb-6">เพิ่มบัญชีเจ้าหน้าที่</h3>
-            <form method="POST" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label class="block text-xs font-bold text-slate-700 mb-1">ชื่อ-นามสกุล</label><input type="text" name="fullname" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
-                    <div><label class="block text-xs font-bold text-slate-700 mb-1">เลขบัตรประชาชน (Username)</label><input type="text" name="id_card" maxlength="13" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
-                    <div><label class="block text-xs font-bold text-slate-700 mb-1">รหัสผ่าน</label><input type="password" name="password" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
-                    <div><label class="block text-xs font-bold text-slate-700 mb-1">ระดับสิทธิ์</label><select name="role_type" class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"><option value="admin">เจ้าหน้าที่ทั่วไป</option><option value="superadmin">ผู้ดูแลหลัก (Super Admin)</option></select></div>
-                </div>
-                <button type="submit" class="w-full bg-sky-600 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm mt-2">บันทึกเพิ่มเจ้าหน้าที่</button>
-            </form>
+    <div class="max-w-6xl mx-auto space-y-8">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <span class="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1 rounded-full font-black uppercase">Admin Management</span>
+                <h1 class="text-2xl font-black mt-2">จัดการข้อมูลเจ้าหน้าที่ & สิทธิ์การใช้งาน</h1>
+                <p class="text-xs text-slate-300 mt-1">ระบบจะรันรหัสเจ้าหน้าที่อัตโนมัติ (rmutto001, rmutto002...)</p>
+            </div>
         </div>
-        <div class="bg-white p-8 rounded-3xl border border-sky-100 shadow-sm overflow-x-auto">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">รายชื่อเจ้าหน้าที่ในระบบ (คลิกที่ชื่อเพื่อดูรายละเอียด)</h3>
-            <table class="w-full text-left">
-                <thead class="bg-sky-50 text-xs text-sky-700 uppercase"><tr><th class="py-3 px-4">ชื่อ-สกุล</th><th class="py-3 px-4">Username</th><th class="py-3 px-4">สิทธิ์</th></tr></thead>
-                <tbody>{rows}</tbody>
-            </table>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <!-- Form เพิ่มพนักงาน -->
+            <div class="lg:col-span-5 bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-5">
+                <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-lg">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-black text-slate-800">ลงทะเบียนเจ้าหน้าที่ใหม่</h3>
+                        <p class="text-xs font-bold text-slate-400">รหัสจะถูกเจนให้อัตโนมัติ</p>
+                    </div>
+                </div>
+
+                <form method="POST" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">รหัสเจ้าหน้าที่ (Username)</label>
+                        <input type="text" value="{next_officer_code}" disabled class="w-full border border-indigo-100 bg-indigo-50/50 text-indigo-700 font-mono font-black rounded-2xl p-3.5 text-sm cursor-not-allowed">
+                        <p class="text-[10px] text-slate-400 mt-1">* ระบบเจนให้อัตโนมัติ บันทึกลงช่อง Username ในฐานข้อมูล</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">ชื่อ-นามสกุลเจ้าหน้าที่ <span class="text-rose-500">*</span></label>
+                        <input type="text" name="fullname" required placeholder="นายสมชาย ใจดี" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-indigo-500">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-black uppercase text-slate-400 mb-1">อีเมล</label>
+                            <input type="email" name="email" placeholder="officer@rmutto.ac.th" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black uppercase text-slate-400 mb-1">เบอร์โทรศัพท์</label>
+                            <input type="text" name="phone" placeholder="0812345678" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">กำหนดรหัสผ่าน (Password)</label>
+                        <input type="password" name="password" placeholder="หากว่างไว้ จะใช้ Username เป็นรหัสผ่านเริ่มต้น" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-indigo-500">
+                    </div>
+
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-4 rounded-2xl shadow-lg transition text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-save"></i> บันทึกข้อมูลเจ้าหน้าที่
+                    </button>
+                </form>
+            </div>
+
+            <!-- ตารางรายชื่อเจ้าหน้าที่ -->
+            <div class="lg:col-span-7 bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <div>
+                        <h3 class="text-base font-black text-slate-800">รายชื่อเจ้าหน้าที่ในระบบ</h3>
+                        <p class="text-xs text-slate-400">รวมทั้งหมด {len(officers)} ท่าน</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                            <tr>
+                                <th class="py-3 px-4">#</th>
+                                <th class="py-3 px-4">Username</th>
+                                <th class="py-3 px-4">ชื่อ-นามสกุล</th>
+                                <th class="py-3 px-4">อีเมล</th>
+                                <th class="py-3 px-4">เบอร์โทร</th>
+                                <th class="py-3 px-4">สิทธิ์</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">{officers_rows}</tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
     """
