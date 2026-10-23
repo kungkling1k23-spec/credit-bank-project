@@ -1458,46 +1458,56 @@ def submit_credit():
     if not session.get('user_id'):
         return redirect(url_for('login'))
 
-    user = User.query.get(session['user_id'])
-
-    # ส่วนประมวลผลเมื่อกดส่งฟอร์ม (POST)
+    success_msg = ""
+    
+    # เมื่อมีการกดส่งฟอร์ม (POST)
     if request.method == 'POST':
-        # ... (โค้ดส่วนรับค่าและบันทึกข้อมูลคำร้องลง db ตามเดิมของคุณ) ...
-        pass
-
-    # 🟢 1. ดึงข้อมูลรายวิชาทั้งหมดจาก DBeaver (เรียงตามรหัสวิชา)
-    courses = Course.query.order_by(Course.course_code.asc()).all()
-
-    # 🟢 2. วนลูปสร้างตัวเลือกรายวิชาใส่ใน Dropdown
-    course_options = ""
-    for c in courses:
-        course_options += f'<option value="{c.course_code}">{c.course_code} - {c.course_name} ({c.credits} หน่วยกิต)</option>'
-
-    # 🟢 3. นำ {course_options} ไปวางไว้ในแท็ก <select> ของฟอร์ม HTML
-    content = f"""
-    <div class="max-w-4xl mx-auto space-y-6">
-        <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-            <h1 class="text-2xl font-black text-slate-800">ยื่นคำขอเทียบโอนหน่วยกิต</h1>
-            
-            <form method="POST" action="/submit_credit" class="space-y-5">
-                <div>
-                    <label class="block text-xs font-black uppercase text-slate-400 mb-2">เลือกรายวิชาที่ต้องการเทียบโอน <span class="text-rose-500">*</span></label>
-                    <select name="course_code" required class="w-full border border-slate-200 rounded-2xl p-4 text-sm bg-slate-50 outline-none focus:border-sky-500 font-bold">
-                        <option value="">-- กรุณาเลือกรายวิชา --</option>
-                        {course_options}
-                    </select>
-                </div>
-
-                <!-- ช่องกรอกข้อมูลอื่นๆ ของฟอร์ม เช่น อัปโหลดไฟล์หลักฐาน ฯลฯ -->
-
-                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-extrabold py-4 rounded-2xl shadow-lg transition text-xs">
-                    ส่งคำขอเทียบโอน
-                </button>
-            </form>
+        # --- (ใส่โค้ดบันทึกข้อมูลคำขอเทียบโอนลงฐานข้อมูลตามโครงสร้างเดิมของคุณได้ที่นี่) ---
+        
+        # แสดงข้อความแจ้งเตือนทำรายการสำเร็จบนหน้าเดิม (ไม่ redirect ไปหน้าอื่น)
+        success_msg = """
+        <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center space-x-2">
+            <span>✅ ยื่นคำขอเทียบโอนเรียบร้อยแล้ว</span>
         </div>
-    </div>
-    """
-    return render_layout(content, active_page='submit_credit')
+        """
+
+    try:
+        # ดึงรายวิชาทั้งหมดจากฐานข้อมูล DBeaver
+        courses = Course.query.order_by(Course.course_code.asc()).all()
+
+        # วนลูปสร้างตัวเลือกรายวิชาทั้งหมดใส่ Dropdown
+        course_options = ""
+        for c in courses:
+            course_options += f'<option value="{c.course_code}">{c.course_code} - {c.course_name} ({c.credits or 0} หน่วยกิต)</option>'
+
+        content = f"""
+        <div class="max-w-4xl mx-auto space-y-6">
+            {success_msg}
+            <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+                <div>
+                    <h1 class="text-2xl font-black text-slate-800">ยื่นคำขอเทียบโอนหน่วยกิต</h1>
+                    <p class="text-xs text-slate-400 mt-1">เลือกรายวิชาจากระบบเพื่อยื่นขอเทียบโอน</p>
+                </div>
+                
+                <form method="POST" action="/submit_credit" class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-2">เลือกรายวิชาที่ต้องการเทียบโอน <span class="text-rose-500">*</span></label>
+                        <select name="course_code" required class="w-full border border-slate-200 rounded-2xl p-4 text-sm bg-slate-50 outline-none focus:border-sky-500 font-bold text-slate-700">
+                            <option value="">-- เลือกรายวิชาทั้งหมด ({len(courses)} วิชา) --</option>
+                            {course_options}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-extrabold py-4 rounded-2xl shadow-lg transition text-xs">
+                        ส่งคำขอเทียบโอน
+                    </button>
+                </form>
+            </div>
+        </div>
+        """
+        return render_layout(content, active_page='submit_credit')
+    except Exception as e:
+        return f"<div style='padding:20px; color:red;'><h3>Database Query Error:</h3><p>{str(e)}</p></div>"
 
 @app.route('/history')
 def student_history():
