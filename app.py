@@ -2266,10 +2266,12 @@ def manage_admins():
 
     # บันทึกข้อมูลเจ้าหน้าที่ใหม่
     if request.method == 'POST':
+        prefix = request.form.get('prefix', '').strip()
         username_input = request.form.get('username', '').strip()  # เลขบัตรประชาชน 13 หลัก
         fullname = request.form.get('fullname', '').strip()
         email = request.form.get('email', '').strip()
         phone = request.form.get('phone', '').strip()
+        address = request.form.get('address', '').strip()
 
         # ตรวจสอบว่ามี Username / เลขบัตรประชาชนนี้ในระบบแล้วหรือยัง
         existing_user = User.query.filter((User.username == username_input) | (User.id_card == username_input)).first()
@@ -2281,16 +2283,18 @@ def manage_admins():
         auto_officer_code = generate_next_officer_password()
         hashed_password = generate_password_hash(auto_officer_code)
 
-        # 2. บันทึกลงฐานข้อมูล (กำหนดให้ member_id เป็นรหัสเจ้าหน้าที่ เช่น rmutto001)
+        # 2. บันทึกลงฐานข้อมูล (เพิ่ม prefix และ address)
         new_officer = User(
+            prefix=prefix,
             username=username_input,      # Username เป็นเลขบัตรประชาชน
             id_card=username_input,       # เลขบัตรประชาชน
             password=hashed_password,     # รหัสผ่านแฮช (rmutto001...)
             fullname=fullname,
             email=email,
             phone=phone,
+            address=address,
             role='admin',
-            member_id=auto_officer_code   # 🟢 แก้ไขตรงนี้: ให้เป็นรหัสเจ้าหน้าที่ (rmutto001, rmutto002...) แทนเลขบัตรประชาชน
+            member_id=auto_officer_code   # รหัสประจำตัวเจ้าหน้าที่ (rmutto001...)
         )
 
         try:
@@ -2309,13 +2313,15 @@ def manage_admins():
 
     officers_rows = ""
     for idx, off in enumerate(officers, start=1):
+        pfx = f"{off.prefix} " if getattr(off, 'prefix', None) else ""
         officers_rows += f"""
         <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
             <td class="py-3 px-4 font-mono font-bold text-slate-400">{idx}</td>
             <td class="py-3 px-4 font-mono font-black text-indigo-600 bg-indigo-50/50 rounded-xl">{off.member_id or off.username}</td>
-            <td class="py-3 px-4 font-bold text-slate-800">{off.fullname}</td>
+            <td class="py-3 px-4 font-bold text-slate-800">{pfx}{off.fullname}</td>
             <td class="py-3 px-4 font-mono text-slate-500">{off.username}</td>
             <td class="py-3 px-4 text-slate-500">{off.phone or '-'}</td>
+            <td class="py-3 px-4 text-slate-500 max-w-xs truncate">{getattr(off, 'address', '-') or '-'}</td>
             <td class="py-3 px-4"><span class="bg-slate-100 text-slate-700 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase">{off.role}</span></td>
         </tr>
         """
@@ -2327,7 +2333,7 @@ def manage_admins():
             <div>
                 <span class="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1 rounded-full font-black uppercase">Admin Management</span>
                 <h1 class="text-2xl font-black mt-2">จัดการข้อมูลเจ้าหน้าที่ & สิทธิ์การใช้งาน</h1>
-                <p class="text-xs text-slate-300 mt-1">กรอก Username ด้วยเลขบัตรประชาชน โดยระบบจะเจนรหัสประจำตัว/รหัสผ่านให้อัตโนมัติ (rmutto001, rmutto002...)</p>
+                <p class="text-xs text-slate-300 mt-1">กรอกข้อมูลเจ้าหน้าที่ พร้อมระบุคำนำหน้าชื่อ และที่อยู่</p>
             </div>
         </div>
 
@@ -2340,20 +2346,34 @@ def manage_admins():
                     </div>
                     <div>
                         <h3 class="text-base font-black text-slate-800">ลงทะเบียนเจ้าหน้าที่ใหม่</h3>
-                        <p class="text-xs font-bold text-slate-400">กรอกเลขบัตรประชาชน + รหัสพนักงานเจนออโต้</p>
+                        <p class="text-xs font-bold text-slate-400">กรอกข้อมูลส่วนตัว + รหัสพนักงานเจนออโต้</p>
                     </div>
                 </div>
 
                 <form method="POST" class="space-y-4">
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-black uppercase text-slate-400 mb-1">คำนำหน้า <span class="text-rose-500">*</span></label>
+                            <select name="prefix" required class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-indigo-500 font-bold">
+                                <option value="นาย">นาย</option>
+                                <option value="นาง">นาง</option>
+                                <option value="นางสาว">นางสาว</option>
+                                <option value="ดร.">ดร.</option>
+                                <option value="ผศ.ดร.">ผศ.ดร.</option>
+                                <option value="รศ.ดร.">รศ.ดร.</option>
+                                <option value="อ.">อ.</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-xs font-black uppercase text-slate-400 mb-1">ชื่อ-นามสกุล <span class="text-rose-500">*</span></label>
+                            <input type="text" name="fullname" required placeholder="สมชาย ใจดี" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+
                     <div>
                         <label class="block text-xs font-black uppercase text-slate-400 mb-1">เลขบัตรประชาชน (Username) <span class="text-rose-500">*</span></label>
                         <input type="text" name="username" required placeholder="กรอกเลขบัตรประชาชน 13 หลัก" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-indigo-500 font-mono font-bold">
                         <p class="text-[10px] text-slate-400 mt-1">* ใช้สำหรับเข้าสู่ระบบในช่อง Username / เลขบัตรประชาชน</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">ชื่อ-นามสกุลเจ้าหน้าที่ <span class="text-rose-500">*</span></label>
-                        <input type="text" name="fullname" required placeholder="นายสมชาย ใจดี" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-indigo-500">
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
@@ -2365,6 +2385,11 @@ def manage_admins():
                             <label class="block text-xs font-black uppercase text-slate-400 mb-1">เบอร์โทรศัพท์</label>
                             <input type="text" name="phone" placeholder="0812345678" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-indigo-500">
                         </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-1">ที่อยู่ปัจจุบัน</label>
+                        <textarea name="address" rows="2" placeholder="กรอกที่อยู่ปัจจุบัน" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-indigo-500 resize-none"></textarea>
                     </div>
 
                     <div>
@@ -2393,10 +2418,11 @@ def manage_admins():
                         <thead class="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-wider">
                             <tr>
                                 <th class="py-3 px-4">#</th>
-                                <th class="py-3 px-4">รหัสพนักงาน (member_id)</th>
+                                <th class="py-3 px-4">รหัสพนักงาน</th>
                                 <th class="py-3 px-4">ชื่อ-นามสกุล</th>
                                 <th class="py-3 px-4">เลขบัตรประชาชน</th>
                                 <th class="py-3 px-4">เบอร์โทร</th>
+                                <th class="py-3 px-4">ที่อยู่</th>
                                 <th class="py-3 px-4">สิทธิ์</th>
                             </tr>
                         </thead>
