@@ -1464,7 +1464,7 @@ user_info = User.query.get(user_id)
 user_faculty = getattr(user_info, 'faculty', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ') or 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ'
 user_major = getattr(user_info, 'major', 'สาขาวิชาระบบสารสนเทศ') or 'สาขาวิชาระบบสารสนเทศ'
 
-try:
+    try:
         # 1. จัดการการส่งฟอร์มอัปโหลดหลักฐาน (POST)
         if request.method == 'POST':
             selected_courses = request.form.getlist('selected_courses')
