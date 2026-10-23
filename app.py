@@ -78,9 +78,10 @@ class CreditRequest(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    course_code = db.Column(db.String(50))  # เพิ่มหรือเปลี่ยนบรรทัดนี้
+    course_code = db.Column(db.String(50))
     course_name = db.Column(db.String(255))
-    id_card_img = db.Column(db.String(200))
+    credits = db.Column(db.Integer)  # <-- เพิ่มบรรทัดนี้ลงใน Model
+    id_card_img = db.Column(db.String(500))
     status = db.Column(db.String(50), default='รอดำเนินการ')
 with app.app_context():
     db.create_all()
@@ -1515,13 +1516,15 @@ def submit_credit():
                         if existing_req:
                             existing_req.id_card_img = saved_str
                             existing_req.course_name = course_info.course_name
+                            existing_req.credits = course_info.credits or 0
                             existing_req.status = 'รอดำเนินการ'
                         else:
-                            # บันทึกคำร้องใหม่พร้อมส่ง course_name
+                            # บันทึกคำร้องใหม่พร้อมส่ง course_name และ credits
                             new_req = CreditRequest(
                                 user_id=user_id,
                                 course_code=course_code,
                                 course_name=course_info.course_name,
+                                credits=course_info.credits or 0,
                                 id_card_img=saved_str,
                                 status='รอดำเนินการ'
                             )
@@ -1798,7 +1801,7 @@ def submit_credit():
     except Exception as e:
         db.session.rollback()
         return f"<div style='padding:20px; color:red;'><h3>System Error:</h3><p>{str(e)}</p></div>"
-                                   
+                                       
 @app.route('/history')
 def student_history():
     if not session.get('user_id'): 
