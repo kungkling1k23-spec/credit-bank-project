@@ -2358,10 +2358,7 @@ def manage_admins():
                                 <option value="นาย">นาย</option>
                                 <option value="นาง">นาง</option>
                                 <option value="นางสาว">นางสาว</option>
-                                <option value="ดร.">ดร.</option>
-                                <option value="ผศ.ดร.">ผศ.ดร.</option>
-                                <option value="รศ.ดร.">รศ.ดร.</option>
-                                <option value="อ.">อ.</option>
+                               
                             </select>
                         </div>
                         <div class="col-span-2">
