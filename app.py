@@ -79,6 +79,7 @@ class CreditRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     course_code = db.Column(db.String(50))  # เพิ่มหรือเปลี่ยนบรรทัดนี้
+    course_name = db.Column(db.String(255))
     id_card_img = db.Column(db.String(200))
     status = db.Column(db.String(50), default='รอดำเนินการ')
 with app.app_context():
@@ -1509,40 +1510,21 @@ def submit_credit():
                         saved_str = ",".join(uploaded_filenames)
 
                         # ค้นหาคำร้องเดิม
-                        existing_req = None
-                        if hasattr(CreditRequest, 'course_code'):
-                            existing_req = CreditRequest.query.filter_by(user_id=user_id, course_code=course_code).first()
-                        elif hasattr(CreditRequest, 'course_id'):
-                            existing_req = CreditRequest.query.filter_by(user_id=user_id, course_id=course_code).first()
+                        existing_req = CreditRequest.query.filter_by(user_id=user_id, course_code=course_code).first()
 
                         if existing_req:
-                            if hasattr(existing_req, 'id_card_img'):
-                                existing_req.id_card_img = saved_str
-                            elif hasattr(existing_req, 'evidence_img'):
-                                existing_req.evidence_img = saved_str
-                            
-                            if hasattr(existing_req, 'course_name'):
-                                existing_req.course_name = course_info.course_name
-
+                            existing_req.id_card_img = saved_str
+                            existing_req.course_name = course_info.course_name
                             existing_req.status = 'รอดำเนินการ'
                         else:
-                            # สร้างคำร้องใหม่พร้อมแก้ปัญหา NOT NULL ของ course_name
-                            req_kwargs = {'user_id': user_id, 'status': 'รอดำเนินการ'}
-                            
-                            if hasattr(CreditRequest, 'course_code'):
-                                req_kwargs['course_code'] = course_code
-                            elif hasattr(CreditRequest, 'course_id'):
-                                req_kwargs['course_id'] = course_code
-
-                            if hasattr(CreditRequest, 'course_name'):
-                                req_kwargs['course_name'] = course_info.course_name
-
-                            if hasattr(CreditRequest, 'id_card_img'):
-                                req_kwargs['id_card_img'] = saved_str
-                            elif hasattr(CreditRequest, 'evidence_img'):
-                                req_kwargs['evidence_img'] = saved_str
-
-                            new_req = CreditRequest(**req_kwargs)
+                            # บันทึกคำร้องใหม่พร้อมส่ง course_name
+                            new_req = CreditRequest(
+                                user_id=user_id,
+                                course_code=course_code,
+                                course_name=course_info.course_name,
+                                id_card_img=saved_str,
+                                status='รอดำเนินการ'
+                            )
                             db.session.add(new_req)
 
                         success_count += 1
@@ -1557,12 +1539,7 @@ def submit_credit():
         # 2. ดึงข้อมูลรายวิชาและประวัติการยื่นคำร้อง
         courses = Course.query.order_by(Course.course_code.asc()).all()
         user_requests = CreditRequest.query.filter_by(user_id=user_id).all()
-        
-        existing_requests = {}
-        for req in user_requests:
-            c_code = getattr(req, 'course_code', getattr(req, 'course_id', None))
-            if c_code:
-                existing_requests[c_code] = req
+        existing_requests = {req.course_code: req for req in user_requests if hasattr(req, 'course_code')}
 
         courses_data = []
         table_rows = ""
@@ -1587,9 +1564,9 @@ def submit_credit():
                 lesson_list_html = f"<ul class='mt-1 space-y-0.5'>{lessons_items}</ul>"
 
             if req:
-                status_val = getattr(req, 'status', 'รอดำเนินการ')
+                status_val = req.status or 'รอดำเนินการ'
                 status_badge = f'<span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xs">ยื่นแล้ว ({status_val})</span>'
-                img_str = getattr(req, 'id_card_img', getattr(req, 'evidence_img', ''))
+                img_str = req.id_card_img or ''
                 imgs = img_str.split(",") if img_str else []
                 img_links = " ".join([f'<a href="/static/uploads/{img.strip()}" target="_blank" class="text-sky-600 underline font-bold text-xs">รูปที่ {i+1}</a>' for i, img in enumerate(imgs) if img.strip()]) if imgs else "ไม่มีรูป"
                 action_area = f'<div class="text-xs text-slate-500">หลักฐานที่แนบไว้: {img_links}</div>'
@@ -1625,7 +1602,7 @@ def submit_credit():
             <!-- ขั้นตอนที่ 1: ตารางเลือกรายวิชา -->
             <div id="step-1-container" class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6 relative">
                 
-                <!-- ตรึงแถบส่วนหัวด้านบนตลอดเวลาด้วย Sticky -->
+                <!-- แถบส่วนหัวลอยติดด้านบนจอ (Sticky) -->
                 <div class="sticky top-4 z-30 bg-white/95 backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-md flex justify-between items-center transition-all">
                     <div>
                         <h1 class="text-xl font-black text-slate-800">1. เลือกรายวิชาที่ต้องการเทียบโอน</h1>
@@ -1721,7 +1698,6 @@ def submit_credit():
                 }}
             }}
 
-            // ฟังก์ชันพรีวิวตัวอย่างรูปภาพเมื่อมีการเลือกไฟล์
             function previewImage(input, previewId) {{
                 const previewImg = document.getElementById(previewId);
                 if (input.files && input.files[0]) {{
@@ -1822,7 +1798,7 @@ def submit_credit():
     except Exception as e:
         db.session.rollback()
         return f"<div style='padding:20px; color:red;'><h3>System Error:</h3><p>{str(e)}</p></div>"
-                               
+                                   
 @app.route('/history')
 def student_history():
     if not session.get('user_id'): 
