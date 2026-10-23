@@ -85,6 +85,11 @@ class CreditRequest(db.Model):
     category = db.Column(db.String(100))
     institution = db.Column(db.String(100))
     credits = db.Column(db.Integer)
+    
+    # เพิ่ม 2 คอลัมน์นี้
+    faculty = db.Column(db.String(200), default='คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ')
+    major = db.Column(db.String(200), default='สาขาวิชาระบบสารสนเทศ')
+
     id_card_img = db.Column(db.String(500))
     doc_img = db.Column(db.Text, nullable=True)
     doc_img2 = db.Column(db.Text, nullable=True)
@@ -98,13 +103,9 @@ with app.app_context():
     db.create_all()
     try:
         with db.engine.connect() as conn:
-            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS doc_img TEXT;"))
-            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS doc_img2 TEXT;"))
-            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS doc_img3 TEXT;"))
-            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS req_code VARCHAR(50);"))
-            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS reject_reason TEXT;"))
-            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100);"))
-            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS date_submitted VARCHAR(50);"))
+            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS faculty VARCHAR(200);"))
+            conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS major VARCHAR(200);"))
+            # ... โค้ด ALTER TABLE เดิม ...
             conn.commit()
     except Exception:
         pass
@@ -1456,9 +1457,14 @@ def submit_credit():
         return redirect(url_for('login'))
 
     user_id = session['user_id']
-    msg = ""
+msg = ""
 
-    try:
+# ดึงข้อมูลคณะและสาขาของผู้ใช้
+user_info = User.query.get(user_id)
+user_faculty = getattr(user_info, 'faculty', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ') or 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ'
+user_major = getattr(user_info, 'major', 'สาขาวิชาระบบสารสนเทศ') or 'สาขาวิชาระบบสารสนเทศ'
+
+try:
         # 1. จัดการการส่งฟอร์มอัปโหลดหลักฐาน (POST)
         if request.method == 'POST':
             selected_courses = request.form.getlist('selected_courses')
@@ -1515,6 +1521,8 @@ def submit_credit():
                             if hasattr(existing_req, 'category'): existing_req.category = course_info.category or ''
                             if hasattr(existing_req, 'institution'): existing_req.institution = course_info.institution or ''
                             if hasattr(existing_req, 'credits'): existing_req.credits = course_info.credits or 0
+                            if hasattr(existing_req, 'faculty'): existing_req.faculty = user_faculty
+                            if hasattr(existing_req, 'major'): existing_req.major = user_major
                             existing_req.status = 'Pending'
                             existing_req.date_submitted = datetime.now().strftime('%Y-%m-%d %H:%M')
                         else:
@@ -1528,8 +1536,10 @@ def submit_credit():
                                 'doc_img2': doc2,
                                 'doc_img3': doc3,
                                 'status': 'Pending',
+                                'faculty': user_faculty,
+                                'major': user_major,
                                 'date_submitted': datetime.now().strftime('%Y-%m-%d %H:%M')
-                            }
+                         }
                             if hasattr(CreditRequest, 'course_name'): req_data['course_name'] = course_info.course_name or ''
                             if hasattr(CreditRequest, 'category'): req_data['category'] = course_info.category or ''
                             if hasattr(CreditRequest, 'institution'): req_data['institution'] = course_info.institution or ''
