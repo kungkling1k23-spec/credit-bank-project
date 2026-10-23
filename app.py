@@ -1947,71 +1947,120 @@ def student_history():
 
 @app.route('/student/edit_request/<int:req_id>', methods=['GET', 'POST'])
 def student_edit_request(req_id):
-    if 'user_id' not in session: return redirect(url_for('login'))
+    if 'user_id' not in session: 
+        return redirect(url_for('login'))
+        
     req = CreditRequest.query.get_or_404(req_id)
-    if req.user_id != session['user_id']: return redirect(url_for('history'))
+    if req.user_id != session['user_id']: 
+        return redirect(url_for('student_history'))  # แก้จุดที่ 1: เปลี่ยนจาก 'history' เป็น 'student_history'
+
+    # ดึงรูปภาพหลักฐานเดิม (รองรับทั้ง doc_img และ id_card_img)
+    existing_imgs = []
+    if getattr(req, 'doc_img', None): existing_imgs.append(req.doc_img)
+    if getattr(req, 'doc_img2', None): existing_imgs.append(req.doc_img2)
+    if getattr(req, 'doc_img3', None): existing_imgs.append(req.doc_img3)
+    
+    if not existing_imgs and getattr(req, 'id_card_img', None):
+        existing_imgs = [img.strip() for img in req.id_card_img.split(',') if img.strip()]
 
     if request.method == 'POST':
-        if 'cert_file_0' in request.files:
-            file = request.files['cert_file_0']
-            if file and file.filename != '' and allowed_file(file.filename):
-                ext = file.filename.rsplit('.', 1)[1].lower()
-                req.doc_img = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], req.doc_img))
-        if 'cert_file_1' in request.files:
-            file = request.files['cert_file_1']
-            if file and file.filename != '' and allowed_file(file.filename):
-                ext = file.filename.rsplit('.', 1)[1].lower()
-                req.doc_img2 = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], req.doc_img2))
-        if 'cert_file_2' in request.files:
-            file = request.files['cert_file_2']
-            if file and file.filename != '' and allowed_file(file.filename):
-                ext = file.filename.rsplit('.', 1)[1].lower()
-                req.doc_img3 = f"cert_{uuid.uuid4().hex[:8]}.{ext}"
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], req.doc_img3))
+        try:
+            upload_folder = os.path.join(app.root_path, 'static', 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            new_imgs = list(existing_imgs)
 
-        req.status = 'Pending' 
-        req.reject_reason = None
-        db.session.commit()
-        flash('อัปเดตหลักฐานและส่งให้เจ้าหน้าที่ตรวจสอบเรียบร้อยแล้ว', 'success')
-        return redirect(url_for('history'))
+            for i in range(3):
+                file_key = f'cert_file_{i}'
+                if file_key in request.files:
+                    file = request.files[file_key]
+                    if file and file.filename != '' and allowed_file(file.filename):
+                        ext = file.filename.rsplit('.', 1)[1].lower()
+                        filename = secure_filename(f"cert_{req.id}_{i+1}_{uuid.uuid4().hex[:6]}.{ext}")
+                        file.save(os.path.join(upload_folder, filename))
+                        
+                        if i < len(new_imgs):
+                            new_imgs[i] = filename
+                        else:
+                            new_imgs.append(filename)
 
+            req.doc_img = new_imgs[0] if len(new_imgs) > 0 else None
+            req.doc_img2 = new_imgs[1] if len(new_imgs) > 1 else None
+            req.doc_img3 = new_imgs[2] if len(new_imgs) > 2 else None
+            req.id_card_img = ",".join(new_imgs) if new_imgs else None
+
+            req.status = 'Pending'
+            req.reject_reason = None
+            db.session.commit()
+            
+            flash('✅ อัปเดตหลักฐานและส่งกลับให้เจ้าหน้าที่ตรวจสอบเรียบร้อยแล้ว', 'success')
+            return redirect(url_for('student_history'))  # แก้จุดที่ 2: เปลี่ยนจาก 'history' เป็น 'student_history'
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'เกิดข้อผิดพลาดในการบันทึกข้อมูล: {str(e)}', 'error')
+            return redirect(url_for('student_edit_request', req_id=req_id))
+
+    # GET Request: แสดงหน้าฟอร์มแก้ไข
     course_data_list = get_courses()
-    matched_course = next((c for c in course_data_list if c['name'] == req.course_name), None)
+    matched_course = next((c for c in course_data_list if c['name'] == req.course_name or c['code'] == req.course_code), None)
     mooc_names = matched_course['mooc_list'] if matched_course else []
 
-    def get_mooc_title(index, default_title):
-        if index < len(mooc_names): return f"{default_title} : {mooc_names[index]}"
-        return default_title
+    def get_mooc_title(index):
+        if index < len(mooc_names):
+            return f"หลักฐานที่ {index+1} : {mooc_names[index]}"
+        return f"หลักฐานที่ {index+1}"
 
     ev_html = ""
-    if getattr(req, 'doc_img', None):
-        title = get_mooc_title(0, "หลักฐานที่ 1")
-        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img id="preview-img-0" src="/static/uploads/{req.doc_img}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_0" onchange="previewImage(event, \'preview-img-0\')" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
-    if getattr(req, 'doc_img2', None):
-        title = get_mooc_title(1, "หลักฐานที่ 2")
-        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img id="preview-img-1" src="/static/uploads/{req.doc_img2}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_1" onchange="previewImage(event, \'preview-img-1\')" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
-    if getattr(req, 'doc_img3', None):
-        title = get_mooc_title(2, "หลักฐานที่ 3")
-        ev_html += f'<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><p class="text-sm font-bold text-sky-700 mb-2">{title}</p><img id="preview-img-2" src="/static/uploads/{req.doc_img3}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain"><input type="file" name="cert_file_2" onchange="previewImage(event, \'preview-img-2\')" class="w-full text-xs font-medium file:py-1 file:px-3 file:rounded-lg file:bg-sky-600 file:text-white"></div>'
+    display_count = max(len(existing_imgs), 1)
+    
+    for idx in range(display_count):
+        img_filename = existing_imgs[idx] if idx < len(existing_imgs) else None
+        title = get_mooc_title(idx)
+        
+        img_tag = f'<img id="preview-img-{idx}" src="/static/uploads/{img_filename}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain bg-white p-1 border border-slate-200">' if img_filename else f'<img id="preview-img-{idx}" src="" class="hidden max-h-40 rounded-xl mb-3 shadow-sm object-contain bg-white p-1 border border-slate-200">'
+        
+        ev_html += f"""
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+            <p class="text-sm font-bold text-sky-700">{title}</p>
+            <div>{img_tag}</div>
+            <input type="file" name="cert_file_{idx}" accept="image/*" onchange="previewImage(event, 'preview-img-{idx}')" class="w-full text-xs font-medium file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-sky-600 file:text-white hover:file:bg-sky-700 cursor-pointer">
+        </div>
+        """
 
     content = f"""
-    <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
-        <h3 class="text-2xl font-black text-slate-900 mb-2">แก้ไขหลักฐานคำร้อง: {req.course_name}</h3>
-        <p class="text-xs text-rose-600 mb-6 font-bold">เหตุผลที่ต้องแก้ไข: {req.reject_reason or "-"}</p>
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl space-y-6">
+        <div>
+            <h3 class="text-2xl font-black text-slate-900 mb-1">แก้ไขหลักฐานคำร้อง</h3>
+            <p class="text-sm font-bold text-sky-600">{req.course_name} ({getattr(req, 'course_code', '-') or '-'})</p>
+        </div>
+
+        <div class="bg-rose-50 border border-rose-200 p-4 rounded-2xl">
+            <p class="text-xs font-bold text-rose-500 uppercase">เหตุผลที่ต้องแก้ไขจากเจ้าหน้าที่:</p>
+            <p class="text-sm font-extrabold text-rose-700 mt-0.5">{getattr(req, 'reject_reason', '') or "กรุณาตรวจสอบและอัปโหลดรูปภาพหลักฐานที่ชัดเจนใหม่อีกครั้ง"}</p>
+        </div>
+
         <form method="POST" enctype="multipart/form-data" class="space-y-6">
-            <div class="space-y-4">{ev_html if ev_html else '<p class="text-xs text-slate-400">ยังไม่มีหลักฐานเดิม</p>'}</div>
-            <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm">บันทึกและส่งให้เจ้าหน้าที่ตรวจสอบอีกครั้ง</button>
+            <div class="space-y-4">
+                {ev_html}
+            </div>
+            
+            <div class="flex gap-3 pt-2">
+                <a href="/history" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl text-xs text-center transition flex items-center justify-center">ยกเลิก</a>
+                <button type="submit" class="w-2/3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold py-3.5 rounded-2xl shadow-md text-xs transition">บันทึกและส่งให้เจ้าหน้าที่ตรวจสอบอีกครั้ง</button>
+            </div>
         </form>
     </div>
+
     <script>
         function previewImage(event, imgId) {{
-            var input = event.target;
+            const input = event.target;
+            const preview = document.getElementById(imgId);
             if (input.files && input.files[0]) {{
-                var reader = new FileReader();
+                const reader = new FileReader();
                 reader.onload = function(e) {{
-                    document.getElementById(imgId).src = e.target.result;
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
                 }};
                 reader.readAsDataURL(input.files[0]);
             }}
