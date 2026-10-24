@@ -5,7 +5,7 @@ import csv
 import io
 import urllib.request
 import re
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from markupsafe import escape
 from flask import Flask, request, redirect, url_for, session, flash, get_flashed_messages, Response
 from flask_sqlalchemy import SQLAlchemy
@@ -18,7 +18,6 @@ app.secret_key = os.environ.get('SECRET_KEY', 'credit_bank_is_rmutto_production_
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url:
-    # บังคับให้เชื่อมต่อฐานข้อมูลด้วย psycopg2
     db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
     db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
@@ -29,6 +28,11 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('static/images', exist_ok=True)
+
+def get_thailand_time():
+    """ดึงเวลาปัจจุบันในโซนเวลาประเทศไทย (UTC+7)"""
+    tz_th = timezone(timedelta(hours=7))
+    return datetime.now(tz_th).strftime('%Y-%m-%d %H:%M')
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -97,12 +101,10 @@ class CreditRequest(db.Model):
     status = db.Column(db.String(50), default='Pending')
     reject_reason = db.Column(db.Text, nullable=True)
     approved_by = db.Column(db.String(100), nullable=True)
-    date_submitted = db.Column(db.String(50), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M'))
+    date_submitted = db.Column(db.String(50), default=get_thailand_time)
 
 with app.app_context():
     db.create_all()
-    
-    # เพิ่มการตรวจเช็กและสร้างคอลัมน์ faculty / major ในตาราง user อัตโนมัติ
     try:
         with db.engine.connect() as conn:
             conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS faculty VARCHAR(200) DEFAULT \'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ\';'))
@@ -581,29 +583,33 @@ def home():
     # 1. ฝั่งเจ้าหน้าที่ (Officer / Admin Dashboard)
     if user.role in ['admin', 'superadmin']:
         try:
-            pending_reqs = CreditRequest.query.filter_by(status='Pending').order_by(CreditRequest.id.asc()).all()
+            all_db_requests = CreditRequest.query.order_by(CreditRequest.id.desc()).all()
+            pending_reqs = [r for r in all_db_requests if r.status == 'Pending']
             pending_count = len(pending_reqs)
             
             students = User.query.filter_by(role='student').order_by(User.id.desc()).all()
             total_students = len(students)
             
-            approved_reqs = CreditRequest.query.filter_by(status='Approved').order_by(CreditRequest.id.desc()).all()
+            approved_reqs = [r for r in all_db_requests if r.status == 'Approved']
             approved_count = len(approved_reqs)
             
-            revision_count = CreditRequest.query.filter_by(status='Needs_Revision').count()
+            revision_count = sum(1 for r in all_db_requests if r.status in ['Needs_Revision', 'Need_Edit'])
             total_approved_credits = sum(r.credits for r in approved_reqs if r.credits)
         except Exception:
-            pending_reqs, pending_count, students, total_students, approved_reqs, approved_count, revision_count, total_approved_credits = [], 0, [], 0, [], 0, 0, 0
+            all_db_requests, pending_reqs, pending_count, students, total_students, approved_reqs, approved_count, revision_count, total_approved_credits = [], [], 0, [], 0, [], 0, 0, 0
 
-        pending_list = [{
+        all_requests_list = [{
             'id': r.id,
             'req_code': getattr(r, 'req_code', f'TR{r.id:04d}'),
             'student_name': r.user.fullname if getattr(r, 'user', None) else '-',
             'student_code': r.user.member_id if getattr(r, 'user', None) else '-',
             'course_name': getattr(r, 'course_name', '-'),
             'credits': getattr(r, 'credits', 0),
-            'date': getattr(r, 'date_submitted', '-')
-        } for r in pending_reqs]
+            'date': getattr(r, 'date_submitted', '-'),
+            'status': getattr(r, 'status', 'Pending')
+        } for r in all_db_requests]
+
+        pending_list = [r for r in all_requests_list if r['status'] == 'Pending']
 
         students_list = []
         for s in students:
@@ -616,14 +622,7 @@ def home():
                 'credits': app_credits
             })
 
-        approved_list = [{
-            'req_code': getattr(r, 'req_code', f'TR{r.id:04d}'),
-            'student_name': r.user.fullname if getattr(r, 'user', None) else '-',
-            'course_name': getattr(r, 'course_name', '-'),
-            'credits': getattr(r, 'credits', 0),
-            'approved_by': getattr(r, 'approved_by', 'เจ้าหน้าที่') or 'เจ้าหน้าที่',
-            'date': getattr(r, 'date_submitted', '-')
-        } for r in approved_reqs]
+        approved_list = [r for r in all_requests_list if r['status'] == 'Approved']
 
         from collections import defaultdict
         course_map = defaultdict(lambda: {'count': 0, 'total_credits': 0, 'unit_credits': 0})
@@ -642,11 +641,14 @@ def home():
         } for name, data in course_map.items()]
 
         admin_summary_json = json.dumps({
+            'all_requests': all_requests_list,
             'pending': pending_list,
             'students': students_list,
             'approved': approved_list,
             'credits': credits_summary_list
         }, ensure_ascii=False)
+
+        current_month_str = get_thailand_time()[:7] # YYYY-MM
 
         html_part = f"""
         <div class="max-w-6xl mx-auto space-y-8">
@@ -662,9 +664,9 @@ def home():
                         <p class="text-slate-300 text-sm mt-1">ระบบบริหารจัดการธนาคารหน่วยกิต (Credit Bank) สาขาวิชาระบบสารสนเทศ</p>
                     </div>
                     <div class="flex flex-wrap gap-2 shrink-0">
-                        <a href="/admin/export_csv" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-3 rounded-2xl shadow-lg transition text-xs flex items-center gap-2">
+                        <button onclick="openExportModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-3 rounded-2xl shadow-lg transition text-xs flex items-center gap-2">
                             <i class="fa-solid fa-file-excel"></i> ออกรายงานประจำเดือน (CSV)
-                        </a>
+                        </button>
                         <a href="/admin/requests" class="bg-sky-500 hover:bg-sky-600 text-white font-extrabold px-5 py-3 rounded-2xl shadow-lg transition text-xs flex items-center gap-2">
                             <i class="fa-solid fa-file-signature"></i> ตรวจสอบคำร้องทั้งหมด ({pending_count})
                         </a>
@@ -725,8 +727,8 @@ def home():
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
                     <h3 class="text-base font-black text-slate-800 mb-1">ภาพรวมสถานะคำร้องเทียบโอน</h3>
-                    <p class="text-xs text-slate-400 mb-6">จำแนกตามขั้นตอนการพิจารณา</p>
-                    <div class="h-60 relative">
+                    <p class="text-xs text-slate-400 mb-4">คลิกที่แท่งกราฟเพื่อกรองรายการด้านขวา</p>
+                    <div class="h-60 relative cursor-pointer">
                         <canvas id="adminStatusChart"></canvas>
                     </div>
                 </div>
@@ -734,10 +736,12 @@ def home():
                 <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
                     <div class="flex justify-between items-center border-b border-slate-100 pb-4">
                         <div>
-                            <h3 class="text-lg font-black text-slate-800">คำร้องเร่งด่วนที่รอตรวจสอบ</h3>
-                            <p class="text-xs text-slate-400">สามารถกดดูด่วนเพื่อตรวจสอบหลักฐานได้ทันที</p>
+                            <h3 class="text-lg font-black text-slate-800" id="admin_table_title">คำร้องเร่งด่วนที่รอตรวจสอบ</h3>
+                            <p class="text-xs text-slate-400" id="admin_table_subtitle">สามารถกดดูด่วนเพื่อตรวจสอบหลักฐานได้ทันที</p>
                         </div>
-                        <a href="/admin/requests" class="text-xs font-bold text-sky-600 hover:text-sky-800 transition">ดูทั้งหมด ({pending_count}) <i class="fa-solid fa-arrow-right"></i></a>
+                        <button onclick="renderAdminTableByStatus('Pending')" class="text-xs font-bold text-sky-600 hover:text-sky-800 transition">
+                            <i class="fa-solid fa-rotate-left mr-1"></i> รีเซ็ตตัวกรอง
+                        </button>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -754,6 +758,43 @@ def home():
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export CSV Modal -->
+        <div id="exportCsvModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity">
+            <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6 relative border border-slate-100">
+                <button onclick="closeExportModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+                <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                    <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-xl font-black">
+                        <i class="fa-solid fa-file-excel"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-slate-800">ส่งออกรายงานประจำเดือน</h3>
+                        <p class="text-xs font-bold text-slate-400">เลือกเดือนและปีที่ต้องการดาวน์โหลด</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-500 mb-2">เลือกเดือน / ปี</label>
+                        <input type="month" id="export_month_select" value="{current_month_str}" class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm bg-slate-50 outline-none focus:border-emerald-500 font-bold">
+                    </div>
+
+                    <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl text-xs text-emerald-800 font-medium">
+                        <i class="fa-solid fa-circle-info mr-1 text-emerald-600"></i> ระบบจะนำเสนอเฉพาะข้อมูลคำร้องที่มีการยื่นภายในเดือนที่เลือกเท่านั้น
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 flex gap-3">
+                    <button type="button" onclick="closeExportModal()" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-xs transition">ยกเลิก</button>
+                    <button type="button" onclick="downloadSelectedMonthCSV()" class="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-2xl shadow-md text-xs transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> ดาวน์โหลด CSV
+                    </button>
                 </div>
             </div>
         </div>
@@ -787,6 +828,24 @@ def home():
         js_template = """
         <script>
         const summaryData = __ADMIN_SUMMARY_JSON__;
+
+        function openExportModal() {
+            document.getElementById('exportCsvModal').classList.remove('hidden');
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportCsvModal').classList.add('hidden');
+        }
+
+        function downloadSelectedMonthCSV() {
+            const selectedMonth = document.getElementById('export_month_select').value;
+            if (!selectedMonth) {
+                alert('กรุณาเลือกเดือนก่อนดาวน์โหลด');
+                return;
+            }
+            window.location.href = '/admin/export_csv?month=' + selectedMonth;
+            closeExportModal();
+        }
 
         function openStatSummaryModal(type) {
             const modal = document.getElementById('statSummaryModal');
@@ -863,7 +922,7 @@ def home():
                         <td class="py-3 px-3 font-bold text-slate-800">${item.student_name}</td>
                         <td class="py-3 px-3 font-medium text-slate-700">${item.course_name}</td>
                         <td class="py-3 px-3 text-center font-black text-emerald-600">${item.credits}</td>
-                        <td class="py-3 px-3 text-slate-500 font-medium">${item.approved_by}</td>
+                        <td class="py-3 px-3 text-slate-500 font-medium">${item.approved_by || 'เจ้าหน้าที่'}</td>
                     </tr>`;
                 });
 
@@ -908,19 +967,52 @@ def home():
             document.getElementById('statSummaryModal').classList.add('hidden');
         }
 
-        function renderAdminPendingTable() {
+        function renderAdminTableByStatus(targetStatus) {
             const tbody = document.getElementById('admin_pending_tbody');
+            const titleElem = document.getElementById('admin_table_title');
+            const subtitleElem = document.getElementById('admin_table_subtitle');
             if(!tbody) return;
             tbody.innerHTML = '';
 
-            if (summaryData.pending.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-xs font-bold text-slate-400"><i class="fa-solid fa-circle-check text-2xl mb-2 text-emerald-400 block"></i>ไม่มีคำร้องรอดำเนินการในขณะนี้</td></tr>`;
+            const statusTitles = {
+                'Pending': 'คำร้องเร่งด่วนที่รอตรวจสอบ',
+                'Approved': 'รายการคำร้องที่อนุมัติแล้ว',
+                'Needs_Revision': 'รายการคำร้องที่ส่งกลับให้แก้ไข'
+            };
+            const statusSubtitles = {
+                'Pending': 'สามารถกดตรวจเอกสารเพื่อพิจารณาหลักฐานได้ทันที',
+                'Approved': 'คำร้องที่ได้รับการอนุมัติเรียบร้อยแล้ว',
+                'Needs_Revision': 'คำร้องที่อยู่นะหว่างรอนักศึกษาแก้ไขหลักฐาน'
+            };
+
+            titleElem.innerText = statusTitles[targetStatus] || 'รายการคำร้อง';
+            subtitleElem.innerText = statusSubtitles[targetStatus] || 'กรองข้อมูลตามกราฟสถานะ';
+
+            const filteredRequests = summaryData.all_requests.filter(r => {
+                if (targetStatus === 'Needs_Revision') {
+                    return r.status === 'Needs_Revision' || r.status === 'Need_Edit';
+                }
+                return r.status === targetStatus;
+            });
+
+            if (filteredRequests.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-xs font-bold text-slate-400"><i class="fa-solid fa-folder-open text-2xl mb-2 text-slate-300 block"></i>ไม่พบคำร้องในสถานะ "${statusTitles[targetStatus] || targetStatus}"</td></tr>`;
                 return;
             }
 
-            summaryData.pending.slice(0, 5).forEach(item => {
+            filteredRequests.slice(0, 7).forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition';
+                
+                let btnHtml = '';
+                if (item.status === 'Pending') {
+                    btnHtml = `<a href="/admin/review/${item.id}" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1 border border-amber-200"><i class="fa-solid fa-pen-to-square"></i> ตรวจ</a>`;
+                } else if (item.status === 'Approved') {
+                    btnHtml = `<a href="/admin/review/${item.id}" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1 border border-emerald-200"><i class="fa-solid fa-eye"></i> รายละเอียด</a>`;
+                } else {
+                    btnHtml = `<a href="/admin/review/${item.id}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1 border border-indigo-200"><i class="fa-solid fa-clock-rotate-left"></i> ดูการแก้</a>`;
+                }
+
                 tr.innerHTML = `
                     <td class="px-4 py-3.5">
                         <p class="font-bold text-slate-800 text-xs">${item.student_name}</p>
@@ -928,18 +1020,14 @@ def home():
                     </td>
                     <td class="px-4 py-3.5 font-bold text-slate-700 text-xs">${item.course_name}</td>
                     <td class="px-4 py-3.5 text-center font-black text-sky-600 text-xs">${item.credits}</td>
-                    <td class="px-4 py-3.5 text-right">
-                        <a href="/admin/review/${item.id}" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1 border border-amber-200">
-                            <i class="fa-solid fa-pen-to-square"></i> ตรวจ
-                        </a>
-                    </td>
+                    <td class="px-4 py-3.5 text-right">${btnHtml}</td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            renderAdminPendingTable();
+            renderAdminTableByStatus('Pending');
 
             const chartCanvas = document.getElementById('adminStatusChart');
             if (chartCanvas) {
@@ -959,7 +1047,14 @@ def home():
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
-                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                        onClick: (evt, elements) => {
+                            if (elements.length > 0) {
+                                const index = elements[0].index;
+                                const statusMap = ['Pending', 'Approved', 'Needs_Revision'];
+                                renderAdminTableByStatus(statusMap[index]);
+                            }
+                        }
                     }
                 });
             }
@@ -1114,8 +1209,10 @@ def home():
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-slate-400 font-extrabold uppercase bg-slate-50 rounded-xl">
                             <tr>
-                                <th class="px-4 py-3 rounded-l-xl">ชื่อวิชาที่ขอเทียบโอน</th>
+                                <th class="px-4 py-3 rounded-l-xl">รหัสคำร้อง</th>
+                                <th class="px-4 py-3">ชื่อวิชาที่ขอเทียบโอน</th>
                                 <th class="px-4 py-3 text-center">หน่วยกิต</th>
+                                <th class="px-4 py-3 text-center">วันที่ยื่น</th>
                                 <th class="px-4 py-3 text-center">สถานะ</th>
                                 <th class="px-4 py-3 text-right rounded-r-xl">จัดการ</th>
                             </tr>
@@ -1182,7 +1279,7 @@ def home():
         });
 
         if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-xs font-bold text-slate-400"><i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>ไม่พบรายการคำร้องในหมวดนี้</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-xs font-bold text-slate-400"><i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>ไม่พบรายการคำร้องในหมวดนี้</td></tr>`;
             return;
         }
 
@@ -1199,8 +1296,10 @@ def home():
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-slate-50/80 transition';
             tr.innerHTML = `
+                <td class="px-4 py-4 font-mono font-bold text-sky-600 text-xs">${item.req_code}</td>
                 <td class="px-4 py-4 font-bold text-slate-800">${item.course_name}</td>
                 <td class="px-4 py-4 text-center font-bold text-slate-600">${item.credits}</td>
+                <td class="px-4 py-4 text-center text-xs text-slate-400 font-medium">${item.date_submitted}</td>
                 <td class="px-4 py-4 text-center">${badgeHtml}</td>
                 <td class="px-4 py-4 text-right">
                     <button onclick="openQuickView(${item.id})" class="bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1">
@@ -1508,7 +1607,6 @@ def submit_credit():
                         for lesson in lessons:
                             file_key = f'file_{course_code}_{lesson.id}'
                             file = request.files.get(file_key)
-                            # เพิ่มการตรวจสอบ allowed_file(file.filename) เพื่อความปลอดภัย
                             if file and file.filename != '' and allowed_file(file.filename):
                                 filename = secure_filename(f"{course_code}_{lesson.id}_{file.filename}")
                                 file.save(os.path.join(upload_folder, filename))
@@ -1525,10 +1623,11 @@ def submit_credit():
                         saved_str = ",".join(uploaded_filenames)
                         doc1 = uploaded_filenames[0] if len(uploaded_filenames) > 0 else None
                         doc2 = uploaded_filenames[1] if len(uploaded_filenames) > 1 else None
-                        doc3 = uploaded_filenames[2] if len(uploaded_filenames) > 2 else None  # แก้ไขเงื่อนไข > 2
+                        doc3 = uploaded_filenames[2] if len(uploaded_filenames) > 2 else None
 
                         existing_req = CreditRequest.query.filter_by(user_id=user_id, course_code=course_code).first()
 
+                        now_th = get_thailand_time()
                         if existing_req:
                             existing_req.id_card_img = saved_str
                             existing_req.doc_img = doc1
@@ -1541,7 +1640,7 @@ def submit_credit():
                             if hasattr(existing_req, 'faculty'): existing_req.faculty = user_faculty
                             if hasattr(existing_req, 'major'): existing_req.major = user_major
                             existing_req.status = 'Pending'
-                            existing_req.date_submitted = datetime.now().strftime('%Y-%m-%d %H:%M')
+                            existing_req.date_submitted = now_th
                         else:
                             generated_req_code = f"TR{uuid.uuid4().hex[:6].upper()}"
                             req_data = {
@@ -1555,7 +1654,7 @@ def submit_credit():
                                 'status': 'Pending',
                                 'faculty': user_faculty,
                                 'major': user_major,
-                                'date_submitted': datetime.now().strftime('%Y-%m-%d %H:%M')
+                                'date_submitted': now_th
                             }
                             if hasattr(CreditRequest, 'course_name'): req_data['course_name'] = course_info.course_name or ''
                             if hasattr(CreditRequest, 'category'): req_data['category'] = course_info.category or ''
@@ -1900,7 +1999,7 @@ def student_history():
                             <th class="px-4 py-3 rounded-l-xl">รหัสคำร้อง</th>
                             <th class="px-4 py-3">รายวิชาที่ยื่นเทียบโอน</th>
                             <th class="px-4 py-3 text-center">หน่วยกิต</th>
-                            <th class="px-4 py-3">วันที่ยื่น</th>
+                            <th class="px-4 py-3 text-center">วันที่ยื่น</th>
                             <th class="px-4 py-3 text-center">สถานะ</th>
                             <th class="px-4 py-3 text-right rounded-r-xl">การจัดการ</th>
                         </tr>
@@ -1950,10 +2049,10 @@ def student_history():
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-slate-50 transition';
             tr.innerHTML = `
-                <td class="px-4 py-3.5 font-mono font-bold text-sky-600">${{item.req_code}}</td>
+                <td class="px-4 py-3.5 font-mono font-bold text-sky-600 text-xs">${{item.req_code}}</td>
                 <td class="px-4 py-3.5 font-bold text-slate-800">${{item.course_name}}</td>
                 <td class="px-4 py-3.5 text-center font-bold text-slate-600">${{item.credits}}</td>
-                <td class="px-4 py-3.5 text-xs text-slate-400">${{item.date_submitted}}</td>
+                <td class="px-4 py-3.5 text-center text-xs text-slate-400 font-medium">${{item.date_submitted}}</td>
                 <td class="px-4 py-3.5 text-center">${{badge}}</td>
                 <td class="px-4 py-3.5 text-right">
                     ${{item.status !== 'Approved' && item.status !== 'Pending' ? 
@@ -2016,6 +2115,7 @@ def student_edit_request(req_id):
 
             req.status = 'Pending'
             req.reject_reason = None
+            req.date_submitted = get_thailand_time()
             db.session.commit()
             
             flash('✅ อัปเดตหลักฐานและส่งกลับให้เจ้าหน้าที่ตรวจสอบเรียบร้อยแล้ว', 'success')
@@ -2738,7 +2838,13 @@ def admin_export_csv():
     if session.get('role') not in ['admin', 'superadmin']:
         return redirect(url_for('login'))
         
-    requests = CreditRequest.query.order_by(CreditRequest.id.desc()).all()
+    selected_month = request.args.get('month', '').strip() # e.g. "2026-10"
+    
+    query = CreditRequest.query
+    if selected_month:
+        query = query.filter(CreditRequest.date_submitted.like(f"{selected_month}%"))
+        
+    requests = query.order_by(CreditRequest.id.desc()).all()
     
     output = io.StringIO()
     writer = csv.writer(output)
@@ -2770,11 +2876,12 @@ def admin_export_csv():
         ])
     
     csv_data = "\ufeff" + output.getvalue()
+    filename_str = f"Credit_Bank_Report_{selected_month if selected_month else 'All'}.csv"
     
     return Response(
         csv_data,
         mimetype="text/csv; charset=utf-8",
-        headers={"Content-disposition": f"attachment; filename=Credit_Bank_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"}
+        headers={"Content-disposition": f"attachment; filename={filename_str}"}
     )
 
 if __name__ == '__main__':
