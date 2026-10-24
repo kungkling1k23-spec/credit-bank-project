@@ -744,7 +744,7 @@ def home():
                         </button>
                     </div>
 
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto max-h-[420px] overflow-y-auto pr-2">
                         <table class="w-full text-sm text-left">
                             <thead class="text-xs text-slate-400 font-extrabold uppercase bg-slate-50 rounded-xl">
                                 <tr>
@@ -1000,7 +1000,7 @@ def home():
                 return;
             }
 
-            filteredRequests.slice(0, 7).forEach(item => {
+            filteredRequests.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition';
                 
