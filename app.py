@@ -6,6 +6,7 @@ import io
 import urllib.request
 import re
 from datetime import datetime
+from markupsafe import escape
 from flask import Flask, request, redirect, url_for, session, flash, get_flashed_messages, Response
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -13,7 +14,7 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.secret_key = 'credit_bank_is_rmutto_production_key_2026'
+app.secret_key = os.environ.get('SECRET_KEY', 'credit_bank_is_rmutto_production_key_2026')
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url:
@@ -43,6 +44,8 @@ class User(db.Model):
     dob = db.Column(db.String(20), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     email = db.Column(db.String(100), nullable=True)
+    faculty = db.Column(db.String(200), default='คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ')
+    major = db.Column(db.String(200), default='สาขาวิชาระบบสารสนเทศ')
     address = db.Column(db.Text, nullable=True)
     id_card_img = db.Column(db.String(200), nullable=True)
     profile_img = db.Column(db.String(200), default="default_profile.png")
@@ -61,9 +64,7 @@ class Course(db.Model):
     hours = db.Column(db.Integer)
     credits = db.Column(db.Integer)
 
-    # เชื่อมความสัมพันธ์ไปยังตารางบทเรียนย่อย
     lessons = db.relationship('CourseLesson', backref='course', lazy=True)
-
 
 class CourseLesson(db.Model):
     __tablename__ = 'course_lesson'
@@ -86,7 +87,6 @@ class CreditRequest(db.Model):
     institution = db.Column(db.String(100))
     credits = db.Column(db.Integer)
     
-    # เพิ่ม 2 คอลัมน์นี้
     faculty = db.Column(db.String(200), default='คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ')
     major = db.Column(db.String(200), default='สาขาวิชาระบบสารสนเทศ')
 
@@ -131,6 +131,23 @@ def generate_member_id():
     except Exception:
         return f"IS69{uuid.uuid4().hex[:3].upper()}"
 
+def generate_next_officer_code():
+    last_officer = User.query.filter(
+        User.role.in_(['admin', 'officer', 'superadmin']),
+        User.member_id.like('rmutto%')
+    ).order_by(User.id.desc()).first()
+
+    if last_officer and last_officer.member_id and last_officer.member_id.startswith('rmutto'):
+        try:
+            current_num = int(last_officer.member_id.replace('rmutto', ''))
+            next_num = current_num + 1
+        except ValueError:
+            next_num = 1
+    else:
+        next_num = 1
+
+    return f"rmutto{next_num:03d}"
+
 def format_address(house_no, moo, soi, subdistrict, district, province, postal_code):
     parts = []
     if house_no: parts.append(f"บ้านเลขที่ {house_no.strip()}")
@@ -168,7 +185,7 @@ def get_courses():
             
             if current_code not in courses_dict:
                 try: credits_val = int(credits_raw)
-                except: credits_val = 3
+                except Exception: credits_val = 3
                 courses_dict[current_code] = {"code": current_code, "name": name, "group": group, "provider": provider if provider else "ThaiMOOC", "credits": credits_val, "mooc_list": [], "hours_list": [], "total_num_hours": 0.0}
             else:
                 if not courses_dict[current_code]["name"] and name: courses_dict[current_code]["name"] = name
@@ -179,9 +196,7 @@ def get_courses():
                 nums = re.findall(r'\d+(?:\.\d+)?', hours_raw)
                 if nums: courses_dict[current_code]["total_num_hours"] += float(nums[0])
                 
-                clean_mooc = mooc_name
-                for n in nums:
-                    clean_mooc = clean_mooc.replace(f"({n} ชม.)", "").replace(f"({n} ชั่วโมง)", "").replace(n, "").strip()
+                clean_mooc = re.sub(r'\(\s*\d+(?:\.\d+)?\s*(?:ชม\.|ชั่วโมง)\s*\)', '', mooc_name).strip()
                 if not clean_mooc: clean_mooc = mooc_name
 
                 for m in clean_mooc.split('\n'):
@@ -205,7 +220,7 @@ def render_layout(content, active_page=''):
         return "bg-sky-200 text-sky-900 font-extrabold shadow-sm border border-sky-300" if active_page == page_name else "text-slate-700 hover:text-sky-900 hover:bg-sky-200/80 font-medium"
 
     messages = get_flashed_messages(with_categories=True)
-    flash_html = "".join([f'<div class="p-4 mb-4 text-sm rounded-2xl font-semibold shadow-sm flex items-center justify-between border transition-all {"bg-rose-50 text-rose-700 border-rose-200" if category in ["error", "danger"] else "bg-emerald-50 text-emerald-800 border-emerald-200"}"><div class="flex items-center gap-2"><i class="fa-solid {"fa-circle-exclamation text-rose-500" if category in ["error", "danger"] else "fa-circle-check text-emerald-500"} text-lg"></i><span>{message}</span></div><button onclick="this.parentElement.remove()" class="text-xs font-bold px-2 py-1 hover:bg-black/5 rounded-lg">✕</button></div>' for category, message in messages]) if messages else ""
+    flash_html = "".join([f'<div class="p-4 mb-4 text-sm rounded-2xl font-semibold shadow-sm flex items-center justify-between border transition-all {"bg-rose-50 text-rose-700 border-rose-200" if category in ["error", "danger"] else "bg-emerald-50 text-emerald-800 border-emerald-200"}"><div class="flex items-center gap-2"><i class="fa-solid {"fa-circle-exclamation text-rose-500" if category in ["error", "danger"] else "fa-circle-check text-emerald-500"} text-lg"></i><span>{escape(message)}</span></div><button onclick="this.parentElement.remove()" class="text-xs font-bold px-2 py-1 hover:bg-black/5 rounded-lg">✕</button></div>' for category, message in messages]) if messages else ""
 
     user_role = session.get('role', '')
     manage_admin_menu = ""
@@ -255,7 +270,7 @@ def render_layout(content, active_page=''):
             <div class="p-4 border-t border-sky-200 bg-sky-200/40 shrink-0">
                 <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl transition-all group border {'border-sky-300 bg-sky-200/80' if active_page == 'profile' else 'border-transparent hover:bg-sky-200/60'}">
                     <div class="w-9 h-9 rounded-xl bg-sky-200 text-sky-700 font-bold flex items-center justify-center shrink-0"><i class="fa-regular fa-user"></i></div>
-                    <div class="flex flex-col min-w-0 nav-text"><span class="text-xs font-bold text-slate-800 truncate">{session.get('fullname', 'ผู้ใช้งาน')}</span><span class="text-[10px] text-sky-700 capitalize font-medium">{'เจ้าหน้าที่' if session.get('role') in ['admin', 'superadmin'] else 'นักศึกษา'}</span></div>
+                    <div class="flex flex-col min-w-0 nav-text"><span class="text-xs font-bold text-slate-800 truncate">{escape(session.get('fullname', 'ผู้ใช้งาน'))}</span><span class="text-[10px] text-sky-700 capitalize font-medium">{'เจ้าหน้าที่' if session.get('role') in ['admin', 'superadmin'] else 'นักศึกษา'}</span></div>
                 </a>
                 <a href="/logout" class="mt-2 flex items-center gap-3 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all"><i class="fa-solid fa-arrow-right-from-bracket text-sm w-6 text-center"></i><span class="nav-text">ออกจากระบบ</span></a>
             </div>
@@ -554,7 +569,7 @@ def home():
         """
         return render_layout(landing_content, active_page='home')
 
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])
     if not user:
         session.clear()
         return redirect(url_for('login'))
@@ -639,7 +654,7 @@ def home():
                                 <i class="fa-solid fa-shield-halved mr-1"></i> Officer Command Center
                             </span>
                         </div>
-                        <h1 class="text-3xl font-black">ยินดีต้อนรับ, {user.fullname} 👋</h1>
+                        <h1 class="text-3xl font-black">ยินดีต้อนรับ, {escape(user.fullname)} 👋</h1>
                         <p class="text-slate-300 text-sm mt-1">ระบบบริหารจัดการธนาคารหน่วยกิต (Credit Bank) สาขาวิชาระบบสารสนเทศ</p>
                     </div>
                     <div class="flex flex-wrap gap-2 shrink-0">
@@ -993,8 +1008,8 @@ def home():
             <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <span class="bg-white/20 backdrop-blur-md text-sky-100 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Student Portal</span>
-                    <h1 class="text-3xl font-black mt-2">ยินดีต้อนรับ, {user.prefix or ''}{user.fullname} 👋</h1>
-                    <p class="text-sky-100/80 text-sm mt-1">รหัสนักศึกษา: {user.member_id or '-'} | ระบบธนาคารหน่วยกิต (Credit Bank) IS RMUTTO</p>
+                    <h1 class="text-3xl font-black mt-2">ยินดีต้อนรับ, {escape(user.prefix or '')}{escape(user.fullname)} 👋</h1>
+                    <p class="text-sky-100/80 text-sm mt-1">รหัสนักศึกษา: {escape(user.member_id or '-')} | ระบบธนาคารหน่วยกิต (Credit Bank) IS RMUTTO</p>
                 </div>
                 <a href="/submit_credit" class="group bg-white hover:bg-sky-50 text-sky-700 font-extrabold px-6 py-3.5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 text-sm shrink-0">
                     <i class="fa-solid fa-circle-plus text-sky-600 group-hover:rotate-90 transition-transform duration-300"></i>
@@ -1054,7 +1069,7 @@ def home():
                     <p class="text-xs font-bold text-emerald-700 mt-1">อนุมัติเรียบร้อย <i class="fa-solid fa-arrow-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
                 </div>
 
-                <div onclick="filterByStatus('Need_Edit')" class="cursor-pointer group bg-white hover:bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <div onclick="filterByStatus('Needs_Revision')" class="cursor-pointer group bg-white hover:bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center mb-4">
                         <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-pen-to-square"></i>
@@ -1087,7 +1102,7 @@ def home():
                         <button onclick="filterByStatus('ALL')" id="btn-tab-ALL" class="tab-btn px-3 py-1.5 rounded-xl bg-slate-900 text-white shadow-sm">ทั้งหมด</button>
                         <button onclick="filterByStatus('Pending')" id="btn-tab-Pending" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">รอดำเนินการ</button>
                         <button onclick="filterByStatus('Approved')" id="btn-tab-Approved" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">อนุมัติแล้ว</button>
-                        <button onclick="filterByStatus('Need_Edit')" id="btn-tab-Need_Edit" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">ต้องแก้ไข</button>
+                        <button onclick="filterByStatus('Needs_Revision')" id="btn-tab-Needs_Revision" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">ต้องแก้ไข</button>
                     </div>
                 </div>
 
@@ -1158,7 +1173,7 @@ def home():
             if (currentFilter === 'ALL') return true;
             if (currentFilter === 'Pending') return r.status === 'Pending';
             if (currentFilter === 'Approved') return r.status === 'Approved';
-            if (currentFilter === 'Need_Edit') return r.status !== 'Pending' && r.status !== 'Approved';
+            if (currentFilter === 'Needs_Revision') return r.status === 'Needs_Revision' || r.status === 'Need_Edit';
             return true;
         });
 
@@ -1207,7 +1222,7 @@ def home():
             'ALL': 'แสดงคำร้องทั้งหมด',
             'Pending': 'แสดงเฉพาะคำร้องที่ รอดำเนินการ',
             'Approved': 'แสดงเฉพาะคำร้องที่ อนุมัติแล้ว',
-            'Need_Edit': 'แสดงเฉพาะคำร้องที่ ต้องแก้ไขหลักฐาน'
+            'Needs_Revision': 'แสดงเฉพาะคำร้องที่ ต้องแก้ไขหลักฐาน'
         };
         const labelElem = document.getElementById('filter_status_label');
         if(labelElem) labelElem.innerText = labelMap[status] || '';
@@ -1262,7 +1277,7 @@ def home():
 
         const pendingCount = requestsData.filter(r => r.status === 'Pending').length;
         const approvedCount = requestsData.filter(r => r.status === 'Approved').length;
-        const needEditCount = requestsData.filter(r => r.status !== 'Pending' && r.status !== 'Approved').length;
+        const needEditCount = requestsData.filter(r => r.status === 'Needs_Revision' || r.status === 'Need_Edit').length;
 
         const chartCanvas = document.getElementById('studentChart');
         if (chartCanvas) {
@@ -1286,7 +1301,7 @@ def home():
                     onClick: (evt, elements) => {
                         if (elements.length > 0) {
                             const index = elements[0].index;
-                            const statusMap = ['Pending', 'Approved', 'Need_Edit'];
+                            const statusMap = ['Pending', 'Approved', 'Needs_Revision'];
                             filterByStatus(statusMap[index]);
                         }
                     }
@@ -1322,7 +1337,7 @@ def available_courses():
     try:
         approved_reqs = CreditRequest.query.filter_by(user_id=session['user_id'], status='Approved').all()
         approved_courses = [r.course_name for r in approved_reqs]
-    except: approved_courses = []
+    except Exception: approved_courses = []
 
     cards = ""
     for c in filtered_courses:
@@ -1332,7 +1347,7 @@ def available_courses():
         for idx_m, m in enumerate(c['mooc_list']):
             mooc_items += f'''
             <div class="flex items-start justify-between gap-2 mb-2 pb-2 border-b border-slate-50 last:border-0 text-xs">
-                <div class="flex items-start gap-1.5 text-slate-700 font-medium"><i class="fa-solid fa-check text-sky-400 mt-0.5"></i> <span>{m}</span></div>
+                <div class="flex items-start gap-1.5 text-slate-700 font-medium"><i class="fa-solid fa-check text-sky-400 mt-0.5"></i> <span>{escape(m)}</span></div>
             </div>
             '''
         
@@ -1344,13 +1359,13 @@ def available_courses():
         cards += f"""
         <div class="bg-white rounded-3xl border border-sky-100 p-6 shadow-sm hover:shadow-md transition card-hover flex flex-col h-full">
             <div class="flex justify-between items-start mb-4">
-                <span class="font-mono text-[10px] font-black bg-slate-100 text-slate-500 px-2.5 py-1 rounded-lg tracking-widest">{c['code']}</span>
-                <span class="px-2.5 py-1 rounded-lg text-[10px] font-black border {badge_prov} uppercase">{c['provider']}</span>
+                <span class="font-mono text-[10px] font-black bg-slate-100 text-slate-500 px-2.5 py-1 rounded-lg tracking-widest">{escape(c['code'])}</span>
+                <span class="px-2.5 py-1 rounded-lg text-[10px] font-black border {badge_prov} uppercase">{escape(c['provider'])}</span>
             </div>
-            <h3 class="text-lg font-black text-slate-900 leading-snug mb-2">{c['name']}</h3>
+            <h3 class="text-lg font-black text-slate-900 leading-snug mb-2">{escape(c['name'])}</h3>
             <div class="mb-4 flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-100 text-xs">
                 <span class="font-bold text-slate-500">รวมชั่วโมงเรียน:</span>
-                <span class="font-black text-sky-600">{c['total_hours']}</span>
+                <span class="font-black text-sky-600">{escape(c['total_hours'])}</span>
             </div>
             <div class="mb-5 flex-grow">
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">บทเรียนออนไลน์ย่อย</p>
@@ -1383,7 +1398,7 @@ def available_courses():
     <form method="GET" action="/available_courses" class="max-w-3xl mx-auto bg-white p-3 rounded-[2rem] border border-sky-200 shadow-lg mb-12 flex flex-col sm:flex-row gap-2">
         <div class="flex-grow relative flex items-center">
             <i class="fa-solid fa-magnifying-glass absolute left-5 text-slate-400 text-lg"></i>
-            <input type="text" name="search" value="{search_query}" placeholder="ค้นหา เช่น 'การเขียนโปรแกรม' หรือ '15-02-002'" class="w-full pl-12 pr-4 py-4 text-sm font-bold text-slate-800 bg-transparent outline-none placeholder-slate-400">
+            <input type="text" name="search" value="{escape(search_query)}" placeholder="ค้นหา เช่น 'การเขียนโปรแกรม' หรือ '15-02-002'" class="w-full pl-12 pr-4 py-4 text-sm font-bold text-slate-800 bg-transparent outline-none placeholder-slate-400">
         </div>
         <div class="shrink-0 w-full sm:w-48 border-t sm:border-t-0 sm:border-l border-sky-100">
             <select name="provider" class="w-full h-full py-4 px-4 bg-transparent text-sm font-bold text-slate-600 outline-none cursor-pointer">
@@ -1412,10 +1427,10 @@ def all_courses():
             rows += f"""
             <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
                 <td class="py-3 px-4 font-mono text-slate-400">{idx}</td>
-                <td class="py-3 px-4 font-mono font-bold text-sky-600">{c.course_code}</td>
-                <td class="py-3 px-4 font-bold text-slate-800">{c.course_name}</td>
-                <td class="py-3 px-4 text-slate-500">{c.category or '-'}</td>
-                <td class="py-3 px-4 text-slate-500">{c.institution or '-'}</td>
+                <td class="py-3 px-4 font-mono font-bold text-sky-600">{escape(c.course_code)}</td>
+                <td class="py-3 px-4 font-bold text-slate-800">{escape(c.course_name)}</td>
+                <td class="py-3 px-4 text-slate-500">{escape(c.category or '-')}</td>
+                <td class="py-3 px-4 text-slate-500">{escape(c.institution or '-')}</td>
                 <td class="py-3 px-4 text-center font-bold text-slate-700">{c.credits or 0}</td>
             </tr>
             """
@@ -1448,7 +1463,7 @@ def all_courses():
         """
         return render_layout(content, active_page='all_courses')
     except Exception as e:
-        return f"<div style='padding:20px; color:red;'><h3>Database Query Error:</h3><p>{str(e)}</p></div>"
+        return f"<div style='padding:20px; color:red;'><h3>Database Query Error:</h3><p>{escape(str(e))}</p></div>"
 
 @app.route('/submit_credit', methods=['GET', 'POST'])
 def submit_credit():
@@ -1458,13 +1473,11 @@ def submit_credit():
     user_id = session['user_id']
     msg = ""
 
-    # ดึงข้อมูลคณะและสาขาของผู้ใช้
-    user_info = User.query.get(user_id)
+    user_info = db.session.get(User, user_id)
     user_faculty = getattr(user_info, 'faculty', 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ') or 'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ'
     user_major = getattr(user_info, 'major', 'สาขาวิชาระบบสารสนเทศ') or 'สาขาวิชาระบบสารสนเทศ'
 
     try:
-        # 1. จัดการการส่งฟอร์มอัปโหลดหลักฐาน (POST)
         if request.method == 'POST':
             selected_courses = request.form.getlist('selected_courses')
             
@@ -1491,14 +1504,15 @@ def submit_credit():
                         for lesson in lessons:
                             file_key = f'file_{course_code}_{lesson.id}'
                             file = request.files.get(file_key)
-                            if file and file.filename != '':
+                            # เพิ่มการตรวจสอบ allowed_file(file.filename) เพื่อความปลอดภัย
+                            if file and file.filename != '' and allowed_file(file.filename):
                                 filename = secure_filename(f"{course_code}_{lesson.id}_{file.filename}")
                                 file.save(os.path.join(upload_folder, filename))
                                 uploaded_filenames.append(filename)
                     else:
                         file_key = f'file_{course_code}_default'
                         file = request.files.get(file_key)
-                        if file and file.filename != '':
+                        if file and file.filename != '' and allowed_file(file.filename):
                             filename = secure_filename(f"{course_code}_default_{file.filename}")
                             file.save(os.path.join(upload_folder, filename))
                             uploaded_filenames.append(filename)
@@ -1507,7 +1521,7 @@ def submit_credit():
                         saved_str = ",".join(uploaded_filenames)
                         doc1 = uploaded_filenames[0] if len(uploaded_filenames) > 0 else None
                         doc2 = uploaded_filenames[1] if len(uploaded_filenames) > 1 else None
-                        doc3 = uploaded_filenames[2] if len(uploaded_filenames) > 2 else None
+                        doc3 = uploaded_filenames[2] if len(uploaded_filenames) > 2 else None  # แก้ไขเงื่อนไข > 2
 
                         existing_req = CreditRequest.query.filter_by(user_id=user_id, course_code=course_code).first()
 
@@ -1556,7 +1570,6 @@ def submit_credit():
                 </div>
                 """
 
-        # 2. ดึงข้อมูลรายวิชาและประวัติการยื่นคำร้อง
         courses = Course.query.order_by(Course.course_code.asc()).all()
         user_requests = CreditRequest.query.filter_by(user_id=user_id).all()
         existing_requests = {req.course_code: req for req in user_requests if hasattr(req, 'course_code')}
@@ -1580,15 +1593,15 @@ def submit_credit():
             lesson_count = len(lessons)
             lesson_list_html = ""
             if lessons:
-                lessons_items = "".join([f"<li class='text-[11px] text-slate-500'>• {l.lesson_name} ({l.hours} ชม.)</li>" for l in lessons])
+                lessons_items = "".join([f"<li class='text-[11px] text-slate-500'>• {escape(l.lesson_name)} ({l.hours} ชม.)</li>" for l in lessons])
                 lesson_list_html = f"<ul class='mt-1 space-y-0.5'>{lessons_items}</ul>"
 
             if req:
                 status_val = req.status or 'Pending'
-                status_badge = f'<span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xs">ยื่นแล้ว ({status_val})</span>'
+                status_badge = f'<span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xs">ยื่นแล้ว ({escape(status_val)})</span>'
                 img_str = req.id_card_img or ''
                 imgs = img_str.split(",") if img_str else []
-                img_links = " ".join([f'<a href="/static/uploads/{img.strip()}" target="_blank" class="text-sky-600 underline font-bold text-xs">รูปที่ {i+1}</a>' for i, img in enumerate(imgs) if img.strip()]) if imgs else "ไม่มีรูป"
+                img_links = " ".join([f'<a href="/static/uploads/{escape(img.strip())}" target="_blank" class="text-sky-600 underline font-bold text-xs">รูปที่ {i+1}</a>' for i, img in enumerate(imgs) if img.strip()]) if imgs else "ไม่มีรูป"
                 action_area = f'<div class="text-xs text-slate-500">หลักฐานที่แนบไว้: {img_links}</div>'
                 checkbox_html = '<input type="checkbox" disabled class="w-4 h-4 rounded text-slate-300 cursor-not-allowed">'
             else:
@@ -1599,16 +1612,16 @@ def submit_credit():
                     {lesson_list_html if lesson_count > 0 else '<span class="text-[11px] text-slate-400">ไม่มีบทเรียนย่อย</span>'}
                 </div>
                 """
-                checkbox_html = f'<input type="checkbox" value="{c.course_code}" onchange="toggleCourseSelection(\'{c.course_code}\')" class="course-select-cb w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 cursor-pointer">'
+                checkbox_html = f'<input type="checkbox" value="{escape(c.course_code)}" onchange="toggleCourseSelection(\'{escape(c.course_code)}\')" class="course-select-cb w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 cursor-pointer">'
 
             table_rows += f"""
-            <tr class="border-b border-slate-100 hover:bg-slate-50/50 transition" id="row-{c.course_code}">
+            <tr class="border-b border-slate-100 hover:bg-slate-50/50 transition" id="row-{escape(c.course_code)}">
                 <td class="py-4 px-4 text-center">{checkbox_html}</td>
                 <td class="py-4 px-4 font-mono text-slate-400 text-xs">{idx}</td>
-                <td class="py-4 px-4 font-mono font-bold text-sky-600 text-xs">{c.course_code}</td>
+                <td class="py-4 px-4 font-mono font-bold text-sky-600 text-xs">{escape(c.course_code)}</td>
                 <td class="py-4 px-4 font-bold text-slate-800 text-xs">
-                    <div>{c.course_name}</div>
-                    <div class="text-[11px] text-slate-400 font-normal">{c.category or '-'} | {c.credits or 0} หน่วยกิต</div>
+                    <div>{escape(c.course_name)}</div>
+                    <div class="text-[11px] text-slate-400 font-normal">{escape(c.category or '-')} | {c.credits or 0} หน่วยกิต</div>
                 </td>
                 <td class="py-4 px-4">{status_badge}</td>
                 <td class="py-4 px-4">{action_area}</td>
@@ -1813,14 +1826,14 @@ def submit_credit():
 
     except Exception as e:
         db.session.rollback()
-        return f"<div style='padding:20px; color:red;'><h3>System Error:</h3><p>{str(e)}</p></div>"
+        return f"<div style='padding:20px; color:red;'><h3>System Error:</h3><p>{escape(str(e))}</p></div>"
 
 @app.route('/history')
 def student_history():
     if not session.get('user_id'): 
         return redirect(url_for('login'))
         
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])
     requests = CreditRequest.query.filter_by(user_id=user.id).order_by(CreditRequest.id.desc()).all()
 
     pending_count = sum(1 for r in requests if r.status == 'Pending')
@@ -1963,7 +1976,6 @@ def student_edit_request(req_id):
     if req.user_id != session['user_id']: 
         return redirect(url_for('student_history'))
 
-    # ดึงรูปภาพหลักฐานเดิม (รองรับทั้ง doc_img และ id_card_img)
     existing_imgs = []
     if getattr(req, 'doc_img', None): existing_imgs.append(req.doc_img)
     if getattr(req, 'doc_img2', None): existing_imgs.append(req.doc_img2)
@@ -2010,7 +2022,6 @@ def student_edit_request(req_id):
             flash(f'เกิดข้อผิดพลาดในการบันทึกข้อมูล: {str(e)}', 'error')
             return redirect(url_for('student_edit_request', req_id=req_id))
 
-    # GET Request: แสดงหน้าฟอร์มแก้ไข
     course_data_list = get_courses()
     matched_course = next((c for c in course_data_list if c['name'] == req.course_name or c['code'] == req.course_code), None)
     mooc_names = matched_course['mooc_list'] if matched_course else []
@@ -2027,11 +2038,11 @@ def student_edit_request(req_id):
         img_filename = existing_imgs[idx] if idx < len(existing_imgs) else None
         title = get_mooc_title(idx)
         
-        img_tag = f'<img id="preview-img-{idx}" src="/static/uploads/{img_filename}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain bg-white p-1 border border-slate-200">' if img_filename else f'<img id="preview-img-{idx}" src="" class="hidden max-h-40 rounded-xl mb-3 shadow-sm object-contain bg-white p-1 border border-slate-200">'
+        img_tag = f'<img id="preview-img-{idx}" src="/static/uploads/{escape(img_filename)}" class="max-h-40 rounded-xl mb-3 shadow-sm object-contain bg-white p-1 border border-slate-200">' if img_filename else f'<img id="preview-img-{idx}" src="" class="hidden max-h-40 rounded-xl mb-3 shadow-sm object-contain bg-white p-1 border border-slate-200">'
         
         ev_html += f"""
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
-            <p class="text-sm font-bold text-sky-700">{title}</p>
+            <p class="text-sm font-bold text-sky-700">{escape(title)}</p>
             <div>{img_tag}</div>
             <input type="file" name="cert_file_{idx}" accept="image/*" onchange="previewImage(event, 'preview-img-{idx}')" class="w-full text-xs font-medium file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-sky-600 file:text-white hover:file:bg-sky-700 cursor-pointer">
         </div>
@@ -2041,12 +2052,12 @@ def student_edit_request(req_id):
     <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl space-y-6">
         <div>
             <h3 class="text-2xl font-black text-slate-900 mb-1">แก้ไขหลักฐานคำร้อง</h3>
-            <p class="text-sm font-bold text-sky-600">{req.course_name} ({getattr(req, 'course_code', '-') or '-'})</p>
+            <p class="text-sm font-bold text-sky-600">{escape(req.course_name)} ({escape(getattr(req, 'course_code', '-') or '-')})</p>
         </div>
 
         <div class="bg-rose-50 border border-rose-200 p-4 rounded-2xl">
             <p class="text-xs font-bold text-rose-500 uppercase">เหตุผลที่ต้องแก้ไขจากเจ้าหน้าที่:</p>
-            <p class="text-sm font-extrabold text-rose-700 mt-0.5">{getattr(req, 'reject_reason', '') or "กรุณาตรวจสอบและอัปโหลดรูปภาพหลักฐานที่ชัดเจนใหม่อีกครั้ง"}</p>
+            <p class="text-sm font-extrabold text-rose-700 mt-0.5">{escape(getattr(req, 'reject_reason', '') or "กรุณาตรวจสอบและอัปโหลดรูปภาพหลักฐานที่ชัดเจนใหม่อีกครั้ง")}</p>
         </div>
 
         <form method="POST" enctype="multipart/form-data" class="space-y-6">
@@ -2083,17 +2094,17 @@ def student_edit_request(req_id):
 def credits():
     if 'user_id' not in session: return redirect(url_for('login'))
     try: approved_requests = CreditRequest.query.filter_by(user_id=session['user_id'], status='Approved').all()
-    except: approved_requests = []
+    except Exception: approved_requests = []
 
     total_approved = sum(getattr(r, 'credits', 0) or 0 for r in approved_requests)
     rows = ""
     for r in approved_requests:
         rows += f"""
         <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
-            <td class="py-4 px-4 font-extrabold text-slate-900">{getattr(r, 'course_name', '-')}</td>
-            <td class="py-4 px-4 text-slate-600 font-medium">{getattr(r, 'institution', '-')}</td>
+            <td class="py-4 px-4 font-extrabold text-slate-900">{escape(getattr(r, 'course_name', '-'))}</td>
+            <td class="py-4 px-4 text-slate-600 font-medium">{escape(getattr(r, 'institution', '-'))}</td>
             <td class="py-4 px-4 font-black text-sky-600">{getattr(r, 'credits', 0)} หน่วยกิต</td>
-            <td class="py-4 px-4 text-xs text-slate-500 font-medium">{getattr(r, 'approved_by', 'เจ้าหน้าที่') or 'เจ้าหน้าที่'}</td>
+            <td class="py-4 px-4 text-xs text-slate-500 font-medium">{escape(getattr(r, 'approved_by', 'เจ้าหน้าที่') or 'เจ้าหน้าที่')}</td>
         </tr>
         """
     content = f"""
@@ -2139,10 +2150,10 @@ def admin_requests():
 
         rows += f"""
         <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
-            <td class="py-4 px-4 font-mono font-bold text-sky-600">{getattr(r, 'req_code', f'TR{r.id:04d}')}</td>
-            <td class="py-4 px-4 font-bold text-slate-900">{student_name}<br><span class="text-xs text-sky-600 font-semibold">({student_code})</span></td>
-            <td class="py-4 px-4 text-slate-700 font-medium">{getattr(r, 'course_name', '-')}</td>
-            <td class="py-4 px-4 text-slate-500 text-xs font-medium">{getattr(r, 'date_submitted', '-')}</td>
+            <td class="py-4 px-4 font-mono font-bold text-sky-600">{escape(getattr(r, 'req_code', f'TR{r.id:04d}'))}</td>
+            <td class="py-4 px-4 font-bold text-slate-900">{escape(student_name)}<br><span class="text-xs text-sky-600 font-semibold">({escape(student_code)})</span></td>
+            <td class="py-4 px-4 text-slate-700 font-medium">{escape(getattr(r, 'course_name', '-'))}</td>
+            <td class="py-4 px-4 text-slate-500 text-xs font-medium">{escape(getattr(r, 'date_submitted', '-'))}</td>
             <td class="py-4 px-4">{status_badge}</td>
             <td class="py-4 px-4">{action_col}</td>
         </tr>
@@ -2158,7 +2169,7 @@ def admin_requests():
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <h3 class="text-xl font-black text-slate-900">รายการคำร้องเทียบโอนทั้งหมด (สาขาวิชาระบบสารสนเทศ)</h3>
-                <p class="text-xs text-slate-400 mt-1">กำลังแสดงหมวด: <span class="font-bold text-sky-600">{filter_label}</span></p>
+                <p class="text-xs text-slate-400 mt-1">กำลังแสดงหมวด: <span class="font-bold text-sky-600">{escape(filter_label)}</span></p>
             </div>
             <div class="flex flex-wrap gap-2 text-xs font-bold">
                 <a href="/admin/requests" class="px-3 py-2 rounded-xl border {'bg-slate-900 text-white' if not status_filter else 'bg-slate-50 text-slate-600'}">ทั้งหมด</a>
@@ -2184,7 +2195,7 @@ def admin_review(req_id):
 
     if request.method == 'POST':
         action = request.form.get('action')
-        admin_user = User.query.get(session['user_id'])
+        admin_user = db.session.get(User, session['user_id'])
         if action == 'approve':
             req.status = 'Approved'
             req.approved_by = admin_user.fullname if admin_user else 'เจ้าหน้าที่'
@@ -2217,25 +2228,25 @@ def admin_review(req_id):
     evidence_html = ""
     if getattr(req, 'doc_img', None):
         title = get_mooc_title(0, "หลักฐานที่ 1")
-        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-sm font-bold text-sky-700 bg-sky-100 px-3 py-1.5 rounded-lg mb-2 inline-block">{title}</span><a href="/static/uploads/{req.doc_img}" target="_blank"><img src="/static/uploads/{req.doc_img}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
+        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-sm font-bold text-sky-700 bg-sky-100 px-3 py-1.5 rounded-lg mb-2 inline-block">{escape(title)}</span><a href="/static/uploads/{escape(req.doc_img)}" target="_blank"><img src="/static/uploads/{escape(req.doc_img)}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
     if getattr(req, 'doc_img2', None):
         title = get_mooc_title(1, "หลักฐานที่ 2")
-        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-sm font-bold text-sky-700 bg-sky-100 px-3 py-1.5 rounded-lg mb-2 inline-block">{title}</span><a href="/static/uploads/{req.doc_img2}" target="_blank"><img src="/static/uploads/{req.doc_img2}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
+        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-sm font-bold text-sky-700 bg-sky-100 px-3 py-1.5 rounded-lg mb-2 inline-block">{escape(title)}</span><a href="/static/uploads/{escape(req.doc_img2)}" target="_blank"><img src="/static/uploads/{escape(req.doc_img2)}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
     if getattr(req, 'doc_img3', None):
         title = get_mooc_title(2, "หลักฐานที่ 3")
-        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-sm font-bold text-sky-700 bg-sky-100 px-3 py-1.5 rounded-lg mb-2 inline-block">{title}</span><a href="/static/uploads/{req.doc_img3}" target="_blank"><img src="/static/uploads/{req.doc_img3}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
+        evidence_html += f'<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl"><span class="text-sm font-bold text-sky-700 bg-sky-100 px-3 py-1.5 rounded-lg mb-2 inline-block">{escape(title)}</span><a href="/static/uploads/{escape(req.doc_img3)}" target="_blank"><img src="/static/uploads/{escape(req.doc_img3)}" class="max-h-56 mx-auto rounded-xl shadow-sm hover:scale-105 transition object-contain mt-2" onerror="this.src=\'https://via.placeholder.com/300x200?text=Image+Not+Found\';"></a></div>'
 
     student = req.user
     content = f"""
     <div class="max-w-4xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
         <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-black text-slate-900">พิจารณาคำร้อง: {req.course_name}</h3>
-            <span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-xs font-bold">{getattr(req, 'req_code', f'TR{req.id:04d}')}</span>
+            <h3 class="text-xl font-black text-slate-900">พิจารณาคำร้อง: {escape(req.course_name)}</h3>
+            <span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-xs font-bold">{escape(getattr(req, 'req_code', f'TR{req.id:04d}'))}</span>
         </div>
 
         <div class="bg-sky-50/50 p-6 rounded-2xl border border-sky-100 mb-6 flex gap-8 text-sm">
-            <div><p class="text-xs font-bold text-slate-400 mb-1">นักศึกษา</p><p class="font-bold">{student.fullname if student else '-'}</p></div>
-            <div><p class="text-xs font-bold text-slate-400 mb-1">ระบบ</p><p class="font-bold">{getattr(req, 'institution', '-')}</p></div>
+            <div><p class="text-xs font-bold text-slate-400 mb-1">นักศึกษา</p><p class="font-bold">{escape(student.fullname) if student else '-'}</p></div>
+            <div><p class="text-xs font-bold text-slate-400 mb-1">ระบบ</p><p class="font-bold">{escape(getattr(req, 'institution', '-'))}</p></div>
             <div><p class="text-xs font-bold text-slate-400 mb-1">หน่วยกิต</p><p class="font-bold text-sky-600">{getattr(req, 'credits', 0)}</p></div>
         </div>
 
@@ -2261,7 +2272,7 @@ def admin_review(req_id):
 @app.route('/profile')
 def profile():
     if 'user_id' not in session: return redirect(url_for('login'))
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])
     if not user: return redirect(url_for('login'))
     display_title = "เจ้าหน้าที่" if user.role in ['admin', 'superadmin'] else f"{user.prefix or ''} {user.fullname}"
     
@@ -2272,14 +2283,14 @@ def profile():
     content = f"""
     <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-xl relative">
         {edit_btn_html}
-        <h3 class="text-2xl font-black text-slate-900 mb-1">{display_title}</h3>
-        <p class="text-sm font-bold text-sky-600 mb-1">รหัสนักศึกษา: {user.member_id or '-'}</p>
+        <h3 class="text-2xl font-black text-slate-900 mb-1">{escape(display_title)}</h3>
+        <p class="text-sm font-bold text-sky-600 mb-1">รหัสนักศึกษา: {escape(user.member_id or '-')}</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 bg-sky-50/50 p-6 rounded-2xl border border-sky-100 text-sm mt-6">
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ชื่อ-สกุล</span> <span class="font-bold text-slate-800">{user.fullname}</span></div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เลขบัตรประชาชน</span> <span class="font-bold text-slate-800">{user.id_card or '-'}</span></div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เบอร์โทรศัพท์</span> <span class="font-bold text-slate-800">{user.phone or '-'}</span></div>
-            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">อีเมล</span> <span class="font-bold text-slate-800">{user.email or '-'}</span></div>
-            <div class="md:col-span-2"><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ที่อยู่</span> <span class="font-bold text-slate-800">{user.address or '-'}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ชื่อ-สกุล</span> <span class="font-bold text-slate-800">{escape(user.fullname)}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เลขบัตรประชาชน</span> <span class="font-bold text-slate-800">{escape(user.id_card or '-')}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">เบอร์โทรศัพท์</span> <span class="font-bold text-slate-800">{escape(user.phone or '-')}</span></div>
+            <div><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">อีเมล</span> <span class="font-bold text-slate-800">{escape(user.email or '-')}</span></div>
+            <div class="md:col-span-2"><span class="text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">ที่อยู่</span> <span class="font-bold text-slate-800">{escape(user.address or '-')}</span></div>
         </div>
     </div>
     """
@@ -2288,7 +2299,7 @@ def profile():
 @app.route('/request_edit_profile', methods=['GET', 'POST'])
 def request_edit_profile():
     if 'user_id' not in session: return redirect(url_for('login'))
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])
 
     if request.method == 'POST':
         user.prefix = request.form.get('prefix')
@@ -2322,11 +2333,11 @@ def request_edit_profile():
                     <option value="นาง" {'selected' if user.prefix=='นาง' else ''}>นาง</option>
                     <option value="นางสาว" {'selected' if user.prefix=='นางสาว' else ''}>นางสาว</option>
                 </select></div>
-                <div class="col-span-2"><label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">ชื่อ-นามสกุล</label><input type="text" name="fullname" value="{user.fullname}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                <div class="col-span-2"><label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">ชื่อ-นามสกุล</label><input type="text" name="fullname" value="{escape(user.fullname)}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
             </div>
             <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">เบอร์โทรศัพท์</label><input type="tel" name="phone" value="{user.phone or ''}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
-                <div><label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">อีเมล</label><input type="email" name="email" value="{user.email or ''}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">เบอร์โทรศัพท์</label><input type="tel" name="phone" value="{escape(user.phone or '')}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
+                <div><label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">อีเมล</label><input type="email" name="email" value="{escape(user.email or '')}" required class="w-full border border-sky-100 rounded-2xl p-3 text-sm bg-sky-50/50"></div>
             </div>
             <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3.5 rounded-2xl shadow-md text-sm mt-4">บันทึกการเปลี่ยนแปลง</button>
         </form>
@@ -2338,17 +2349,17 @@ def request_edit_profile():
 def admin_students():
     if session.get('role') not in ['admin', 'superadmin']: return redirect(url_for('login'))
     try: students = User.query.filter_by(role='student').order_by(User.id.desc()).all()
-    except: students = []
+    except Exception: students = []
 
     rows = ""
     for s in students:
         try: approved_credits = sum(r.credits for r in CreditRequest.query.filter_by(user_id=s.id, status='Approved').all() if r.credits)
-        except: approved_credits = 0
+        except Exception: approved_credits = 0
         rows += f"""
         <tr class="border-b border-sky-50 text-sm hover:bg-sky-50/50 transition">
-            <td class="py-4 px-4 font-bold text-sky-600 font-mono">{s.member_id or '-'}<br><span class="text-xs text-slate-400 font-normal">({s.id_card or '-'})</span></td>
-            <td class="py-4 px-4 font-extrabold text-slate-900">{s.prefix or ''} {s.fullname}<br><span class="text-xs text-slate-500 font-normal">สาขาวิชาระบบสารสนเทศ</span></td>
-            <td class="py-4 px-4 text-xs text-slate-600 font-medium">{s.phone or '-'}<br>{s.email or '-'}</td>
+            <td class="py-4 px-4 font-bold text-sky-600 font-mono">{escape(s.member_id or '-')}<br><span class="text-xs text-slate-400 font-normal">({escape(s.id_card or '-')})</span></td>
+            <td class="py-4 px-4 font-extrabold text-slate-900">{escape(s.prefix or '')} {escape(s.fullname)}<br><span class="text-xs text-slate-500 font-normal">สาขาวิชาระบบสารสนเทศ</span></td>
+            <td class="py-4 px-4 text-xs text-slate-600 font-medium">{escape(s.phone or '-')}<br>{escape(s.email or '-')}</td>
             <td class="py-4 px-4 font-black text-center"><span class="bg-sky-50 text-sky-700 px-3 py-1 rounded-full text-xs font-bold border border-sky-100">{approved_credits} หน่วยกิต</span></td>
         </tr>
         """
@@ -2365,35 +2376,13 @@ def admin_students():
     """
     return render_layout(content, active_page='admin_students')
 
-def generate_next_officer_id():
-    last_officer = User.query.filter(
-        User.role.in_(['admin', 'officer', 'superadmin']),
-        User.username.like('rmutto%')
-    ).order_by(User.id.desc()).first()
-
-    if last_officer and last_officer.username.startswith('rmutto'):
-        try:
-            current_num = int(last_officer.username.replace('rmutto', ''))
-            next_num = current_num + 1
-        except ValueError:
-            next_num = 1
-    else:
-        next_num = 1
-
-    return f"rmutto{next_num:03d}"
-
-def generate_next_officer_password():
-    officer_count = User.query.filter(User.role.in_(['admin', 'officer', 'superadmin'])).count()
-    next_num = officer_count + 1
-    return f"rmutto{next_num:03d}"
-
 @app.route('/admin/manage_admins', methods=['GET', 'POST'])
 def manage_admins():
     if not session.get('user_id'):
         return redirect(url_for('login'))
     
-    current_user = User.query.get(session['user_id'])
-    if current_user.role not in ['admin', 'superadmin']:
+    current_user = db.session.get(User, session['user_id'])
+    if not current_user or current_user.role not in ['admin', 'superadmin']:
         flash('ไม่มีสิทธิ์เข้าถึงส่วนงานนี้', 'error')
         return redirect(url_for('home'))
 
@@ -2410,7 +2399,7 @@ def manage_admins():
             flash('เลขบัตรประชาชน / Username นี้มีอยู่ในระบบแล้ว', 'error')
             return redirect(url_for('manage_admins'))
 
-        auto_officer_code = generate_next_officer_password()
+        auto_officer_code = generate_next_officer_code()
         hashed_password = generate_password_hash(auto_officer_code)
 
         new_officer = User(
@@ -2429,14 +2418,14 @@ def manage_admins():
         try:
             db.session.add(new_officer)
             db.session.commit()
-            flash(f'เพิ่มเจ้าหน้าที่สำเร็จ! Username (เลขบัตร): {username_input} | รหัสพนักงาน/รหัสผ่าน: {auto_officer_code}', 'success')
-        except Exception as e:
+            flash(f'เพิ่มเจ้าหน้าที่สำเร็จ! Username (เลขบัตร): {username_input} | รหัสพนักงาน/รหัสผ่านเริ่มต้น: {auto_officer_code}', 'success')
+        except Exception:
             db.session.rollback()
             flash('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error')
 
         return redirect(url_for('manage_admins'))
 
-    next_auto_password = generate_next_officer_password()
+    next_auto_password = generate_next_officer_code()
     officers = User.query.filter(User.role.in_(['admin', 'superadmin'])).order_by(User.id.asc()).all()
 
     officers_rows = ""
@@ -2445,12 +2434,12 @@ def manage_admins():
         officers_rows += f"""
         <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
             <td class="py-3 px-4 font-mono font-bold text-slate-400">{idx}</td>
-            <td class="py-3 px-4 font-mono font-black text-indigo-600 bg-indigo-50/50 rounded-xl">{off.member_id or off.username}</td>
-            <td class="py-3 px-4 font-bold text-slate-800">{pfx}{off.fullname}</td>
-            <td class="py-3 px-4 font-mono text-slate-500">{off.username}</td>
-            <td class="py-3 px-4 text-slate-500">{off.phone or '-'}</td>
-            <td class="py-3 px-4 text-slate-500 max-w-xs truncate">{getattr(off, 'address', '-') or '-'}</td>
-            <td class="py-3 px-4"><span class="bg-slate-100 text-slate-700 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase">{off.role}</span></td>
+            <td class="py-3 px-4 font-mono font-black text-indigo-600 bg-indigo-50/50 rounded-xl">{escape(off.member_id or off.username)}</td>
+            <td class="py-3 px-4 font-bold text-slate-800">{escape(pfx)}{escape(off.fullname)}</td>
+            <td class="py-3 px-4 font-mono text-slate-500">{escape(off.username)}</td>
+            <td class="py-3 px-4 text-slate-500">{escape(off.phone or '-')}</td>
+            <td class="py-3 px-4 text-slate-500 max-w-xs truncate">{escape(getattr(off, 'address', '-') or '-')}</td>
+            <td class="py-3 px-4"><span class="bg-slate-100 text-slate-700 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase">{escape(off.role)}</span></td>
         </tr>
         """
 
@@ -2516,7 +2505,7 @@ def manage_admins():
 
                     <div>
                         <label class="block text-xs font-black uppercase text-slate-400 mb-1">รหัสพนักงาน / รหัสผ่านออโต้</label>
-                        <input type="text" value="{next_auto_password}" disabled class="w-full border border-indigo-100 bg-indigo-50/50 text-indigo-700 font-mono font-black rounded-2xl p-3.5 text-sm cursor-not-allowed">
+                        <input type="text" value="{escape(next_auto_password)}" disabled class="w-full border border-indigo-100 bg-indigo-50/50 text-indigo-700 font-mono font-black rounded-2xl p-3.5 text-sm cursor-not-allowed">
                         <p class="text-[10px] text-slate-400 mt-1">* รหัสจะถูกบันทึกลงคอลัมน์ member_id และใช้เป็นรหัสผ่านเริ่มต้นในการล็อกอิน</p>
                     </div>
 
@@ -2562,7 +2551,7 @@ def manage_admin_detail(admin_id):
         flash('คุณไม่มีสิทธิ์เข้าถึงหน้านี้', 'error')
         return redirect(url_for('home'))
     
-    target_admin = User.query.get_or_404(admin_id)
+    target_admin = CreditRequest.query.get_or_404(admin_id)
 
     if request.method == 'POST':
         action = request.form.get('action')
@@ -2586,13 +2575,13 @@ def manage_admin_detail(admin_id):
     content = f"""
     <div class="max-w-xl mx-auto bg-white p-8 rounded-3xl border border-sky-100 shadow-xl">
         <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-black text-slate-900">รายละเอียดเจ้าหน้าที่: {target_admin.fullname}</h3>
+            <h3 class="text-xl font-black text-slate-900">รายละเอียดเจ้าหน้าที่: {escape(target_admin.fullname)}</h3>
             <a href="/admin/manage_admins" class="text-xs font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-xl border border-sky-200">ย้อนกลับ</a>
         </div>
         <form method="POST" class="space-y-4">
-            <div><label class="block text-xs font-bold text-slate-700 mb-1">ชื่อ-นามสกุล</label><input type="text" name="fullname" value="{target_admin.fullname}" required class="w-full border rounded-xl p-3 text-sm bg-sky-50"></div>
-            <div><label class="block text-xs font-bold text-slate-700 mb-1">เบอร์โทรศัพท์</label><input type="text" name="phone" value="{target_admin.phone or ''}" class="w-full border rounded-xl p-3 text-sm bg-sky-50"></div>
-            <div><label class="block text-xs font-bold text-slate-700 mb-1">อีเมล</label><input type="email" name="email" value="{target_admin.email or ''}" class="w-full border rounded-xl p-3 text-sm bg-sky-50"></div>
+            <div><label class="block text-xs font-bold text-slate-700 mb-1">ชื่อ-นามสกุล</label><input type="text" name="fullname" value="{escape(target_admin.fullname)}" required class="w-full border rounded-xl p-3 text-sm bg-sky-50"></div>
+            <div><label class="block text-xs font-bold text-slate-700 mb-1">เบอร์โทรศัพท์</label><input type="text" name="phone" value="{escape(target_admin.phone or '')}" class="w-full border rounded-xl p-3 text-sm bg-sky-50"></div>
+            <div><label class="block text-xs font-bold text-slate-700 mb-1">อีเมล</label><input type="email" name="email" value="{escape(target_admin.email or '')}" class="w-full border rounded-xl p-3 text-sm bg-sky-50"></div>
             <div><label class="block text-xs font-bold text-slate-700 mb-1">ระดับสิทธิ์</label><select name="role" class="w-full border rounded-xl p-3 text-sm bg-sky-50"><option value="admin" {'selected' if target_admin.role=='admin' else ''}>เจ้าหน้าที่ทั่วไป</option><option value="superadmin" {'selected' if target_admin.role=='superadmin' else ''}>ผู้ดูแลหลัก (Super Admin)</option></select></div>
             <div class="flex gap-3 pt-4">
                 <button type="submit" name="action" value="update" class="flex-grow bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl text-sm">บันทึกการแก้ไข</button>
@@ -2726,11 +2715,11 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
-@app.route('/secret_clear_all_requests')
+@app.route('/secret_clear_all_requests', methods=['POST'])
 def secret_clear_all_requests():
     if session.get('role') != 'superadmin': 
-        return "คุณไม่มีสิทธิ์เข้าถึงหน้านี้"
-    
+        return "คุณไม่มีสิทธิ์เข้าถึงหน้านี้", 403
+        
     try:
         deleted_count = db.session.query(CreditRequest).delete()
         db.session.commit()
@@ -2738,13 +2727,13 @@ def secret_clear_all_requests():
         return redirect(url_for('admin_requests'))
     except Exception as e:
         db.session.rollback()
-        return f"เกิดข้อผิดพลาด: {e}"
+        return f"เกิดข้อผิดพลาด: {escape(str(e))}"
 
 @app.route('/admin/export_csv')
 def admin_export_csv():
     if session.get('role') not in ['admin', 'superadmin']:
         return redirect(url_for('login'))
-    
+        
     requests = CreditRequest.query.order_by(CreditRequest.id.desc()).all()
     
     output = io.StringIO()
