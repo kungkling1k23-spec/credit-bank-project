@@ -1070,7 +1070,7 @@ def home():
         admin_content = html_part + js_code
         return render_layout(admin_content, active_page='home')
 
-    # 2. ฝั่งนักศึกษา (Student Dashboard)
+# 2. ฝั่งนักศึกษา (Student Dashboard)
     try:
         user_requests = CreditRequest.query.filter_by(user_id=user.id).order_by(CreditRequest.id.desc()).all()
     except Exception:
@@ -1089,17 +1089,36 @@ def home():
     for r in user_requests:
         req_list_json.append({
             'id': r.id,
-            'req_code': getattr(r, 'req_code', f'TR{r.id:04d}'),
-            'course_name': getattr(r, 'course_name', '-'),
-            'credits': getattr(r, 'credits', 0),
-            'status': getattr(r, 'status', 'Pending'),
-            'reject_reason': getattr(r, 'reject_reason', '-') or '-',
-            'doc_img': getattr(r, 'doc_img', None),
-            'doc_img2': getattr(r, 'doc_img2', None),
-            'doc_img3': getattr(r, 'doc_img3', None),
-            'date_submitted': getattr(r, 'date_submitted', '-')
+            'req_code': r.req_code or f'TR{r.id:04d}',
+            'course_name': r.course_name or '-',
+            'credits': r.credits or 0,
+            'status': r.status or 'Pending',
+            'reject_reason': r.reject_reason or '-',
+            'doc_img': r.doc_img or '',
+            'doc_img2': r.doc_img2 or '',
+            'doc_img3': r.doc_img3 or '',
+            'date_submitted': r.date_submitted or '-'
         })
     req_json_str = json.dumps(req_list_json, ensure_ascii=False)
+
+    edit_banner_html = ""
+    if need_edit_count > 0:
+        edit_banner_html = f'''
+        <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl flex items-center justify-between gap-4 mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 font-bold">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-black text-indigo-950">แจ้งเตือนคำร้องต้องแก้ไข</p>
+                    <p class="text-[11px] font-bold text-indigo-700">คุณมี {need_edit_count} รายการคำร้องที่เจ้าหน้าที่ส่งกลับให้แก้ไขหลักฐานเพิ่มเติม</p>
+                </div>
+            </div>
+            <button onclick="filterByStatus('Needs_Revision')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs transition shrink-0 shadow-sm">
+                คลิกแก้ไขด่วน <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+        '''
 
     html_part = f"""
     <div class="max-w-6xl mx-auto space-y-8">
@@ -1183,43 +1202,63 @@ def home():
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center">
-                <h3 class="text-base font-black text-slate-800 mb-2 w-full text-left">สัดส่วนสถานะคำร้อง</h3>
-                <p class="text-xs text-slate-400 mb-6 w-full text-left">สามารถคลิกชิ้นส่วนกราฟเพื่อกรองตารางได้</p>
+                <h3 class="text-base font-black text-slate-800 mb-1 w-full text-left">สัดส่วนสถานะคำร้อง</h3>
+                <p class="text-xs text-slate-400 mb-4 w-full text-left">สามารถคลิกชิ้นส่วนกราฟเพื่อกรองตารางได้</p>
                 <div class="w-48 h-48 relative">
                     <canvas id="studentChart"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span class="text-2xl font-black text-slate-800">{len(user_requests)}</span>
+                        <span class="text-[10px] font-bold text-slate-400">คำร้องทั้งหมด</span>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center justify-center gap-3 mt-4 text-[11px] font-bold border-t border-slate-100 pt-3 w-full">
+                    <span class="flex items-center gap-1.5 text-amber-600"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> รอดำเนินการ</span>
+                    <span class="flex items-center gap-1.5 text-emerald-600"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> อนุมัติแล้ว</span>
+                    <span class="flex items-center gap-1.5 text-indigo-600"><span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> ต้องแก้ไข</span>
                 </div>
             </div>
 
-            <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
-                    <div>
-                        <h3 class="text-lg font-black text-slate-800">รายการคำร้องเทียบโอน</h3>
-                        <p class="text-xs text-slate-400" id="filter_status_label">แสดงคำร้องทั้งหมด</p>
+            <div class="lg:col-span-2 space-y-4">
+                {edit_banner_html}
+
+                <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800">รายการคำร้องเทียบโอน</h3>
+                            <p class="text-xs text-slate-400" id="filter_status_label">แสดงคำร้องทั้งหมด</p>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                            <div class="relative min-w-[200px]">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <input type="text" id="student_search_input" onkeyup="handleStudentSearch()" placeholder="ค้นหาชื่อวิชา / รหัสคำร้อง..." class="w-full pl-8 pr-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-sky-400">
+                            </div>
+
+                            <div class="flex flex-wrap gap-1.5 bg-slate-100 p-1 rounded-2xl text-xs font-bold shrink-0">
+                                <button onclick="filterByStatus('ALL')" id="btn-tab-ALL" class="tab-btn px-3 py-1.5 rounded-xl bg-slate-900 text-white shadow-sm">ทั้งหมด</button>
+                                <button onclick="filterByStatus('Pending')" id="btn-tab-Pending" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">รอดำเนินการ</button>
+                                <button onclick="filterByStatus('Approved')" id="btn-tab-Approved" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">อนุมัติแล้ว</button>
+                                <button onclick="filterByStatus('Needs_Revision')" id="btn-tab-Needs_Revision" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">ต้องแก้ไข</button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="flex flex-wrap gap-1.5 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
-                        <button onclick="filterByStatus('ALL')" id="btn-tab-ALL" class="tab-btn px-3 py-1.5 rounded-xl bg-slate-900 text-white shadow-sm">ทั้งหมด</button>
-                        <button onclick="filterByStatus('Pending')" id="btn-tab-Pending" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">รอดำเนินการ</button>
-                        <button onclick="filterByStatus('Approved')" id="btn-tab-Approved" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">อนุมัติแล้ว</button>
-                        <button onclick="filterByStatus('Needs_Revision')" id="btn-tab-Needs_Revision" class="tab-btn px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800">ต้องแก้ไข</button>
+                    <div class="overflow-x-auto max-h-[420px] overflow-y-auto pr-1">
+                        <table class="w-full text-sm text-left border-separate border-spacing-0">
+                            <thead class="text-xs text-slate-400 font-extrabold uppercase bg-slate-50 sticky top-0 z-10 shadow-sm">
+                                <tr>
+                                    <th class="px-4 py-3 rounded-l-xl bg-slate-50">รหัสคำร้อง</th>
+                                    <th class="px-4 py-3 bg-slate-50">ชื่อวิชาที่ขอเทียบโอน</th>
+                                    <th class="px-4 py-3 text-center bg-slate-50">หน่วยกิต</th>
+                                    <th class="px-4 py-3 text-center bg-slate-50">วันที่ยื่น</th>
+                                    <th class="px-4 py-3 text-center bg-slate-50">สถานะ</th>
+                                    <th class="px-4 py-3 text-right rounded-r-xl bg-slate-50">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requests_tbody" class="divide-y divide-slate-100">
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-
-                <div class="overflow-x-auto max-h-[420px] overflow-y-auto pr-1">
-                    <table class="w-full text-sm text-left border-separate border-spacing-0">
-                        <thead class="text-xs text-slate-400 font-extrabold uppercase bg-slate-50 rounded-xl">
-                            <tr>
-                                <th class="px-4 py-3 rounded-l-xl">รหัสคำร้อง</th>
-                                <th class="px-4 py-3">ชื่อวิชาที่ขอเทียบโอน</th>
-                                <th class="px-4 py-3 text-center">หน่วยกิต</th>
-                                <th class="px-4 py-3 text-center">วันที่ยื่น</th>
-                                <th class="px-4 py-3 text-center">สถานะ</th>
-                                <th class="px-4 py-3 text-right rounded-r-xl">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="requests_tbody" class="divide-y divide-slate-100">
-                        </tbody>
-                    </table>
                 </div>
             </div>
         </div>
@@ -1262,8 +1301,23 @@ def home():
 
     js_template = """
     <script>
-    const requestsData = __REQUESTS_JSON__;
+    let requestsData = [];
+    try {
+        requestsData = __REQUESTS_JSON__;
+    } catch(e) {
+        console.error("JSON parse error:", e);
+    }
+
     let currentFilter = 'ALL';
+    let searchQuery = '';
+
+    function handleStudentSearch() {
+        const inputElem = document.getElementById('student_search_input');
+        if (inputElem) {
+            searchQuery = inputElem.value.toLowerCase().trim();
+        }
+        renderTable();
+    }
 
     function renderTable() {
         const tbody = document.getElementById('requests_tbody');
@@ -1271,42 +1325,50 @@ def home():
         tbody.innerHTML = '';
 
         const filtered = requestsData.filter(r => {
-            if (currentFilter === 'ALL') return true;
-            if (currentFilter === 'Pending') return r.status === 'Pending';
-            if (currentFilter === 'Approved') return r.status === 'Approved';
-            if (currentFilter === 'Needs_Revision') return r.status === 'Needs_Revision' || r.status === 'Need_Edit';
-            return true;
+            let matchStatus = true;
+            if (currentFilter === 'Pending') matchStatus = (r.status === 'Pending');
+            else if (currentFilter === 'Approved') matchStatus = (r.status === 'Approved');
+            else if (currentFilter === 'Needs_Revision') matchStatus = (r.status === 'Needs_Revision' || r.status === 'Need_Edit');
+
+            let matchSearch = true;
+            if (searchQuery) {
+                const courseName = (r.course_name || '').toLowerCase();
+                const reqCode = (r.req_code || '').toLowerCase();
+                matchSearch = courseName.includes(searchQuery) || reqCode.includes(searchQuery);
+            }
+
+            return matchStatus && matchSearch;
         });
 
         if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-xs font-bold text-slate-400"><i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>ไม่พบรายการคำร้องในหมวดนี้</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-xs font-bold text-slate-400"><i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>ไม่พบรายการคำร้องที่ตรงกับเงื่อนไข</td></tr>`;
             return;
         }
 
         filtered.forEach(item => {
             let badgeHtml = '';
             if (item.status === 'Pending') {
-                badgeHtml = `<span class="bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> รอดำเนินการ</span>`;
+                badgeHtml = `<span class="bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> รอดำเนินการ</span>`;
             } else if (item.status === 'Approved') {
-                badgeHtml = `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-[10px]"></i> อนุมัติแล้ว</span>`;
+                badgeHtml = `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-check text-[10px]"></i> อนุมัติแล้ว</span>`;
             } else {
-                badgeHtml = `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"><i class="fa-solid fa-pen-to-square text-[10px]"></i> ให้แก้ไข</span>`;
+                badgeHtml = `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-pen-to-square text-[10px]"></i> ให้แก้ไข</span>`;
             }
 
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-slate-50/80 transition';
             tr.innerHTML = `
-                <td class="px-4 py-4 font-mono font-bold text-sky-600 text-xs whitespace-nowrap">${item.req_code}</td>
-                <td class="px-4 py-4 font-bold text-slate-800">${item.course_name}</td>
-                <td class="px-4 py-4 text-center font-bold text-slate-600 text-xs whitespace-nowrap">${item.credits}</td>
-                <td class="px-4 py-4 text-center text-xs text-slate-400 font-medium whitespace-nowrap">${item.date_submitted}</td>
+                <td class="px-4 py-4 font-mono font-bold text-sky-600 text-xs whitespace-nowrap">${item.req_code || '-'}</td>
+                <td class="px-4 py-4 font-bold text-slate-800">${item.course_name || '-'}</td>
+                <td class="px-4 py-4 text-center font-bold text-slate-600 text-xs whitespace-nowrap">${item.credits || 0}</td>
+                <td class="px-4 py-4 text-center text-xs text-slate-400 font-medium whitespace-nowrap">${item.date_submitted || '-'}</td>
                 <td class="px-4 py-4 text-center whitespace-nowrap">${badgeHtml}</td>
                 <td class="px-4 py-4 text-right whitespace-nowrap">
                     <button onclick="openQuickView(${item.id})" class="bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1.5 whitespace-nowrap shrink-0">
                         <i class="fa-solid fa-eye text-[11px]"></i> รายละเอียด
                     </button>
                 </td>
-            ;
+            `;
             tbody.appendChild(tr);
         });
     }
@@ -1337,8 +1399,8 @@ def home():
         const item = requestsData.find(r => r.id === id);
         if (!item) return;
 
-        document.getElementById('modal_course_name').innerText = item.course_name;
-        document.getElementById('modal_credits_text').innerText = 'จำนวน: ' + item.credits + ' หน่วยกิต';
+        document.getElementById('modal_course_name').innerText = item.course_name || '-';
+        document.getElementById('modal_credits_text').innerText = 'จำนวน: ' + (item.credits || 0) + ' หน่วยกิต';
 
         const badgeContainer = document.getElementById('modal_status_badge');
         const reasonBox = document.getElementById('modal_reject_reason_box');
@@ -1376,40 +1438,48 @@ def home():
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-        renderTable();
+        try {
+            renderTable();
+        } catch (e) {
+            console.error("renderTable error:", e);
+        }
 
-        const pendingCount = requestsData.filter(r => r.status === 'Pending').length;
-        const approvedCount = requestsData.filter(r => r.status === 'Approved').length;
-        const needEditCount = requestsData.filter(r => r.status === 'Needs_Revision' || r.status === 'Need_Edit').length;
+        try {
+            const pendingCount = requestsData.filter(r => r.status === 'Pending').length;
+            const approvedCount = requestsData.filter(r => r.status === 'Approved').length;
+            const needEditCount = requestsData.filter(r => r.status === 'Needs_Revision' || r.status === 'Need_Edit').length;
 
-        const chartCanvas = document.getElementById('studentChart');
-        if (chartCanvas) {
-            const ctx = chartCanvas.getContext('2d');
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['รอดำเนินการ', 'อนุมัติแล้ว', 'ต้องแก้ไข'],
-                    datasets: [{
-                        data: [pendingCount, approvedCount, needEditCount],
-                        backgroundColor: ['#f59e0b', '#10b981', '#6366f1'],
-                        borderWidth: 0,
-                        hoverOffset: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    cutout: '75%',
-                    onClick: (evt, elements) => {
-                        if (elements.length > 0) {
-                            const index = elements[0].index;
-                            const statusMap = ['Pending', 'Approved', 'Needs_Revision'];
-                            filterByStatus(statusMap[index]);
+            const chartCanvas = document.getElementById('studentChart');
+            if (chartCanvas && typeof Chart !== 'undefined') {
+                const ctx = chartCanvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['รอดำเนินการ', 'อนุมัติแล้ว', 'ต้องแก้ไข'],
+                        datasets: [{
+                            data: [pendingCount, approvedCount, needEditCount],
+                            backgroundColor: ['#f59e0b', '#10b981', '#6366f1'],
+                            borderWidth: 0,
+                            hoverOffset: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        cutout: '75%',
+                        onClick: (evt, elements) => {
+                            if (elements.length > 0) {
+                                const index = elements[0].index;
+                                const statusMap = ['Pending', 'Approved', 'Needs_Revision'];
+                                filterByStatus(statusMap[index]);
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
+        } catch (e) {
+            console.error("Chart build error:", e);
         }
     });
     </script>
