@@ -1205,8 +1205,8 @@ def home():
                     </div>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left">
+                <div class="overflow-x-auto max-h-[420px] overflow-y-auto pr-1">
+                    <table class="w-full text-sm text-left border-separate border-spacing-0">
                         <thead class="text-xs text-slate-400 font-extrabold uppercase bg-slate-50 rounded-xl">
                             <tr>
                                 <th class="px-4 py-3 rounded-l-xl">รหัสคำร้อง</th>
@@ -1296,17 +1296,17 @@ def home():
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-slate-50/80 transition';
             tr.innerHTML = `
-                <td class="px-4 py-4 font-mono font-bold text-sky-600 text-xs">${item.req_code}</td>
+                <td class="px-4 py-4 font-mono font-bold text-sky-600 text-xs whitespace-nowrap">${item.req_code}</td>
                 <td class="px-4 py-4 font-bold text-slate-800">${item.course_name}</td>
-                <td class="px-4 py-4 text-center font-bold text-slate-600">${item.credits}</td>
-                <td class="px-4 py-4 text-center text-xs text-slate-400 font-medium">${item.date_submitted}</td>
-                <td class="px-4 py-4 text-center">${badgeHtml}</td>
-                <td class="px-4 py-4 text-right">
-                    <button onclick="openQuickView(${item.id})" class="bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1">
-                        <i class="fa-solid fa-eye"></i> รายละเอียด
+                <td class="px-4 py-4 text-center font-bold text-slate-600 text-xs whitespace-nowrap">${item.credits}</td>
+                <td class="px-4 py-4 text-center text-xs text-slate-400 font-medium whitespace-nowrap">${item.date_submitted}</td>
+                <td class="px-4 py-4 text-center whitespace-nowrap">${badgeHtml}</td>
+                <td class="px-4 py-4 text-right whitespace-nowrap">
+                    <button onclick="openQuickView(${item.id})" class="bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                        <i class="fa-solid fa-eye text-[11px]"></i> รายละเอียด
                     </button>
                 </td>
-            `;
+            ;
             tbody.appendChild(tr);
         });
     }
