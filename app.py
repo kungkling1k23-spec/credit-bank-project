@@ -101,8 +101,12 @@ class CreditRequest(db.Model):
 
 with app.app_context():
     db.create_all()
+    
+    # เพิ่มการตรวจเช็กและสร้างคอลัมน์ faculty / major ในตาราง user อัตโนมัติ
     try:
         with db.engine.connect() as conn:
+            conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS faculty VARCHAR(200) DEFAULT \'คณะบริหารธุรกิจและเทคโนโลยีสารสนเทศ\';'))
+            conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS major VARCHAR(200) DEFAULT \'สาขาวิชาระบบสารสนเทศ\';'))
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS faculty VARCHAR(200);"))
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS major VARCHAR(200);"))
             conn.commit()
