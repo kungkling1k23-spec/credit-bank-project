@@ -2997,11 +2997,19 @@ def admin_login():
     
 @app.route('/admin_panel')
 def admin_panel():
-    """แสดงหน้าจอแผงควบคุมเจ้าหน้าที่"""
-    # ดึงรายการคำร้องและรายวิชาจาก Database Models ใน app.py เดิม
-    requests = CreditRequest.query.all() if 'CreditRequest' in globals() else []
-    courses = Course.query.all() if 'Course' in globals() else []
-    return render_template('admin.html', requests=requests, courses=courses)
+    # ดึงข้อมูลวิชา
+    try:
+        courses = Course.query.all()
+    except Exception:
+        courses = []
+
+    # ดึงข้อมูลคำร้อง
+    try:
+        requests = CreditRequest.query.all()
+    except Exception:
+        requests = []
+
+    return render_template('admin.html', courses=courses, requests=requests)
 
 @app.route('/admin/request/action', methods=['POST'])
 def admin_handle_request():
