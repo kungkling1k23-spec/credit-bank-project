@@ -125,10 +125,10 @@ with app.app_context():
             main_admin = User(
                 member_id='ADM001',
                 prefix='นาย',
-                fullname='ผู้ดูแลระบบหลัก (Super Admin)',
+                fullname='ผู้ดูแลระบบหลัก',
                 id_card='0000000000000',
                 username='Admin_rmutto',
-                password=generate_password_hash('rmutto'),
+                password=generate_password_hash('rmutto2026'),
                 role='superadmin',
                 phone="081-000-0000",
                 email="admin@rmutto.ac.th"
@@ -141,12 +141,12 @@ with app.app_context():
             admin_999 = User(
                 member_id='ADM999',
                 prefix='นาย',
-                fullname='เจ้าหน้าที่ดูแลรายวิชา (Admin-999)',
+                fullname='เจ้าหน้าที่ดูแลรายวิชา',
                 id_card='9999999999999',
                 username='Admin-999',
                 password=generate_password_hash('16092547'),
                 role='admin',
-                phone="081-000-0000",
+                phone="081-000-0001",
                 email="admin999@rmutto.ac.th"
             )
             db.session.add(admin_999)
