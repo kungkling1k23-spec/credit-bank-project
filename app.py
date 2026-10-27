@@ -2995,21 +2995,103 @@ def admin_login():
         flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error')
         return redirect(url_for('admin_panel'))
     
+# =========================================================
+# 1. หน้าแผงควบคุมรายวิชา
+# =========================================================
 @app.route('/admin_panel')
 def admin_panel():
-    # ดึงข้อมูลวิชา
     try:
-        courses = Course.query.all()
+        courses = Course.query.order_by(Course.id.desc()).all()
     except Exception:
         courses = []
+    return render_template('admin.html', courses=courses)
 
-    # ดึงข้อมูลคำร้อง
+# =========================================================
+# 2. เพิ่มรายวิชาใหม่ (Add)
+# =========================================================
+@app.route('/admin/course/add', methods=['POST'])
+def admin_add_course():
     try:
-        requests = CreditRequest.query.all()
-    except Exception:
-        requests = []
+        code = request.form.get('course_code', '').strip().upper()
+        name = request.form.get('course_name', '').strip()
+        credits = int(request.form.get('credits', 3))
+        category = request.form.get('category', 'หมวดวิชาศึกษาทั่วไป')
+        institution = request.form.get('institution', 'ThaiMOOC')
+        hours = int(request.form.get('hours', 45))
+        description = request.form.get('description', '').strip()
 
-    return render_template('admin.html', courses=courses, requests=requests)
+        if code and name:
+            new_course = Course(
+                course_code=code,
+                course_name=name,
+                credits=credits,
+                category=category,
+                institution=institution,
+                hours=hours,
+                description=description
+            )
+            db.session.add(new_course)
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    return redirect(url_for('admin_panel'))
+
+# =========================================================
+# 3. แก้ไขรายวิชา (Edit)
+# =========================================================
+@app.route('/admin/course/edit', methods=['POST'])
+def admin_edit_course():
+    try:
+        course_id = request.form.get('course_id')
+        code = request.form.get('course_code', '').strip().upper()
+        name = request.form.get('course_name', '').strip()
+        credits = int(request.form.get('credits', 3))
+        category = request.form.get('category', 'หมวดวิชาศึกษาทั่วไป')
+        institution = request.form.get('institution', 'ThaiMOOC')
+        hours = int(request.form.get('hours', 45))
+        description = request.form.get('description', '').strip()
+
+        course = Course.query.get(course_id)
+        if course:
+            if hasattr(course, 'course_code'): course.course_code = code
+            if hasattr(course, 'code'): course.code = code
+            if hasattr(course, 'course_name'): course.course_name = name
+            if hasattr(course, 'name'): course.name = name
+            
+            course.credits = credits
+            course.category = category
+            if hasattr(course, 'institution'): course.institution = institution
+            if hasattr(course, 'hours'): course.hours = hours
+            if hasattr(course, 'description'): course.description = description
+
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    return redirect(url_for('admin_panel'))
+
+# =========================================================
+# 4. ลบรายวิชา (Delete)
+# =========================================================
+@app.route('/admin/course/delete', methods=['POST'])
+def admin_delete_course():
+    try:
+        course_id = request.form.get('course_id')
+        if course_id:
+            course = Course.query.get(course_id)
+            if not course:
+                course = Course.query.filter_by(course_code=course_id).first()
+            if not course and hasattr(Course, 'code'):
+                course = Course.query.filter_by(code=course_id).first()
+
+            if course:
+                db.session.delete(course)
+                db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    return redirect(url_for('admin_panel'))
 
 @app.route('/admin/request/action', methods=['POST'])
 def admin_handle_request():
@@ -3028,20 +3110,6 @@ def admin_handle_request():
             
     return redirect(url_for('admin_panel'))
 
-@app.route('/admin/course/add', methods=['POST'])
-def admin_add_course():
-    """เพิ่มรายวิชาใหม่เข้าสู่ระบบ"""
-    code = request.form.get('course_code', '').strip().upper()
-    name = request.form.get('course_name', '').strip()
-    category = request.form.get('category', '')
-    credits = int(request.form.get('credits', 3))
-
-    if 'Course' in globals() and code and name:
-        new_course = Course(course_code=code, course_name=name, category=category, credits=credits)
-        db.session.add(new_course)
-        db.session.commit()
-
-    return redirect(url_for('admin_panel'))
 
 if __name__ == '__main__':
     app.run(debug=True)
