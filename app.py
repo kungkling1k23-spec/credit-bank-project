@@ -255,9 +255,9 @@ def render_layout(content, active_page=''):
             {f'''
                 {f"""
                     <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
+                    <a href="/admin/analytics" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_analytics')}"><i class="fa-solid fa-chart-line text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายงานวิเคราะห์สถิติ</span></a>
                     <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_students')}"><i class="fa-solid fa-users text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายชื่อนักศึกษา</span></a>
                     <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_requests')}"><i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ตรวจสอบคำร้อง</span></a>
-                    <a href="/admin/analytics" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_analytics')}"><i class="fa-solid fa-chart-line text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายงานวิเคราะห์สถิติ</span></a>
                     <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('all_courses')}"><i class="fa-solid fa-table-list text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หลักสูตรทั้งหมด</span></a>
                     {manage_admin_menu}
                 """ if user_role in ['admin', 'superadmin'] else f"""
