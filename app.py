@@ -192,6 +192,30 @@ with app.app_context():
     except Exception:
         db.session.rollback()
 
+    try:
+        if Course.query.count() == 0:
+            c1 = Course(course_code='CS101', course_name='Introduction to Computer Science', credits=3, category='หมวดวิชาแกน')
+            c2 = Course(course_code='GEN201', course_name='Modern Thai Society and Culture', credits=2, category='หมวดวิชาศึกษาทั่วไป')
+            c3 = Course(course_code='ART102', course_name='Creative Design and Thinking', credits=3, category='หมวดวิชาเลือก')
+
+            sample_list = [
+                (c1, 'ThaiMOOC', 45, 'แนวคิดพื้นฐานเกี่ยวกับวิทยาการคอมพิวเตอร์ อัลกอรึทึม และการแก้ปัญหาเบื้องต้น'),
+                (c2, 'ChulaMOOC', 30, 'ศึกษาบริบททางสังคมและวัฒนธรรมไทยร่วมสมัยและการปรับตัวในยุคดิจิทัล'),
+                (c3, 'ThaiMOOC', 45, 'กระบวนการคิดเชิงออกแบบและการสร้างสรรค์ผลงานศิลปะร่วมสมัย')
+            ]
+
+            for course_obj, inst, hrs, desc in sample_list:
+                if hasattr(course_obj, 'institution'): setattr(course_obj, 'institution', inst)
+                if hasattr(course_obj, 'hours'): setattr(course_obj, 'hours', hrs)
+                if hasattr(course_obj, 'description'): setattr(course_obj, 'description', desc)
+                db.session.add(course_obj)
+
+            db.session.commit()
+            print("Successfully seeded initial courses into Database")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error seeding courses: {e}")
+
 def generate_member_id():
     try:
         last_user = User.query.filter(User.member_id.like('IS%')).order_by(User.id.desc()).first()
