@@ -7,7 +7,7 @@ import urllib.request
 import re
 from datetime import datetime, timedelta, timezone
 from markupsafe import escape
-from flask import Flask, request, redirect, url_for, session, flash, get_flashed_messages, Response
+from flask import Flask, render_template, request, redirect, url_for, session, flash, get_flashed_messages, Response
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
