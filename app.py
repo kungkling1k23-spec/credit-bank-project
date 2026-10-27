@@ -667,6 +667,7 @@ def home():
                         <h1 class="text-3xl font-black">ยินดีต้อนรับ, {escape(user.fullname)} 👋</h1>
                         <p class="text-slate-300 text-sm mt-1">ระบบบริหารจัดการธนาคารหน่วยกิต (Credit Bank) สาขาวิชาระบบสารสนเทศ</p>
                     </div>
+
                 </div>
                 <div class="absolute -right-10 -bottom-10 w-56 h-56 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
             </div>
@@ -2721,7 +2722,7 @@ def manage_admin_detail(admin_id):
         flash('คุณไม่มีสิทธิ์เข้าถึงหน้านี้', 'error')
         return redirect(url_for('home'))
     
-    target_admin = CreditRequest.query.get_or_404(admin_id)
+    target_admin = User.query.get_or_404(admin_id)
 
     if request.method == 'POST':
         action = request.form.get('action')
@@ -2949,6 +2950,50 @@ def admin_export_csv():
         mimetype="text/csv; charset=utf-8",
         headers={"Content-disposition": f"attachment; filename={filename_str}"}
     )
+
+# =========================================================
+# ROUTE สำหรับระบบเจ้าหน้าที่ (ADMIN CONTROLLERS)
+# =========================================================
+
+@app.route('/admin_panel')
+def admin_panel():
+    """แสดงหน้าจอแผงควบคุมเจ้าหน้าที่"""
+    # ดึงรายการคำร้องและรายวิชาจาก Database Models ใน app.py เดิม
+    requests = CreditRequest.query.all() if 'CreditRequest' in globals() else []
+    courses = Course.query.all() if 'Course' in globals() else []
+    return render_template('admin.html', requests=requests, courses=courses)
+
+@app.route('/admin/request/action', methods=['POST'])
+def admin_handle_request():
+    """อนุมัติ หรือ ปฏิเสธคำร้องเทียบโอน"""
+    req_id = request.form.get('req_id')
+    action = request.form.get('action')
+    
+    if 'CreditRequest' in globals() and req_id:
+        req_item = CreditRequest.query.get(req_id)
+        if req_item:
+            if action == 'approve':
+                req_item.status = 'Approved'
+            elif action == 'reject':
+                req_item.status = 'Rejected'
+            db.session.commit()
+            
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/course/add', methods=['POST'])
+def admin_add_course():
+    """เพิ่มรายวิชาใหม่เข้าสู่ระบบ"""
+    code = request.form.get('course_code', '').strip().upper()
+    name = request.form.get('course_name', '').strip()
+    category = request.form.get('category', '')
+    credits = int(request.form.get('credits', 3))
+
+    if 'Course' in globals() and code and name:
+        new_course = Course(course_code=code, course_name=name, category=category, credits=credits)
+        db.session.add(new_course)
+        db.session.commit()
+
+    return redirect(url_for('admin_panel'))
 
 if __name__ == '__main__':
     app.run(debug=True)
