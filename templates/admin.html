@@ -1,367 +1,307 @@
 <!DOCTYPE html>
-<html lang="th" class="h-full">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CourseManager - ระบบจัดการรายวิชาและหน่วยกิต</title>
-    <!-- Tailwind CSS CDN -->
+    <title>จัดการรายวิชา - CourseManager</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Font Prompt -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Prompt', 'sans-serif'] }
-                }
-            }
-        }
-    </script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50/30 text-slate-800 h-full flex flex-col antialiased">
+<body class="min-h-screen text-slate-800 antialiased flex flex-col">
 
-    <!-- Header Navbar -->
-    <header class="bg-slate-900 text-white shadow-xl sticky top-0 z-30 border-b border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center gap-4">
-            <div class="flex items-center space-x-3.5">
-                <div class="bg-gradient-to-tr from-indigo-600 to-violet-500 p-3 rounded-2xl shadow-lg border border-white/10">
-                    <i class="fa-solid fa-graduation-cap text-xl text-white"></i>
+    <!-- Navbar Header -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-gradient-to-tr from-indigo-500 to-sky-400 rounded-2xl flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-graduation-cap text-2xl text-white"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight text-white">CourseManager</h1>
-                    <p class="text-xs text-indigo-300 font-light">ระบบจัดการรายวิชาและหน่วยกิตสำหรับเจ้าหน้าที่</p>
+                    <h1 class="text-xl font-black tracking-tight">CourseManager</h1>
+                    <p class="text-[11px] text-slate-400 font-medium">ระบบจัดการรายวิชาและหน่วยกิตสำหรับเจ้าหน้าที่</p>
                 </div>
             </div>
 
             <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2 bg-slate-800/80 border border-slate-700 px-3.5 py-2 rounded-2xl">
-                    <div class="w-7 h-7 rounded-xl bg-indigo-500 text-white flex items-center justify-center font-bold text-xs shadow-md">
-                        {{ session.get('fullname', 'A')[0]|upper }}
-                    </div>
-                    <span class="text-xs font-bold text-white">{{ session.get('fullname', 'เจ้าหน้าที่') }}</span>
+                <div class="hidden sm:flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-2xl text-xs font-bold text-slate-200">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>เจ้าหน้าที่ดูแลรายวิชา</span>
                 </div>
-
-                <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center gap-2 shadow-md">
-                    <i class="fa-solid fa-plus-circle"></i> เพิ่มรายวิชา
+                <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-5 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 shadow-md hover:shadow-indigo-500/20">
+                    <i class="fa-solid fa-circle-plus text-sm"></i> เพิ่มรายวิชา
                 </button>
-                <a href="/logout" class="bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 px-3.5 py-2.5 rounded-xl transition text-xs sm:text-sm flex items-center gap-1.5" title="ออกจากระบบ">
-                    <i class="fa-solid fa-right-from-bracket"></i>
+                <a href="/" class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl flex items-center justify-center transition border border-slate-700">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 </a>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full space-y-6">
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
-        <!-- Statistics Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-            <!-- Total Courses -->
-            <div class="bg-white/80 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-slate-200/60 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">รายวิชาทั้งหมด</p>
-                    <h3 class="text-3xl font-bold text-slate-800 mt-1">{{ courses|length }}</h3>
-                    <p class="text-[11px] text-indigo-600 font-medium mt-1"><i class="fa-solid fa-book text-[10px]"></i> รายวิชาในระบบ</p>
-                </div>
-                <div class="bg-indigo-50 text-indigo-600 rounded-2xl p-4 text-2xl">
-                    <i class="fa-solid fa-book"></i>
-                </div>
-            </div>
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="p-4 rounded-2xl font-bold text-xs flex items-center justify-between shadow-sm border {{ 'bg-emerald-50 text-emerald-700 border-emerald-200' if category == 'success' else 'bg-rose-50 text-rose-700 border-rose-200' }}">
+                  <div class="flex items-center gap-2">
+                      <i class="fa-solid {{ 'fa-circle-check text-emerald-500' if category == 'success' else 'fa-circle-exclamation text-rose-500' }} text-base"></i>
+                      <span>{{ message }}</span>
+                  </div>
+                  <button onclick="this.parentElement.remove()" class="text-xs font-bold opacity-60 hover:opacity-100">✕</button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
 
-            <!-- Total Credits -->
-            <div class="bg-white/80 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-slate-200/60 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">หน่วยกิตรวม</p>
-                    <h3 class="text-3xl font-bold text-slate-800 mt-1">
-                        {% set total_credits = namespace(val=0) %}
-                        {% for c in courses %}{% set total_credits.val = total_credits.val + (c.credits|default(3)|int) %}{% endfor %}
-                        {{ total_credits.val }}
-                    </h3>
-                    <p class="text-[11px] text-emerald-600 font-medium mt-1"><i class="fa-solid fa-star text-[10px]"></i> หน่วยกิตสะสมรวม</p>
-                </div>
-                <div class="bg-emerald-50 text-emerald-600 rounded-2xl p-4 text-2xl">
-                    <i class="fa-solid fa-award"></i>
-                </div>
-            </div>
-
-            <!-- Total Study Hours -->
-            <div class="bg-white/80 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-slate-200/60 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">ชั่วโมงเรียนรวม</p>
-                    <h3 class="text-3xl font-bold text-slate-800 mt-1">
-                        {% set total_hours = namespace(val=0) %}
-                        {% for c in courses %}{% set total_hours.val = total_hours.val + (c.hours|default(45)|int) %}{% endfor %}
-                        {{ total_hours.val }}
-                    </h3>
-                    <p class="text-[11px] text-amber-600 font-medium mt-1"><i class="fa-solid fa-clock text-[10px]"></i> ชั่วโมงทั้งหมด</p>
-                </div>
-                <div class="bg-amber-50 text-amber-600 rounded-2xl p-4 text-2xl">
-                    <i class="fa-solid fa-hourglass-half"></i>
-                </div>
-            </div>
-
-            <!-- Platform Breakdown -->
-            <div class="bg-white/80 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-slate-200/60 flex flex-col justify-center">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">สถาบัน / ระบบ</p>
-                <div class="flex items-center gap-2">
-                    <div class="bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl flex-1 text-center">
-                        <span class="block text-[10px] font-semibold text-blue-600">ThaiMOOC</span>
-                        <span class="text-lg font-bold text-blue-800">
-                            {% set tm_count = namespace(val=0) %}
-                            {% for c in courses %}{% if (c.institution|default('ThaiMOOC')) == 'ThaiMOOC' %}{% set tm_count.val = tm_count.val + 1 %}{% endif %}{% endfor %}
-                            {{ tm_count.val }}
+        <!-- Course Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for course in courses %}
+            <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                <div class="space-y-4">
+                    <!-- Badges -->
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="font-mono text-xs font-black bg-slate-900 text-white px-3 py-1 rounded-xl tracking-wider">
+                            {{ course.course_code }}
                         </span>
-                    </div>
-                    <div class="bg-pink-50 border border-pink-100 px-3 py-1.5 rounded-xl flex-1 text-center">
-                        <span class="block text-[10px] font-semibold text-pink-600">ChulaMOOC</span>
-                        <span class="text-lg font-bold text-pink-800">
-                            {% set cm_count = namespace(val=0) %}
-                            {% for c in courses %}{% if c.institution == 'ChulaMOOC' %}{% set cm_count.val = cm_count.val + 1 %}{% endif %}{% endfor %}
-                            {{ cm_count.val }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filter & Search Toolbar -->
-        <div class="bg-white/90 backdrop-blur-md rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/60 flex flex-col lg:flex-row gap-4 items-center justify-between">
-            <!-- Search Bar -->
-            <div class="relative w-full lg:w-80">
-                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <i class="fa-solid fa-search"></i>
-                </span>
-                <input type="text" id="searchInput" oninput="filterCourses()" placeholder="ค้นหารหัสวิชา หรือชื่อวิชา..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
-            </div>
-
-            <!-- Platform Filter Pills -->
-            <div class="flex items-center gap-2 w-full lg:w-auto overflow-x-auto">
-                <span class="text-xs font-medium text-slate-400 whitespace-nowrap"><i class="fa-solid fa-building-columns mr-1"></i> ระบบ:</span>
-                <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/60">
-                    <button onclick="setPlatformFilter('all')" id="btn-p-all" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-600 shadow-sm">ทั้งหมด</button>
-                    <button onclick="setPlatformFilter('ThaiMOOC')" id="btn-p-ThaiMOOC" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600">ThaiMOOC</button>
-                    <button onclick="setPlatformFilter('ChulaMOOC')" id="btn-p-ChulaMOOC" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600">ChulaMOOC</button>
-                </div>
-            </div>
-
-            <!-- Category Filter Tabs -->
-            <div class="flex items-center gap-2 w-full lg:w-auto overflow-x-auto">
-                <span class="text-xs font-medium text-slate-400 whitespace-nowrap"><i class="fa-solid fa-filter mr-1"></i> หมวดหมู่:</span>
-                <div class="flex items-center gap-1.5">
-                    <button onclick="setCategoryFilter('all')" id="btn-c-all" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white">ทั้งหมด</button>
-                    <button onclick="setCategoryFilter('หมวดวิชาศึกษาทั่วไป')" id="btn-c-gen" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 text-slate-600 border">หมวดวิชาศึกษาทั่วไป</button>
-                    <button onclick="setCategoryFilter('หมวดวิชาแกน')" id="btn-c-core" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 text-slate-600 border">หมวดวิชาแกน</button>
-                    <button onclick="setCategoryFilter('หมวดวิชาเลือก')" id="btn-c-elec" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 text-slate-600 border">หมวดวิชาเลือก</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Courses Display Grid -->
-        <div class="space-y-4">
-            <div class="flex justify-between items-center px-1">
-                <h3 class="font-bold text-slate-800 text-base sm:text-lg flex items-center gap-2">
-                    <i class="fa-solid fa-list-check text-indigo-600"></i> รายการรายวิชาทั้งหมด 
-                    <span class="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-0.5 rounded-full">{{ courses|length }} วิชา</span>
-                </h3>
-            </div>
-
-            <div id="courseGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {% for c in courses %}
-                <div class="course-card bg-white/95 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-slate-200/70 flex flex-col justify-between hover:shadow-xl transition duration-300"
-                     data-code="{{ c.course_code if c.course_code else c.code }}"
-                     data-name="{{ c.course_name if c.course_name else c.name }}"
-                     data-institution="{{ c.institution|default('ThaiMOOC') }}"
-                     data-category="{{ c.category|default('หมวดวิชาทั่วไป') }}">
-                    <div>
-                        <!-- Top Badges -->
-                        <div class="flex justify-between items-start gap-2 mb-3">
-                            <span class="bg-slate-900 text-white font-bold px-3 py-1 rounded-xl text-xs tracking-wider">
-                                {{ c.course_code if c.course_code else c.code }}
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-extrabold border bg-sky-50 text-sky-700 border-sky-200">
+                                <i class="fa-solid fa-building-columns mr-1"></i>{{ course.institution or 'ThaiMOOC' }}
                             </span>
-                            <div class="flex items-center gap-1.5">
-                                <span class="{% if c.institution == 'ChulaMOOC' %}bg-pink-50 text-pink-700 border-pink-200{% else %}bg-blue-50 text-blue-700 border-blue-200{% endif %} font-semibold px-2.5 py-1 rounded-xl text-xs border flex items-center gap-1">
-                                    <i class="fa-solid fa-building-columns text-[10px]"></i> {{ c.institution|default('ThaiMOOC') }}
-                                </span>
-                                <span class="bg-emerald-50 text-emerald-700 font-semibold px-2.5 py-1 rounded-xl text-xs border border-emerald-200">
-                                    <i class="fa-solid fa-star text-[10px]"></i> {{ c.credits|default(3) }} หน่วยกิต
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Course Title -->
-                        <h4 class="font-bold text-slate-800 text-base line-clamp-1">
-                            {{ c.course_name if c.course_name else c.name }}
-                        </h4>
-
-                        <!-- Category Badge -->
-                        <div class="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 font-medium px-2.5 py-1 rounded-lg text-xs mt-2 border border-slate-200/50">
-                            <i class="fa-solid fa-tag text-[10px] text-indigo-500"></i> {{ c.category|default('หมวดวิชาศึกษาทั่วไป') }}
-                        </div>
-
-                        <!-- Details Grid -->
-                        <div class="mt-4 space-y-2 text-xs text-slate-500 border-t border-slate-100 pt-3">
-                            <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-clock text-indigo-500 w-4"></i>
-                                <span>ชั่วโมงเรียน: <strong class="text-slate-700 font-semibold">{{ c.hours|default(45) }} ชั่วโมง</strong></span>
-                            </div>
-                            <div class="mt-2">
-                                <p class="text-[11px] font-semibold text-slate-400 mb-0.5">รายละเอียดวิชา:</p>
-                                <p class="text-slate-600 line-clamp-2 bg-slate-50 p-2.5 rounded-xl text-xs border border-slate-100">
-                                    {{ c.description if c.description else 'ไม่มีรายละเอียดวิชา' }}
-                                </p>
-                            </div>
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-extrabold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                ★ {{ course.credits or 3 }} หน่วยกิต
+                            </span>
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
-                    <div class="flex items-center justify-end gap-2 mt-5 pt-3 border-t border-slate-100">
-                        <form method="POST" action="/admin/course/delete" onsubmit="return confirm('ยืนยันการลบรายวิชานี้?');">
-                            <input type="hidden" name="course_id" value="{{ c.id if c.id else c.course_code }}">
-                            <button type="submit" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
-                                <i class="fa-solid fa-trash text-[11px]"></i> ลบ
-                            </button>
-                        </form>
+                    <!-- Course Title & Category -->
+                    <div>
+                        <h3 class="text-lg font-black text-slate-800 leading-snug">{{ course.course_name }}</h3>
+                        <span class="inline-block mt-2 text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-lg">
+                            🏷️ {{ course.category or 'หมวดวิชาแกน' }}
+                        </span>
+                    </div>
+
+                    <!-- Hours & Description -->
+                    <div class="space-y-2 pt-2 border-t border-slate-100">
+                        <p class="text-xs font-bold text-slate-600 flex items-center gap-1.5">
+                            <i class="fa-regular fa-clock text-indigo-500"></i>
+                            <span>ชั่วโมงเรียน: <strong class="text-slate-800">{{ course.hours or 'ไม่ระบุ' }} ชั่วโมง</strong></span>
+                        </p>
+
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-400">รายละเอียดวิชา:</p>
+                            <div class="mt-1 p-3 bg-slate-50 rounded-2xl text-xs font-medium text-slate-600 border border-slate-100 min-h-[60px] max-h-[100px] overflow-y-auto">
+                                {{ course.description or 'ไม่มีรายละเอียดวิชา' }}
+                            </div>
+                        </div>
                     </div>
                 </div>
-                {% else %}
-                <div class="col-span-full bg-white p-12 text-center text-slate-400 text-xs rounded-2xl border border-dashed border-slate-300">
-                    <i class="fa-solid fa-folder-open text-3xl mb-3 text-slate-300"></i>
-                    <p class="font-bold text-slate-600 text-sm">ไม่พบรายวิชาในระบบ</p>
-                    <p class="text-slate-400 mt-1">กดปุ่ม "เพิ่มรายวิชา" เพื่อเพิ่มข้อมูลเข้าระบบ</p>
+
+                <!-- Action Buttons: แก้ไข & ลบ -->
+                <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-end gap-2">
+                    <!-- ปุ่มแก้ไข -->
+                    <button type="button" 
+                            data-code="{{ course.course_code }}"
+                            data-name="{{ course.course_name }}"
+                            data-credits="{{ course.credits or 3 }}"
+                            data-category="{{ course.category or 'หมวดวิชาศึกษาทั่วไป' }}"
+                            data-institution="{{ course.institution or 'ThaiMOOC' }}"
+                            data-hours="{{ course.hours or 45 }}"
+                            data-description="{{ course.description or '' }}"
+                            onclick="openEditModal(this)"
+                            class="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold rounded-2xl text-xs border border-amber-200 transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-pen-to-square"></i> แก้ไข
+                    </button>
+
+                    <!-- ปุ่มลบ -->
+                    <form method="POST" action="/admin/course/delete" onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบวิชานี้?');" class="inline">
+                        <input type="hidden" name="course_id" value="{{ course.course_code }}">
+                        <button type="submit" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-2xl text-xs border border-rose-200 transition flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-trash-can"></i> ลบ
+                        </button>
+                    </form>
                 </div>
-                {% endfor %}
             </div>
+            {% else %}
+            <div class="col-span-full py-16 text-center bg-white rounded-3xl border border-dashed border-slate-300">
+                <i class="fa-solid fa-folder-open text-4xl text-slate-300 mb-2 block"></i>
+                <p class="text-slate-500 font-bold text-sm">ยังไม่มีรายวิชาในระบบ กดปุ่ม "เพิ่มรายวิชา" ด้านบนเพื่อเริ่มสร้างวิชาแรก</p>
+            </div>
+            {% endfor %}
         </div>
-
     </main>
 
-    <!-- Modal เพิ่มรายวิชาใหม่ -->
-    <div id="courseModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-100">
-            <div class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-6 py-4 flex justify-between items-center shadow-md">
-                <h3 class="font-bold text-base sm:text-lg flex items-center gap-2">
-                    <i class="fa-solid fa-book-medical"></i> เพิ่มรายวิชาใหม่
-                </h3>
-                <button onclick="closeModal()" class="text-indigo-200 hover:text-white p-1.5 rounded-xl transition">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
+    <!-- Modal 1: เพิ่มรายวิชา (Add Modal) -->
+    <div id="addModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative space-y-5 border border-slate-100">
+            <button onclick="closeAddModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center font-black text-lg">
+                    <i class="fa-solid fa-plus"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-slate-800">เพิ่มรายวิชาใหม่</h3>
+                    <p class="text-xs text-slate-400">กรอกข้อมูลรายละเอียดวิชาเพื่อเปิดให้เทียบโอน</p>
+                </div>
             </div>
 
-            <form method="POST" action="/admin/course/add" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form method="POST" action="/admin/course/add" class="space-y-4 text-xs font-bold text-slate-700">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสวิชา <span class="text-rose-500">*</span></label>
-                        <input type="text" name="course_code" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm uppercase">
+                        <label class="block mb-1">รหัสวิชา *</label>
+                        <input type="text" name="course_code" required placeholder="เช่น CS101" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 font-mono uppercase">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">หน่วยกิต <span class="text-rose-500">*</span></label>
-                        <input type="number" name="credits" required min="1" max="15" value="3" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm">
+                        <label class="block mb-1">หน่วยกิต *</label>
+                        <input type="number" name="credits" value="3" required min="1" max="10" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อรายวิชา <span class="text-rose-500">*</span></label>
-                    <input type="text" name="course_name" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm">
+                    <label class="block mb-1">ชื่อวิชา *</label>
+                    <input type="text" name="course_name" required placeholder="เช่น การเขียนโปรแกรมคอมพิวเตอร์" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500">
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">สถาบัน/ระบบ <span class="text-rose-500">*</span></label>
-                        <select name="institution" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm">
+                        <label class="block mb-1">หมวดวิชา</label>
+                        <select name="category" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500">
+                            <option value="หมวดวิชาแกน">หมวดวิชาแกน</option>
+                            <option value="หมวดวิชาศึกษาทั่วไป">หมวดวิชาศึกษาทั่วไป</option>
+                            <option value="หมวดวิชาเลือก">หมวดวิชาเลือก</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-1">สถาบัน / ระบบที่เปิดเรียน</label>
+                        <select name="institution" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500">
                             <option value="ThaiMOOC">ThaiMOOC</option>
                             <option value="ChulaMOOC">ChulaMOOC</option>
                         </select>
                     </div>
+                </div>
+
+                <div>
+                    <label class="block mb-1">จำนวนชั่วโมงเรียน</label>
+                    <input type="number" name="hours" value="45" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block mb-1">รายละเอียดวิชา</label>
+                    <textarea name="description" rows="3" placeholder="อธิบายภาพรวมและคำอธิบายรายวิชาย่อ..." class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 resize-none"></textarea>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 flex gap-3">
+                    <button type="button" onclick="closeAddModal()" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-2xl transition">ยกเลิก</button>
+                    <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3 rounded-2xl shadow-md transition">บันทึกวิชาใหม่</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: แก้ไขรายวิชา (Edit Modal) -->
+    <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative space-y-5 border border-slate-100">
+            <button onclick="closeEditModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                <div class="w-10 h-10 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center font-black text-lg">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-slate-800">แก้ไขข้อมูลรายวิชา</h3>
+                    <p class="text-xs text-slate-400">ปรับปรุงรายละเอียดรายวิชาในระบบ</p>
+                </div>
+            </div>
+
+            <form method="POST" action="/admin/course/edit" class="space-y-4 text-xs font-bold text-slate-700">
+                <!-- course_id เดิมสำหรับใช้อ้างอิงการอัปเดต -->
+                <input type="hidden" name="course_id" id="edit_course_id">
+
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">หมวดหมู่รายวิชา <span class="text-rose-500">*</span></label>
-                        <select name="category" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm">
-                            <option value="หมวดวิชาศึกษาทั่วไป">หมวดวิชาศึกษาทั่วไป</option>
+                        <label class="block mb-1">รหัสวิชา *</label>
+                        <input type="text" name="course_code" id="edit_course_code" required class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500 font-mono uppercase">
+                    </div>
+                    <div>
+                        <label class="block mb-1">หน่วยกิต *</label>
+                        <input type="number" name="credits" id="edit_credits" required min="1" max="10" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block mb-1">ชื่อวิชา *</label>
+                    <input type="text" name="course_name" id="edit_course_name" required class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block mb-1">หมวดวิชา</label>
+                        <select name="category" id="edit_category" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500">
                             <option value="หมวดวิชาแกน">หมวดวิชาแกน</option>
+                            <option value="หมวดวิชาศึกษาทั่วไป">หมวดวิชาศึกษาทั่วไป</option>
                             <option value="หมวดวิชาเลือก">หมวดวิชาเลือก</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-1">สถาบัน / ระบบที่เปิดเรียน</label>
+                        <select name="institution" id="edit_institution" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500">
+                            <option value="ThaiMOOC">ThaiMOOC</option>
+                            <option value="ChulaMOOC">ChulaMOOC</option>
                         </select>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">จำนวนชั่วโมงเรียน (ชม.) <span class="text-rose-500">*</span></label>
-                    <input type="number" name="hours" required min="1" max="300" value="45" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm">
+                    <label class="block mb-1">จำนวนชั่วโมงเรียน</label>
+                    <input type="number" name="hours" id="edit_hours" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">รายละเอียดวิชา</label>
-                    <textarea name="description" rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm resize-none"></textarea>
+                    <label class="block mb-1">รายละเอียดวิชา</label>
+                    <textarea name="description" id="edit_description" rows="3" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500 resize-none"></textarea>
                 </div>
 
-                <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                    <button type="button" onclick="closeModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-4 py-2.5 rounded-xl text-xs sm:text-sm">
-                        ยกเลิก
-                    </button>
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-xl text-xs sm:text-sm shadow-md">
-                        <i class="fa-solid fa-save"></i> บันทึกข้อมูล
-                    </button>
+                <div class="pt-4 border-t border-slate-100 flex gap-3">
+                    <button type="button" onclick="closeEditModal()" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-2xl transition">ยกเลิก</button>
+                    <button type="submit" class="w-2/3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 rounded-2xl shadow-md transition">บันทึกการแก้ไข</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
-        let currentPlatform = 'all';
-        let currentCategory = 'all';
-
-        function openAddModal() { document.getElementById('courseModal').classList.remove('hidden'); }
-        function closeModal() { document.getElementById('courseModal').classList.add('hidden'); }
-
-        function setPlatformFilter(platform) {
-            currentPlatform = platform;
-            ['all', 'ThaiMOOC', 'ChulaMOOC'].forEach(p => {
-                const btn = document.getElementById(`btn-p-${p}`);
-                if (btn) {
-                    btn.className = p === platform 
-                        ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-600 shadow-sm'
-                        : 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600';
-                }
-            });
-            filterCourses();
+        // ฟังก์ชันจัดการ Modal เพิ่มรายวิชา
+        function openAddModal() {
+            document.getElementById('addModal').classList.remove('hidden');
+        }
+        function closeAddModal() {
+            document.getElementById('addModal').classList.add('hidden');
         }
 
-        function setCategoryFilter(category) {
-            currentCategory = category;
-            const catMap = { 'all': 'btn-c-all', 'หมวดวิชาศึกษาทั่วไป': 'btn-c-gen', 'หมวดวิชาแกน': 'btn-c-core', 'หมวดวิชาเลือก': 'btn-c-elec' };
-            Object.keys(catMap).forEach(key => {
-                const btn = document.getElementById(catMap[key]);
-                if (btn) {
-                    btn.className = key === category
-                        ? 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white'
-                        : 'px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 text-slate-600 border';
-                }
-            });
-            filterCourses();
+        // ฟังก์ชันจัดการ Modal แก้ไขรายวิชา
+        function openEditModal(btn) {
+            document.getElementById('edit_course_id').value = btn.dataset.code;
+            document.getElementById('edit_course_code').value = btn.dataset.code;
+            document.getElementById('edit_course_name').value = btn.dataset.name;
+            document.getElementById('edit_credits').value = btn.dataset.credits;
+            document.getElementById('edit_category').value = btn.dataset.category;
+            document.getElementById('edit_institution').value = btn.dataset.institution;
+            document.getElementById('edit_hours').value = btn.dataset.hours;
+            document.getElementById('edit_description').value = btn.dataset.description;
+
+            document.getElementById('editModal').classList.remove('hidden');
         }
-
-        function filterCourses() {
-            const search = document.getElementById('searchInput').value.toLowerCase().trim();
-            const cards = document.querySelectorAll('.course-card');
-
-            cards.forEach(card => {
-                const code = card.dataset.code.toLowerCase();
-                const name = card.dataset.name.toLowerCase();
-                const inst = card.dataset.institution;
-                const cat = card.dataset.category;
-
-                const matchSearch = code.includes(search) || name.includes(search);
-                const matchPlatform = currentPlatform === 'all' || inst === currentPlatform;
-                const matchCategory = currentCategory === 'all' || cat === currentCategory;
-
-                if (matchSearch && matchPlatform && matchCategory) {
-                    card.style.display = 'flex';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
         }
     </script>
 </body>
