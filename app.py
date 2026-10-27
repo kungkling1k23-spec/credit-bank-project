@@ -145,7 +145,7 @@ with app.app_context():
         if not admin_999:
             admin_999 = User(
                 member_id='ADM999',
-                prefix='นาย',
+                prefix='',
                 fullname='เจ้าหน้าที่ดูแลรายวิชา',
                 id_card='9999999999999',
                 username='Admin-999',
@@ -3005,7 +3005,7 @@ def admin_login():
         admin_999 = User.query.filter_by(username='Admin-999').first()
         if admin_999:
             session['user_id'] = admin_999.id
-            session['fullname'] = admin_999.fullname
+            session['fullname'] = 'เจ้าหน้าที่ดูแลรายวิชา'
             session['role'] = admin_999.role
             session['member_id'] = admin_999.member_id
         session['admin_logged_in'] = True
