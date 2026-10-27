@@ -1,4 +1,4 @@
-# analytics.py - ระบบสรุปรายงานและวิเคราะห์ข้อมูลฝั่งเจ้าหน้าที่ (พร้อมฟังก์ชัน Export CSV)
+# analytics.py - ระบบสรุปรายงานและวิเคราะห์ข้อมูลฝั่งเจ้าหน้าที่ (เพิ่มตัวกรองรายชื่อนักศึกษา)
 from flask import Blueprint, request, session, redirect, url_for, flash
 from sqlalchemy import func
 import json
@@ -22,6 +22,7 @@ def admin_analytics():
         start_date = request.args.get('start_date', '').strip()
         end_date = request.args.get('end_date', '').strip()
         selected_course = request.args.get('course_code', '').strip()
+        selected_student = request.args.get('student_id', '').strip()
         selected_status = request.args.get('status', '').strip()
 
         # 2. ค้นหาข้อมูลตามตัวกรอง
@@ -33,6 +34,11 @@ def admin_analytics():
             query = query.filter(CreditRequest.date_submitted.isnot(None)).filter(CreditRequest.date_submitted <= f"{end_date} 23:59")
         if selected_course and selected_course != 'ALL':
             query = query.filter(CreditRequest.course_code == selected_course)
+        if selected_student and selected_student != 'ALL':
+            try:
+                query = query.filter(CreditRequest.user_id == int(selected_student))
+            except ValueError:
+                pass
         if selected_status and selected_status != 'ALL':
             if selected_status == 'Needs_Revision':
                 query = query.filter(CreditRequest.status.in_(['Needs_Revision', 'Need_Edit']))
@@ -51,12 +57,20 @@ def admin_analytics():
         approval_rate = round((len(approved_reqs) / total_reqs * 100), 1) if total_reqs > 0 else 0
         unique_students_count = len(set(r.user_id for r in filtered_requests if getattr(r, 'user_id', None)))
 
+        # 4. ดึงข้อมูลรายวิชาและนักศึกษาทั้งหมดสำหรับ Dropdown
         try:
             all_courses = Course.query.order_by(Course.course_code.asc()).all()
         except Exception:
             all_courses = []
 
-        # 4. ข้อมูลสำหรับกราฟ
+        try:
+            all_students = User.query.filter_by(role='student').order_by(User.fullname.asc()).all()
+            if not all_students:
+                all_students = User.query.order_by(User.fullname.asc()).all()
+        except Exception:
+            all_students = []
+
+        # 5. ข้อมูลสำหรับกราฟ
         status_chart_data = [len(pending_reqs), len(approved_reqs), len(revision_reqs)]
 
         course_counts = {}
@@ -68,7 +82,7 @@ def admin_analytics():
         top_course_labels = [tc[0] for tc in sorted_top_courses]
         top_course_values = [tc[1] for tc in sorted_top_courses]
 
-        # 5. แปลงข้อมูลคำร้องเป็น JSON สำหรับ Read-Only Modal และ Export CSV
+        # 6. แปลงข้อมูลคำร้องเป็น JSON สำหรับ Read-Only Modal และ Export CSV
         requests_data_list = []
         for r in filtered_requests:
             requests_data_list.append({
@@ -91,11 +105,19 @@ def admin_analytics():
 
         requests_json = json.dumps(requests_data_list, ensure_ascii=False)
 
-        # 6. HTML ตัวเลือกรายวิชา และ ตาราง
+        # 7. HTML ตัวเลือกรายวิชา นักศึกษา และ ตาราง
         course_options_html = '<option value="ALL">-- เลือกทุกรายวิชา --</option>'
         for c in all_courses:
             is_sel = 'selected' if selected_course == c.course_code else ''
             course_options_html += f'<option value="{escape(c.course_code)}" {is_sel}>{escape(c.course_code)} - {escape(c.course_name)}</option>'
+
+        student_options_html = '<option value="ALL">-- เลือกนักศึกษาทุกคน --</option>'
+        for st in all_students:
+            is_sel = 'selected' if selected_student == str(st.id) else ''
+            st_code = getattr(st, 'member_id', '') or ''
+            st_name = getattr(st, 'fullname', '') or ''
+            display_label = f"{st_code} - {st_name}" if st_code else st_name
+            student_options_html += f'<option value="{st.id}" {is_sel}>{escape(display_label)}</option>'
 
         table_rows_html = ""
         for r in filtered_requests:
@@ -138,7 +160,7 @@ def admin_analytics():
                             <i class="fa-solid fa-chart-line mr-1"></i> Analytics & Custom Reports
                         </span>
                         <h1 class="text-2xl sm:text-3xl font-black mt-2">รายงานวิเคราะห์สถิติสรุปข้อมูล</h1>
-                        <p class="text-xs sm:text-sm text-slate-300 mt-1">สรุปข้อมูลเทียบโอนหน่วยกิตแบบเลือกช่วงเวลา รายวิชา และสถานะคำร้อง</p>
+                        <p class="text-xs sm:text-sm text-slate-300 mt-1">สรุปข้อมูลเทียบโอนหน่วยกิตแบบเลือกช่วงเวลา รายวิชา นักศึกษา และสถานะคำร้อง</p>
                     </div>
                 </div>
                 <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -154,7 +176,7 @@ def admin_analytics():
                     </div>
                 </div>
                 
-                <form method="GET" action="/admin/analytics" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <form method="GET" action="/admin/analytics" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <div>
                         <label class="block text-xs font-black uppercase text-slate-500 mb-1.5">ตั้งแต่วันที่</label>
                         <input type="date" name="start_date" value="{escape(start_date)}" class="w-full border border-slate-200 rounded-2xl p-3 text-xs font-bold bg-slate-50 outline-none focus:border-indigo-500 transition">
@@ -173,6 +195,13 @@ def admin_analytics():
                     </div>
 
                     <div>
+                        <label class="block text-xs font-black uppercase text-slate-500 mb-1.5">เลือกนักศึกษา</label>
+                        <select name="student_id" class="w-full border border-slate-200 rounded-2xl p-3 text-xs font-bold bg-slate-50 outline-none focus:border-indigo-500 transition">
+                            {student_options_html}
+                        </select>
+                    </div>
+
+                    <div>
                         <label class="block text-xs font-black uppercase text-slate-500 mb-1.5">สถานะคำร้อง</label>
                         <select name="status" class="w-full border border-slate-200 rounded-2xl p-3 text-xs font-bold bg-slate-50 outline-none focus:border-indigo-500 transition">
                             <option value="ALL" {'selected' if selected_status=='ALL' or not selected_status else ''}>-- ทุกสถานะ --</option>
@@ -182,7 +211,7 @@ def admin_analytics():
                         </select>
                     </div>
 
-                    <div class="lg:col-span-4 flex flex-wrap justify-end gap-2 pt-2 border-t border-slate-100">
+                    <div class="lg:col-span-5 flex flex-wrap justify-end gap-2 pt-2 border-t border-slate-100">
                         <a href="/admin/analytics" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-5 py-2.5 rounded-2xl text-xs transition">
                             ล้างตัวกรอง
                         </a>
@@ -349,14 +378,13 @@ def admin_analytics():
             console.error("Parse JSON error:", e);
         }}
 
-        // ฟังก์ชันส่งออก CSV ตามตัวกรอง
         function exportFilteredCSV() {{
             if (!analyticsRequestsData || analyticsRequestsData.length === 0) {{
                 alert('ไม่พบข้อมูลคำร้องตามตัวกรองเพื่อส่งออก');
                 return;
             }}
 
-            let csvContent = "\\uFEFF"; // UTF-8 BOM รองรับภาษาไทยใน Excel
+            let csvContent = "\\uFEFF";
             csvContent += "รหัสคำร้อง,ชื่อนักศึกษา,รหัสนักศึกษา,ชื่อวิชาที่เทียบโอน,หน่วยกิต,สถาบันผู้จัดหลักสูตร,วันที่ยื่นคำร้อง,สถานะคำร้อง,ผู้พิจารณา/หมายเหตุ\\n";
 
             analyticsRequestsData.forEach(item => {{
