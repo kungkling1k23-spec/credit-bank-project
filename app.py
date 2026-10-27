@@ -156,6 +156,42 @@ with app.app_context():
     except Exception:
         db.session.rollback()
 
+    try:
+        if Course.query.count() == 0:
+            sample_courses = [
+                Course(
+                    course_code='CS101',
+                    course_name='Introduction to Computer Science',
+                    credits=3,
+                    category='หมวดวิชาแกน',
+                    institution='ThaiMOOC',
+                    hours=45,
+                    description='แนวคิดพื้นฐานเกี่ยวกับวิทยาการคอมพิวเตอร์ อัลกอรึทึม และการแก้ปัญหาเบื้องต้น'
+                ),
+                Course(
+                    course_code='GEN201',
+                    course_name='Modern Thai Society and Culture',
+                    credits=2,
+                    category='หมวดวิชาศึกษาทั่วไป',
+                    institution='ChulaMOOC',
+                    hours=30,
+                    description='ศึกษาบริบททางสังคมและวัฒนธรรมไทยร่วมสมัยและการปรับตัวในยุคดิจิทัล'
+                ),
+                Course(
+                    course_code='ART102',
+                    course_name='Creative Design and Thinking',
+                    credits=3,
+                    category='หมวดวิชาเลือก',
+                    institution='ThaiMOOC',
+                    hours=45,
+                    description='กระบวนการคิดเชิงออกแบบและการสร้างสรรค์ผลงานศิลปะร่วมสมัย'
+                )
+            ]
+            db.session.add_all(sample_courses)
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 def generate_member_id():
     try:
         last_user = User.query.filter(User.member_id.like('IS%')).order_by(User.id.desc()).first()
