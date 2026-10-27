@@ -16,8 +16,11 @@ from sqlalchemy import text
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'credit_bank_is_rmutto_production_key_2026')
 
-from analytics import analytics_bp
-app.register_blueprint(analytics_bp)
+try:
+    from analytics import analytics_bp
+    app.register_blueprint(analytics_bp)
+except ImportError:
+    pass
 
 db_url = os.environ.get('DATABASE_URL')
 if db_url:
@@ -70,8 +73,9 @@ class Course(db.Model):
     online_lesson = db.Column(db.Text)
     hours = db.Column(db.Integer)
     credits = db.Column(db.Integer)
+    description = db.Column(db.Text, nullable=True)
 
-    lessons = db.relationship('CourseLesson', backref='course', lazy=True)
+    lessons = db.relationship('CourseLesson', backref='course', lazy=True, cascade="all, delete-orphan")
 
 class CourseLesson(db.Model):
     __tablename__ = 'course_lesson'
@@ -114,6 +118,7 @@ with app.app_context():
             conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS major VARCHAR(200) DEFAULT \'สาขาวิชาระบบสารสนเทศ\';'))
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS faculty VARCHAR(200);"))
             conn.execute(text("ALTER TABLE credit_request ADD COLUMN IF NOT EXISTS major VARCHAR(200);"))
+            conn.execute(text("ALTER TABLE course ADD COLUMN IF NOT EXISTS description TEXT;"))
             conn.commit()
     except Exception:
         pass
@@ -151,7 +156,6 @@ with app.app_context():
             )
             db.session.add(admin_999)
 
-        # บันทึกทั้ง 2 บัญชีลงฐานข้อมูล
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -188,28 +192,6 @@ with app.app_context():
                 )
             ]
             db.session.add_all(sample_courses)
-            db.session.commit()
-    except Exception:
-        db.session.rollback()
-
-    try:
-        if Course.query.count() == 0:
-            c1 = Course(course_code='CS101', course_name='Introduction to Computer Science', credits=3, category='หมวดวิชาแกน')
-            c2 = Course(course_code='GEN201', course_name='Modern Thai Society and Culture', credits=2, category='หมวดวิชาศึกษาทั่วไป')
-            c3 = Course(course_code='ART102', course_name='Creative Design and Thinking', credits=3, category='หมวดวิชาเลือก')
-
-            sample_list = [
-                (c1, 'ThaiMOOC', 45, 'แนวคิดพื้นฐานเกี่ยวกับวิทยาการคอมพิวเตอร์ อัลกอรึทึม และการแก้ปัญหาเบื้องต้น'),
-                (c2, 'ChulaMOOC', 30, 'ศึกษาบริบททางสังคมและวัฒนธรรมไทยร่วมสมัยและการปรับตัวในยุคดิจิทัล'),
-                (c3, 'ThaiMOOC', 45, 'กระบวนการคิดเชิงออกแบบและการสร้างสรรค์ผลงานศิลปะร่วมสมัย')
-            ]
-
-            for course_obj, inst, hrs, desc in sample_list:
-                if hasattr(course_obj, 'institution'): setattr(course_obj, 'institution', inst)
-                if hasattr(course_obj, 'hours'): setattr(course_obj, 'hours', hrs)
-                if hasattr(course_obj, 'description'): setattr(course_obj, 'description', desc)
-                db.session.add(course_obj)
-
             db.session.commit()
             print("Successfully seeded initial courses into Database")
     except Exception as e:
@@ -340,6 +322,7 @@ def render_layout(content, active_page=''):
             {f'''
                 {f"""
                     <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
+                    <a href="/admin_panel" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_panel')}"><i class="fa-solid fa-gear text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">จัดการรายวิชา</span></a>
                     <a href="/admin/analytics" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_analytics')}"><i class="fa-solid fa-chart-line text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายงานวิเคราะห์สถิติ</span></a>
                     <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_students')}"><i class="fa-solid fa-users text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายชื่อนักศึกษา</span></a>
                     <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_requests')}"><i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ตรวจสอบคำร้อง</span></a>
@@ -553,39 +536,6 @@ def home():
                     </div>
                 </div>
             </div>
-
-            <div class="bg-slate-900 rounded-[2.5rem] p-8 sm:p-12 text-white space-y-8 relative overflow-hidden">
-                <div class="text-center max-w-2xl mx-auto space-y-2 relative z-10">
-                    <span class="text-sky-400 font-black text-xs uppercase tracking-wider">Simple Workflow</span>
-                    <h2 class="text-2xl sm:text-3xl font-black">ขั้นตอนการเทียบโอนหน่วยกิตง่ายๆ</h2>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
-                    <div class="bg-white/5 p-6 rounded-3xl border border-white/10 hover:bg-white/10 transition">
-                        <div class="w-10 h-10 rounded-2xl bg-sky-500/20 text-sky-300 font-black flex items-center justify-center mb-4 text-base">1</div>
-                        <h4 class="font-bold text-sm mb-1">ค้นหารายวิชา</h4>
-                        <p class="text-xs text-slate-400 leading-relaxed">เลือกวิชาตามหลักสูตร IS ที่เปิดให้เทียบโอนผ่าน ThaiMOOC/ChulaMOOC</p>
-                    </div>
-
-                    <div class="bg-white/5 p-6 rounded-3xl border border-white/10 hover:bg-white/10 transition">
-                        <div class="w-10 h-10 rounded-2xl bg-sky-500/20 text-sky-300 font-black flex items-center justify-center mb-4 text-base">2</div>
-                        <h4 class="font-bold text-sm mb-1">แนบรูปใบประกาศ</h4>
-                        <p class="text-xs text-slate-400 leading-relaxed">อัปโหลดรูปหลักฐานการผ่านคอร์สออนไลน์เข้าสู่ระบบ</p>
-                    </div>
-
-                    <div class="bg-white/5 p-6 rounded-3xl border border-white/10 hover:bg-white/10 transition">
-                        <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-300 font-black flex items-center justify-center mb-4 text-base">3</div>
-                        <h4 class="font-bold text-sm mb-1">เจ้าหน้าที่ตรวจสอบ</h4>
-                        <p class="text-xs text-slate-400 leading-relaxed">เจ้าหน้าที่พิจารณาความถูกต้องของเอกสารหลักฐาน</p>
-                    </div>
-
-                    <div class="bg-white/5 p-6 rounded-3xl border border-white/10 hover:bg-white/10 transition">
-                        <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-300 font-black flex items-center justify-center mb-4 text-base">4</div>
-                        <h4 class="font-bold text-sm mb-1">สะสมหน่วยกิต</h4>
-                        <p class="text-xs text-slate-400 leading-relaxed">อนุมัติหน่วยกิตสะสมเข้าสู่บัญชีนักศึกษาทันที</p>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <div id="quickLoginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity">
@@ -669,7 +619,6 @@ def home():
         session.clear()
         return redirect(url_for('login'))
     
-    # 1. ฝั่งเจ้าหน้าที่ (Officer / Admin Dashboard)
     if user.role in ['admin', 'superadmin']:
         try:
             all_db_requests = CreditRequest.query.order_by(CreditRequest.id.desc()).all()
@@ -737,7 +686,7 @@ def home():
             'credits': credits_summary_list
         }, ensure_ascii=False)
 
-        current_month_str = get_thailand_time()[:7] # YYYY-MM
+        current_month_str = get_thailand_time()[:7]
 
         html_part = f"""
         <div class="max-w-6xl mx-auto space-y-8">
@@ -752,7 +701,6 @@ def home():
                         <h1 class="text-3xl font-black">ยินดีต้อนรับ, {escape(user.fullname)} 👋</h1>
                         <p class="text-slate-300 text-sm mt-1">ระบบบริหารจัดการธนาคารหน่วยกิต (Credit Bank) สาขาวิชาระบบสารสนเทศ</p>
                     </div>
-
                 </div>
                 <div class="absolute -right-10 -bottom-10 w-56 h-56 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
             </div>
@@ -844,7 +792,6 @@ def home():
             </div>
         </div>
 
-        <!-- Export CSV Modal -->
         <div id="exportCsvModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity">
             <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6 relative border border-slate-100">
                 <button onclick="closeExportModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
@@ -1152,7 +1099,7 @@ def home():
         admin_content = html_part + js_code
         return render_layout(admin_content, active_page='home')
 
-# 2. ฝั่งนักศึกษา (Student Dashboard)
+    # ฝั่งนักศึกษา (Student Dashboard)
     try:
         user_requests = CreditRequest.query.filter_by(user_id=user.id).order_by(CreditRequest.id.desc()).all()
     except Exception:
@@ -2925,7 +2872,7 @@ def login():
             session['fullname'] = user.fullname
             session['role'] = user.role
             session['member_id'] = user.member_id
-            if  user.username == 'Admin-999':
+            if user.role in ['admin', 'superadmin']:
                 return redirect(url_for('admin_panel'))
             return redirect(url_for('home'))
         flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error')
@@ -2992,7 +2939,7 @@ def admin_export_csv():
     if session.get('role') not in ['admin', 'superadmin']:
         return redirect(url_for('login'))
         
-    selected_month = request.args.get('month', '').strip() # e.g. "2026-10"
+    selected_month = request.args.get('month', '').strip()
     
     query = CreditRequest.query
     if selected_month:
@@ -3046,22 +2993,36 @@ def admin_login():
     username = request.form.get('username', '').strip()
     password = request.form.get('password', '').strip()
 
-    # ตรวจสอบ Username และ Password ตามที่กำหนด
-    if username == 'Admin-999' and password == '16092547':
+    user = User.query.filter((User.username == username) | (User.id_card == username)).first()
+    if user and check_password_hash(user.password, password) and user.role in ['admin', 'superadmin']:
+        session['user_id'] = user.id
+        session['fullname'] = user.fullname
+        session['role'] = user.role
+        session['member_id'] = user.member_id
         session['admin_logged_in'] = True
-        session['fullname'] = 'เจ้าหน้าที่ (Admin-999)'
+        return redirect(url_for('admin_panel'))
+    elif username == 'Admin-999' and password == '16092547':
+        admin_999 = User.query.filter_by(username='Admin-999').first()
+        if admin_999:
+            session['user_id'] = admin_999.id
+            session['fullname'] = admin_999.fullname
+            session['role'] = admin_999.role
+            session['member_id'] = admin_999.member_id
+        session['admin_logged_in'] = True
         return redirect(url_for('admin_panel'))
     else:
         flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error')
-        return redirect(url_for('admin_panel'))
-    
+        return redirect(url_for('login', role='admin'))
+
 # =========================================================
 # 1. หน้าแผงควบคุมรายวิชา
 # =========================================================
 @app.route('/admin_panel')
 def admin_panel():
+    if session.get('role') not in ['admin', 'superadmin']:
+        return redirect(url_for('login'))
     try:
-        courses = Course.query.order_by(Course.id.desc()).all()
+        courses = Course.query.order_by(Course.course_code.asc()).all()
     except Exception:
         courses = []
     return render_template('admin.html', courses=courses)
@@ -3071,6 +3032,8 @@ def admin_panel():
 # =========================================================
 @app.route('/admin/course/add', methods=['POST'])
 def admin_add_course():
+    if session.get('role') not in ['admin', 'superadmin']:
+        return redirect(url_for('login'))
     try:
         code = request.form.get('course_code', '').strip().upper()
         name = request.form.get('course_name', '').strip()
@@ -3092,8 +3055,10 @@ def admin_add_course():
             )
             db.session.add(new_course)
             db.session.commit()
-    except Exception:
+            flash('เพิ่มรายวิชาสำเร็จ', 'success')
+    except Exception as e:
         db.session.rollback()
+        flash(f'เกิดข้อผิดพลาดในการเพิ่มรายวิชา: {e}', 'error')
 
     return redirect(url_for('admin_panel'))
 
@@ -3102,6 +3067,8 @@ def admin_add_course():
 # =========================================================
 @app.route('/admin/course/edit', methods=['POST'])
 def admin_edit_course():
+    if session.get('role') not in ['admin', 'superadmin']:
+        return redirect(url_for('login'))
     try:
         course_id = request.form.get('course_id')
         code = request.form.get('course_code', '').strip().upper()
@@ -3112,22 +3079,20 @@ def admin_edit_course():
         hours = int(request.form.get('hours', 45))
         description = request.form.get('description', '').strip()
 
-        course = Course.query.get(course_id)
+        course = db.session.get(Course, course_id) or Course.query.filter_by(course_code=course_id).first()
         if course:
-            if hasattr(course, 'course_code'): course.course_code = code
-            if hasattr(course, 'code'): course.code = code
-            if hasattr(course, 'course_name'): course.course_name = name
-            if hasattr(course, 'name'): course.name = name
-            
+            course.course_code = code
+            course.course_name = name
             course.credits = credits
             course.category = category
-            if hasattr(course, 'institution'): course.institution = institution
-            if hasattr(course, 'hours'): course.hours = hours
-            if hasattr(course, 'description'): course.description = description
-
+            course.institution = institution
+            course.hours = hours
+            course.description = description
             db.session.commit()
-    except Exception:
+            flash('แก้ไขรายวิชาสำเร็จ', 'success')
+    except Exception as e:
         db.session.rollback()
+        flash(f'เกิดข้อผิดพลาดในการแก้ไข: {e}', 'error')
 
     return redirect(url_for('admin_panel'))
 
@@ -3136,30 +3101,30 @@ def admin_edit_course():
 # =========================================================
 @app.route('/admin/course/delete', methods=['POST'])
 def admin_delete_course():
+    if session.get('role') not in ['admin', 'superadmin']:
+        return redirect(url_for('login'))
     try:
         course_id = request.form.get('course_id')
         if course_id:
-            course = Course.query.get(course_id)
-            if not course:
-                course = Course.query.filter_by(course_code=course_id).first()
-            if not course and hasattr(Course, 'code'):
-                course = Course.query.filter_by(code=course_id).first()
-
+            course = db.session.get(Course, course_id) or Course.query.filter_by(course_code=course_id).first()
             if course:
                 db.session.delete(course)
                 db.session.commit()
-    except Exception:
+                flash('ลบรายวิชาสำเร็จ', 'success')
+    except Exception as e:
         db.session.rollback()
+        flash(f'เกิดข้อผิดพลาดในการลบ: {e}', 'error')
 
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/request/action', methods=['POST'])
 def admin_handle_request():
-    """อนุมัติ หรือ ปฏิเสธคำร้องเทียบโอน"""
+    if session.get('role') not in ['admin', 'superadmin']:
+        return redirect(url_for('login'))
     req_id = request.form.get('req_id')
     action = request.form.get('action')
     
-    if 'CreditRequest' in globals() and req_id:
+    if req_id:
         req_item = CreditRequest.query.get(req_id)
         if req_item:
             if action == 'approve':
@@ -3169,7 +3134,6 @@ def admin_handle_request():
             db.session.commit()
             
     return redirect(url_for('admin_panel'))
-
 
 if __name__ == '__main__':
     app.run(debug=True)
