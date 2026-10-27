@@ -155,6 +155,10 @@ with app.app_context():
                 email="admin999@rmutto.ac.th"
             )
             db.session.add(admin_999)
+        else:
+            # เพิ่ม 3 บรรทัดนี้เพื่ออัปเดตข้อมูลเดิมในฐานข้อมูล
+            admin_999.fullname = 'เจ้าหน้าที่ดูแลรายวิชา'
+            admin_999.prefix = ''
 
         db.session.commit()
     except Exception:
