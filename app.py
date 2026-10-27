@@ -2865,6 +2865,8 @@ def login():
             session['fullname'] = user.fullname
             session['role'] = user.role
             session['member_id'] = user.member_id
+            if  user.username == 'Admin-999':
+                return redirect(url_for('admin_panel'))
             return redirect(url_for('home'))
         flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error')
 
