@@ -667,14 +667,6 @@ def home():
                         <h1 class="text-3xl font-black">ยินดีต้อนรับ, {escape(user.fullname)} 👋</h1>
                         <p class="text-slate-300 text-sm mt-1">ระบบบริหารจัดการธนาคารหน่วยกิต (Credit Bank) สาขาวิชาระบบสารสนเทศ</p>
                     </div>
-                    <div class="flex flex-wrap gap-2 shrink-0">
-                        <button onclick="openExportModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-3 rounded-2xl shadow-lg transition text-xs flex items-center gap-2">
-                            <i class="fa-solid fa-file-excel"></i> ออกรายงานประจำเดือน (CSV)
-                        </button>
-                        <a href="/admin/requests" class="bg-sky-500 hover:bg-sky-600 text-white font-extrabold px-5 py-3 rounded-2xl shadow-lg transition text-xs flex items-center gap-2">
-                            <i class="fa-solid fa-file-signature"></i> ตรวจสอบคำร้องทั้งหมด ({pending_count})
-                        </a>
-                    </div>
                 </div>
                 <div class="absolute -right-10 -bottom-10 w-56 h-56 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
             </div>

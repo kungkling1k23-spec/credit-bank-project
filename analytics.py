@@ -1,4 +1,4 @@
-# analytics.py - ระบบสรุปรายงานและวิเคราะห์ข้อมูลฝั่งเจ้าหน้าที่ (Fix NameError)
+# analytics.py - ระบบสรุปรายงานและวิเคราะห์ข้อมูลฝั่งเจ้าหน้าที่ (พร้อมฟังก์ชัน Export CSV)
 from flask import Blueprint, request, session, redirect, url_for, flash
 from sqlalchemy import func
 import json
@@ -68,7 +68,7 @@ def admin_analytics():
         top_course_labels = [tc[0] for tc in sorted_top_courses]
         top_course_values = [tc[1] for tc in sorted_top_courses]
 
-        # 5. แปลงข้อมูลคำร้องเป็น JSON สำหรับ Read-Only Modal
+        # 5. แปลงข้อมูลคำร้องเป็น JSON สำหรับ Read-Only Modal และ Export CSV
         requests_data_list = []
         for r in filtered_requests:
             requests_data_list.append({
@@ -182,10 +182,13 @@ def admin_analytics():
                         </select>
                     </div>
 
-                    <div class="lg:col-span-4 flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <div class="lg:col-span-4 flex flex-wrap justify-end gap-2 pt-2 border-t border-slate-100">
                         <a href="/admin/analytics" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-5 py-2.5 rounded-2xl text-xs transition">
                             ล้างตัวกรอง
                         </a>
+                        <button type="button" onclick="exportFilteredCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-2.5 rounded-2xl text-xs shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-file-excel"></i> ส่งออกข้อมูล (CSV)
+                        </button>
                         <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-6 py-2.5 rounded-2xl text-xs shadow-md transition flex items-center gap-2">
                             <i class="fa-solid fa-magnifying-glass"></i> ประมวลผลรายงาน
                         </button>
@@ -267,11 +270,14 @@ def admin_analytics():
             </div>
 
             <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
-                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
                     <div>
                         <h3 class="text-lg font-black text-slate-800">รายการคำร้องตามตัวกรอง</h3>
                         <p class="text-xs text-slate-400">แสดงผลรวม {total_reqs} รายการ (โหมดดูข้อมูลรายงานอย่างเดียว)</p>
                     </div>
+                    <button type="button" onclick="exportFilteredCSV()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-2">
+                        <i class="fa-solid fa-file-csv"></i> ส่งออกข้อมูลที่กรองแล้ว (CSV)
+                    </button>
                 </div>
 
                 <div class="overflow-x-auto max-h-[450px] overflow-y-auto pr-1">
@@ -341,6 +347,50 @@ def admin_analytics():
             analyticsRequestsData = {requests_json};
         }} catch (e) {{
             console.error("Parse JSON error:", e);
+        }}
+
+        // ฟังก์ชันส่งออก CSV ตามตัวกรอง
+        function exportFilteredCSV() {{
+            if (!analyticsRequestsData || analyticsRequestsData.length === 0) {{
+                alert('ไม่พบข้อมูลคำร้องตามตัวกรองเพื่อส่งออก');
+                return;
+            }}
+
+            let csvContent = "\\uFEFF"; // UTF-8 BOM รองรับภาษาไทยใน Excel
+            csvContent += "รหัสคำร้อง,ชื่อนักศึกษา,รหัสนักศึกษา,ชื่อวิชาที่เทียบโอน,หน่วยกิต,สถาบันผู้จัดหลักสูตร,วันที่ยื่นคำร้อง,สถานะคำร้อง,ผู้พิจารณา/หมายเหตุ\\n";
+
+            analyticsRequestsData.forEach(item => {{
+                let stText = 'รอดำเนินการ';
+                if (item.status === 'Approved') stText = 'อนุมัติแล้ว';
+                else if (item.status === 'Needs_Revision' || item.status === 'Need_Edit') stText = 'ต้องแก้ไข';
+
+                let note = '-';
+                if (item.status === 'Approved') note = 'ผู้อนุมัติ: ' + (item.approved_by || 'เจ้าหน้าที่');
+                else if (item.status !== 'Pending') note = (item.reject_reason || '-').replace(/"/g, '""');
+
+                let row = [
+                    `"${{item.req_code || '-'}}"`,
+                    `"${{item.student_name || '-'}}"`,
+                    `"${{item.student_code || '-'}}"`,
+                    `"${{(item.course_name || '-').replace(/"/g, '""')}}"`,
+                    `"${{item.credits || 0}}"`,
+                    `"${{item.institution || 'ThaiMOOC'}}"`,
+                    `"${{item.date_submitted || '-'}}"`,
+                    `"${{stText}}"`,
+                    `"${{note}}"`
+                ];
+                csvContent += row.join(",") + "\\n";
+            }});
+
+            const blob = new Blob([csvContent], {{ type: 'text/csv;charset=utf-8;' }});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const todayStr = new Date().toISOString().slice(0, 10);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `รายงานสถิติคำร้องเทียบโอน_${{todayStr}}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }}
 
         function openAnalyticsViewModal(id) {{
