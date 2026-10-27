@@ -119,15 +119,40 @@ with app.app_context():
         pass
 
     try:
+        # 1. บัญชี Super Admin เดิม (Admin_rmutto)
         main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
         if not main_admin:
             main_admin = User(
-                member_id='ADM001', prefix='นาย', fullname='ผู้ดูแลระบบหลัก (Super Admin)', 
-                id_card='0000000000000', username='Admin_rmutto', password=generate_password_hash('rmutto2026'), 
-                role='superadmin', phone="081-000-0000", email="admin@rmutto.ac.th"
+                member_id='ADM001',
+                prefix='นาย',
+                fullname='ผู้ดูแลระบบหลัก (Super Admin)',
+                id_card='0000000000000',
+                username='Admin_rmutto',
+                password=generate_password_hash('rmutto'),
+                role='superadmin',
+                phone="081-000-0000",
+                email="admin@rmutto.ac.th"
             )
             db.session.add(main_admin)
-            db.session.commit()
+
+        # 2. บัญชี Admin ใหม่ (Admin-999 / รหัสผ่าน 16092547)
+        admin_999 = User.query.filter_by(username='Admin-999').first()
+        if not admin_999:
+            admin_999 = User(
+                member_id='ADM999',
+                prefix='นาย',
+                fullname='เจ้าหน้าที่ดูแลรายวิชา (Admin-999)',
+                id_card='9999999999999',
+                username='Admin-999',
+                password=generate_password_hash('16092547'),
+                role='admin',
+                phone="081-000-0000",
+                email="admin999@rmutto.ac.th"
+            )
+            db.session.add(admin_999)
+
+        # บันทึกทั้ง 2 บัญชีลงฐานข้อมูล
+        db.session.commit()
     except Exception:
         db.session.rollback()
 
@@ -2954,7 +2979,20 @@ def admin_export_csv():
 # =========================================================
 # ROUTE สำหรับระบบเจ้าหน้าที่ (ADMIN CONTROLLERS)
 # =========================================================
+@app.route('/admin/login', methods=['POST'])
+def admin_login():
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '').strip()
 
+    # ตรวจสอบ Username และ Password ตามที่กำหนด
+    if username == 'Admin-999' and password == '16092547':
+        session['admin_logged_in'] = True
+        session['fullname'] = 'เจ้าหน้าที่ (Admin-999)'
+        return redirect(url_for('admin_panel'))
+    else:
+        flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error')
+        return redirect(url_for('admin_panel'))
+    
 @app.route('/admin_panel')
 def admin_panel():
     """แสดงหน้าจอแผงควบคุมเจ้าหน้าที่"""
