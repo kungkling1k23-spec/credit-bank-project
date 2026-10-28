@@ -202,6 +202,18 @@ with app.app_context():
         db.session.rollback()
         print(f"Error seeding courses: {e}")
 
+    try:
+        courses = Course.query.all()
+        for course in courses:
+            # ดึงบทเรียนย่อยจากตาราง CourseLesson ที่ผูกกับวิชานี้
+            if course.lessons:
+                lesson_text_list = [f"• {lesson.lesson_name}" for lesson in course.lessons]
+                course.description = "\n".join(lesson_text_list)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating course descriptions from database: {e}")
+
 def generate_member_id():
     try:
         last_user = User.query.filter(User.member_id.like('IS%')).order_by(User.id.desc()).first()

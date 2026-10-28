@@ -95,8 +95,9 @@
                         </p>
 
                         <div>
-                            <p class="text-[11px] font-bold text-slate-400">รายละเอียดวิชา:</p>
-                            <div class="mt-1 p-3 bg-slate-50 rounded-2xl text-xs font-medium text-slate-600 border border-slate-100 min-h-[60px] max-h-[100px] overflow-y-auto">
+                            <p class="text-[11px] font-bold text-slate-400">รายละเอียดวิชา / บทเรียนออนไลน์:</p>
+                            <!-- [ปรับจุดที่ 1] เพิ่ม whitespace-pre-line เพื่อรองรับการขึ้นบรรทัดใหม่ของบทเรียนย่อย -->
+                            <div class="mt-1 p-3 bg-slate-50 rounded-2xl text-xs font-medium text-slate-700 border border-slate-100 min-h-[60px] max-h-[120px] overflow-y-auto whitespace-pre-line">
                                 {{ course.description or 'ไม่มีรายละเอียดวิชา' }}
                             </div>
                         </div>
@@ -193,9 +194,10 @@
                     <input type="number" name="hours" value="45" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500">
                 </div>
 
+                <!-- [ปรับจุดที่ 2] ปรับป้ายกำกับและตัวอย่างการกรอกข้อมูลบทเรียนย่อยใน Add Modal -->
                 <div>
-                    <label class="block mb-1">รายละเอียดวิชา</label>
-                    <textarea name="description" rows="3" placeholder="อธิบายภาพรวมและคำอธิบายรายวิชาย่อ..." class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 resize-none"></textarea>
+                    <label class="block mb-1">รายละเอียดวิชา / บทเรียนออนไลน์</label>
+                    <textarea name="description" rows="4" placeholder="พิมพ์รายชื่อบทเรียนย่อย (กด Enter ขึ้นบรรทัดใหม่) เช่น&#10;• ชีวิตและการสร้างคุณค่า&#10;• การคิดสร้างสรรค์ เพื่อการพัฒนาตนเอง" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 resize-y font-medium text-xs"></textarea>
                 </div>
 
                 <div class="pt-4 border-t border-slate-100 flex gap-3">
@@ -265,9 +267,10 @@
                     <input type="number" name="hours" id="edit_hours" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500">
                 </div>
 
+                <!-- [ปรับจุดที่ 3] ปรับป้ายกำกับและสไตล์ช่องข้อความบทเรียนย่อยใน Edit Modal -->
                 <div>
-                    <label class="block mb-1">รายละเอียดวิชา</label>
-                    <textarea name="description" id="edit_description" rows="3" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500 resize-none"></textarea>
+                    <label class="block mb-1">รายละเอียดวิชา / บทเรียนออนไลน์</label>
+                    <textarea name="description" id="edit_description" rows="4" placeholder="พิมพ์รายชื่อบทเรียนย่อย (กด Enter ขึ้นบรรทัดใหม่)" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500 resize-y font-medium text-xs"></textarea>
                 </div>
 
                 <div class="pt-4 border-t border-slate-100 flex gap-3">
