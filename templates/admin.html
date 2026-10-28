@@ -8,40 +8,72 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
     </style>
 </head>
 <body class="min-h-screen text-slate-800 antialiased flex flex-col">
 
-    <!-- Navbar Header -->
-    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+    <!-- คำนวณสถิติรวมสำหรับแสดงใน Widgets -->
+    {% set total_courses = courses|length %}
+    {% set total_credits = namespace(val=0) %}
+    {% set total_hours = namespace(val=0) %}
+    {% set thaimooc_count = namespace(val=0) %}
+    {% set chulamooc_count = namespace(val=0) %}
+
+    {% for c in courses %}
+        {% set total_credits.val = total_credits.val + (c.credits or 0) %}
+        {% set total_hours.val = total_hours.val + (c.hours or 0) %}
+        {% if c.institution == 'ThaiMOOC' %}
+            {% set thaimooc_count.val = thaimooc_count.val + 1 %}
+        {% elif c.institution == 'ChulaMOOC' %}
+            {% set chulamooc_count.val = chulamooc_count.val + 1 %}
+        {% endif %}
+    {% endfor %}
+
+    <!-- Header Navbar -->
+    <header class="bg-[#0f172a] text-white shadow-xl sticky top-0 z-40 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+            <!-- Logo -->
             <div class="flex items-center gap-3">
-                <div class="w-11 h-11 bg-gradient-to-tr from-indigo-500 to-sky-400 rounded-2xl flex items-center justify-center shadow-md">
+                <div class="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
                     <i class="fa-solid fa-graduation-cap text-2xl text-white"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-black tracking-tight">CourseManager</h1>
-                    <p class="text-[11px] text-slate-400 font-medium">ระบบจัดการรายวิชาและหน่วยกิตสำหรับเจ้าหน้าที่</p>
+                    <h1 class="text-xl font-black tracking-tight flex items-center gap-2">CourseManager</h1>
+                    <p class="text-[11px] text-slate-400 font-medium">ระบบจัดการรายวิชาและหน่วยกิตอัจฉริยะ</p>
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
-                <div class="hidden sm:flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-2xl text-xs font-bold text-slate-200">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>เจ้าหน้าที่ดูแลรายวิชา</span>
+            <!-- Profile Badge & Action Buttons -->
+            <div class="flex items-center gap-2.5">
+                <!-- User Badge -->
+                <div class="hidden md:flex items-center gap-2.5 bg-slate-800/80 border border-slate-700/80 px-3.5 py-1.5 rounded-2xl text-xs font-bold text-slate-200">
+                    <div class="w-7 h-7 bg-indigo-500 text-white rounded-xl flex items-center justify-center text-xs font-black">
+                        {{ session.get('user_name', 'เจ้าหน้าที่')[0] if session.get('user_name') else 'A' }}
+                    </div>
+                    <div class="text-left">
+                        <div class="text-xs font-bold text-slate-100 leading-tight">{{ session.get('user_name', 'เจ้าหน้าที่ดูแลรายวิชา') }}</div>
+                        <div class="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> ออนไลน์
+                        </div>
+                    </div>
                 </div>
-                <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-5 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 shadow-md hover:shadow-indigo-500/20">
-                    <i class="fa-solid fa-circle-plus text-sm"></i> เพิ่มรายวิชา
+
+                <!-- Add Course Button -->
+                <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-4 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 shadow-lg shadow-indigo-600/30 active:scale-95">
+                    <i class="fa-solid fa-circle-plus text-sm"></i> 
+                    <span>เพิ่มรายวิชา</span>
                 </button>
-                <a href="/logout" class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl flex items-center justify-center transition border border-slate-700" title="ออกจากระบบ">
+
+                <!-- Logout -->
+                <a href="/logout" class="w-10 h-10 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-300 rounded-2xl flex items-center justify-center transition border border-slate-700 active:scale-95" title="ออกจากระบบ">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 </a>
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
+    <!-- Main Content Container -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
         <!-- Flash Messages -->
@@ -59,10 +91,118 @@
           {% endif %}
         {% endwith %}
 
-        <!-- Course Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- SECTION 1: Summary Statistics Cards (Widgets 4 ช่อง) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card 1: รายวิชาทั้งหมด -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between hover:shadow-md transition">
+                <div class="space-y-1">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">รายวิชาทั้งหมด</p>
+                    <h2 id="stat-total-courses" class="text-3xl font-black text-slate-800">{{ total_courses }}</h2>
+                    <p class="text-[10px] font-bold text-indigo-600 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-check"></i> บันทึกในบัญชีของคุณ
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                </div>
+            </div>
+
+            <!-- Card 2: หน่วยกิตรวม -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between hover:shadow-md transition">
+                <div class="space-y-1">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">หน่วยกิตรวม</p>
+                    <h2 id="stat-total-credits" class="text-3xl font-black text-slate-800">{{ total_credits.val }}</h2>
+                    <p class="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                        ★ หน่วยกิตสะสม
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+            </div>
+
+            <!-- Card 3: ชั่วโมงเรียนรวม -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between hover:shadow-md transition">
+                <div class="space-y-1">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ชั่วโมงเรียนรวม</p>
+                    <h2 id="stat-total-hours" class="text-3xl font-black text-slate-800">{{ total_hours.val }}</h2>
+                    <p class="text-[10px] font-bold text-amber-600 flex items-center gap-1">
+                        ⏳ ชั่วโมงทั้งหมด
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+            </div>
+
+            <!-- Card 4: สถาบัน / ระบบ -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md transition space-y-2">
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">สถาบัน / ระบบ</p>
+                <div class="grid grid-cols-2 gap-2 text-center">
+                    <div class="bg-indigo-50/70 border border-indigo-100 p-2 rounded-2xl">
+                        <span class="text-[10px] font-extrabold text-indigo-600 block">ThaiMOOC</span>
+                        <span id="stat-thaimooc" class="text-lg font-black text-indigo-900">{{ thaimooc_count.val }}</span>
+                    </div>
+                    <div class="bg-rose-50/70 border border-rose-100 p-2 rounded-2xl">
+                        <span class="text-[10px] font-extrabold text-rose-600 block">ChulaMOOC</span>
+                        <span id="stat-chulamooc" class="text-lg font-black text-rose-900">{{ chulamooc_count.val }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 2: Filter and Search Bar -->
+        <div class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <!-- Search Field -->
+            <div class="relative flex-grow max-w-md w-full">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" id="searchInput" onkeyup="filterCourses()" placeholder="ค้นหารหัสวิชา หรือชื่อวิชา..." 
+                       class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 focus:bg-white transition">
+            </div>
+
+            <!-- Filters -->
+            <div class="flex flex-wrap items-center gap-3 text-xs font-bold">
+                <!-- Institution Filter -->
+                <div class="flex items-center gap-1.5 bg-slate-50 p-1 border border-slate-200 rounded-2xl">
+                    <span class="text-[11px] text-slate-400 px-2 font-extrabold"><i class="fa-solid fa-building-columns mr-1"></i>ระบบ:</span>
+                    <button type="button" onclick="setInstFilter('all')" class="inst-filter-btn px-3 py-1.5 rounded-xl bg-indigo-600 text-white transition" data-inst="all">ทั้งหมด</button>
+                    <button type="button" onclick="setInstFilter('ThaiMOOC')" class="inst-filter-btn px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-200 transition" data-inst="ThaiMOOC">ThaiMOOC</button>
+                    <button type="button" onclick="setInstFilter('ChulaMOOC')" class="inst-filter-btn px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-200 transition" data-inst="ChulaMOOC">ChulaMOOC</button>
+                </div>
+
+                <!-- Category Filter -->
+                <div class="flex items-center gap-1.5 bg-slate-50 p-1 border border-slate-200 rounded-2xl">
+                    <span class="text-[11px] text-slate-400 px-2 font-extrabold"><i class="fa-solid fa-filter mr-1"></i>หมวดหมู่:</span>
+                    <button type="button" onclick="setCatFilter('all')" class="cat-filter-btn px-3 py-1.5 rounded-xl bg-indigo-600 text-white transition" data-cat="all">ทั้งหมด</button>
+                    <button type="button" onclick="setCatFilter('หมวดวิชาศึกษาทั่วไป')" class="cat-filter-btn px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-200 transition" data-cat="หมวดวิชาศึกษาทั่วไป">หมวดวิชาศึกษาทั่วไป</button>
+                    <button type="button" onclick="setCatFilter('หมวดวิชาแกน')" class="cat-filter-btn px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-200 transition" data-cat="หมวดวิชาแกน">หมวดวิชาแกน</button>
+                    <button type="button" onclick="setCatFilter('หมวดวิชาเลือก')" class="cat-filter-btn px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-200 transition" data-cat="หมวดวิชาเลือก">หมวดวิชาเลือก</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Header -->
+        <div class="flex justify-between items-center px-1 pt-2">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-list-check text-indigo-600"></i>
+                <h2 class="text-base font-black text-slate-800">รายการรายวิชา</h2>
+                <span id="visible-count-badge" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    {{ total_courses }} วิชา
+                </span>
+            </div>
+            <p class="text-xs font-bold text-indigo-600 hidden sm:block">
+                ยินดีต้อนรับคุณ {{ session.get('user_name', 'เจ้าหน้าที่') }}
+            </p>
+        </div>
+
+        <!-- SECTION 3: Course Cards Grid -->
+        <div id="courseGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for course in courses %}
-            <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+            <div class="course-card bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                 data-code="{{ course.course_code }}"
+                 data-name="{{ course.course_name }}"
+                 data-inst="{{ course.institution or 'ThaiMOOC' }}"
+                 data-cat="{{ course.category or 'หมวดวิชาแกน' }}">
                 <div class="space-y-4">
                     <!-- Badges -->
                     <div class="flex flex-wrap items-center justify-between gap-2">
@@ -105,7 +245,6 @@
 
                 <!-- Action Buttons: แก้ไข & ลบ -->
                 <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-end gap-2">
-                    <!-- ปุ่มแก้ไข -->
                     <button type="button" 
                             data-code="{{ course.course_code }}"
                             data-name="{{ course.course_name }}"
@@ -115,26 +254,35 @@
                             data-hours="{{ course.hours or 45 }}"
                             data-description="{{ course.description or course.online_lesson or '' }}"
                             onclick="openEditModal(this)"
-                            class="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold rounded-2xl text-xs border border-amber-200 transition flex items-center gap-1.5 shadow-sm">
+                            class="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold rounded-2xl text-xs border border-amber-200 transition flex items-center gap-1.5 shadow-sm active:scale-95">
                         <i class="fa-solid fa-pen-to-square"></i> แก้ไข
                     </button>
 
-                    <!-- ปุ่มลบ -->
                     <form method="POST" action="/admin/course/delete" onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบวิชานี้?');" class="inline">
                         <input type="hidden" name="course_id" value="{{ course.course_code }}">
-                        <button type="submit" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-2xl text-xs border border-rose-200 transition flex items-center gap-1.5 shadow-sm">
+                        <button type="submit" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-2xl text-xs border border-rose-200 transition flex items-center gap-1.5 shadow-sm active:scale-95">
                             <i class="fa-solid fa-trash-can"></i> ลบ
                         </button>
                     </form>
                 </div>
             </div>
-            {% else %}
-            <div class="col-span-full py-16 text-center bg-white rounded-3xl border border-dashed border-slate-300">
-                <i class="fa-solid fa-folder-open text-4xl text-slate-300 mb-2 block"></i>
-                <p class="text-slate-500 font-bold text-sm">ยังไม่มีรายวิชาในระบบ กดปุ่ม "เพิ่มรายวิชา" ด้านบนเพื่อเริ่มสร้างวิชาแรก</p>
-            </div>
             {% endfor %}
         </div>
+
+        <!-- SECTION 4: Empty State Box (กรณีไม่พบวิชาตรงตามเงื่อนไขค้นหา) -->
+        <div id="emptyState" class="hidden col-span-full py-16 text-center bg-white rounded-3xl border border-dashed border-slate-300 p-8 space-y-4 shadow-sm">
+            <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center mx-auto text-2xl">
+                <i class="fa-solid fa-folder-open"></i>
+            </div>
+            <div>
+                <h3 class="text-base font-black text-slate-800">ไม่พบรายวิชาในระบบ</h3>
+                <p class="text-xs text-slate-400 font-medium mt-1">ลองเปลี่ยนคำค้นหา หรือกดปุ่ม "เพิ่มรายวิชาใหม่" เพื่อสร้างรายวิชาใหม่</p>
+            </div>
+            <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-2xl text-xs shadow-md transition inline-flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> เพิ่มรายวิชาใหม่
+            </button>
+        </div>
+
     </main>
 
     <!-- Modal 1: เพิ่มรายวิชา (Add Modal) -->
@@ -277,7 +425,72 @@
         </div>
     </div>
 
+    <!-- JavaScript For Modals & Real-time Search/Filters -->
     <script>
+        let currentInst = 'all';
+        let currentCat = 'all';
+
+        // Filter Logic
+        function filterCourses() {
+            const query = document.getElementById('searchInput').value.toLowerCase().strip ? document.getElementById('searchInput').value.toLowerCase().trim() : document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.course-card');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const code = (card.dataset.code || '').toLowerCase();
+                const name = (card.dataset.name || '').toLowerCase();
+                const inst = card.dataset.inst || '';
+                const cat = card.dataset.cat || '';
+
+                const matchesSearch = code.includes(query) || name.includes(query);
+                const matchesInst = (currentInst === 'all') || (inst === currentInst);
+                const matchesCat = (currentCat === 'all') || (cat === currentCat);
+
+                if (matchesSearch && matchesInst && matchesCat) {
+                    card.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+
+            // Update visible badge
+            document.getElementById('visible-count-badge').innerText = visibleCount + ' วิชา';
+
+            // Show empty state if 0 matches
+            const emptyState = document.getElementById('emptyState');
+            if (visibleCount === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+            }
+        }
+
+        function setInstFilter(inst) {
+            currentInst = inst;
+            document.querySelectorAll('.inst-filter-btn').forEach(btn => {
+                if (btn.dataset.inst === inst) {
+                    btn.className = "inst-filter-btn px-3 py-1.5 rounded-xl bg-indigo-600 text-white transition";
+                } else {
+                    btn.className = "inst-filter-btn px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-200 transition";
+                }
+            });
+            filterCourses();
+        }
+
+        function setCatFilter(cat) {
+            currentCat = cat;
+            document.querySelectorAll('.cat-filter-btn').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.className = "cat-filter-btn px-3 py-1.5 rounded-xl bg-indigo-600 text-white transition";
+                } else {
+                    btn.className = "cat-filter-btn px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-200 transition";
+                }
+            });
+            filterCourses();
+        }
+
+        // Modal Functions
         function openAddModal() {
             document.getElementById('addModal').classList.remove('hidden');
         }
@@ -300,6 +513,11 @@
         function closeEditModal() {
             document.getElementById('editModal').classList.add('hidden');
         }
+
+        // Initialize state check on load
+        document.addEventListener('DOMContentLoaded', function() {
+            filterCourses();
+        });
     </script>
 </body>
 </html>
