@@ -58,12 +58,12 @@
                     </div>
                 </div>
             </div>
-
-            <!-- 2. ปุ่มย้อนกลับ -->
-<a href="/admin_panel" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3.5 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 border border-slate-700/80 active:scale-95" title="ย้อนกลับหน้าแผงควบคุมเจ้าหน้าที่">
-    <i class="fa-solid fa-arrow-left text-sm text-indigo-400"></i>
-    <span class="hidden sm:inline">ย้อนกลับ</span>
-</a>
+        
+<!-- ปุ่มย้อนกลับกลับไปหน้าศูนย์ควบคุมเจ้าหน้าที่ -->
+            <a href="{{ url_for('officer_dashboard') }}" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3.5 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 border border-slate-700/80 active:scale-95" title="ย้อนกลับหน้าแผงควบคุมเจ้าหน้าที่">
+                <i class="fa-solid fa-arrow-left text-sm text-indigo-400"></i>
+                <span class="hidden sm:inline">ย้อนกลับ</span>
+            </a>
 
             <!-- Add Course Button -->
             <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-4 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 shadow-lg shadow-indigo-600/30 active:scale-95">
