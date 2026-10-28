@@ -2894,6 +2894,7 @@ def login():
         if user and check_password_hash(user.password, password_input):
             session['user_id'] = user.id
             session['fullname'] = user.fullname
+            session['user_name'] = user.fullname  # 🎯 เพิ่มบรรทัดนี้เพื่อให้ตรงกับ session.get('user_name') ในหน้า admin.html
             session['role'] = user.role
             session['member_id'] = user.member_id
             if user.role in ['admin', 'superadmin']:
