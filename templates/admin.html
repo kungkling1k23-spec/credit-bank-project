@@ -35,15 +35,15 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         
         <!-- 1. โลโก้: กดแล้วย้อนกลับมาหน้าศูนย์ควบคุมเจ้าหน้าที่ (Officer Command Center) -->
-        <a href="{{ url_for('admin_panel') }}" class="flex items-center gap-3 hover:opacity-90 transition group" title="กลับหน้าแผงควบคุมเจ้าหน้าที่">
-            <div class="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition">
-                <i class="fa-solid fa-graduation-cap text-2xl text-white"></i>
-            </div>
-            <div>
-                <h1 class="text-xl font-black tracking-tight flex items-center gap-2">CourseManager</h1>
-                <p class="text-[11px] text-slate-400 font-medium">ระบบจัดการรายวิชาและหน่วยกิตอัจฉริยะ</p>
-            </div>
-        </a>
+        <a href="/admin_panel" class="flex items-center gap-3 hover:opacity-90 transition group">
+    <div class="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition">
+        <i class="fa-solid fa-graduation-cap text-2xl text-white"></i>
+    </div>
+    <div>
+        <h1 class="text-xl font-black tracking-tight flex items-center gap-2">CourseManager</h1>
+        <p class="text-[11px] text-slate-400 font-medium">ระบบจัดการรายวิชาและหน่วยกิตอัจฉริยะ</p>
+    </div>
+</a>
 
         <!-- Profile Badge & Action Buttons -->
         <div class="flex items-center gap-2.5">
@@ -59,11 +59,11 @@
                 </div>
             </div>
 
-            <!-- 2. ปุ่มย้อนกลับ: กดแล้วกลับมาหน้าศูนย์ควบคุมเจ้าหน้าที่โดยตรง -->
-            <a href="{{ url_for('admin_panel') }}" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3.5 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 border border-slate-700/80 active:scale-95" title="ย้อนกลับหน้าแผงควบคุมเจ้าหน้าที่">
-                <i class="fa-solid fa-arrow-left text-sm text-indigo-400"></i>
-                <span class="hidden sm:inline">ย้อนกลับ</span>
-            </a>
+            <!-- 2. ปุ่มย้อนกลับ -->
+<a href="/admin_panel" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3.5 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 border border-slate-700/80 active:scale-95" title="ย้อนกลับหน้าแผงควบคุมเจ้าหน้าที่">
+    <i class="fa-solid fa-arrow-left text-sm text-indigo-400"></i>
+    <span class="hidden sm:inline">ย้อนกลับ</span>
+</a>
 
             <!-- Add Course Button -->
             <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-4 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 shadow-lg shadow-indigo-600/30 active:scale-95">
