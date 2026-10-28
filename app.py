@@ -124,21 +124,29 @@ with app.app_context():
         pass
 
     try:
-        # 1. บัญชี Super Admin เดิม (Admin_rmutto)
-        main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
-        if not main_admin:
-            main_admin = User(
-                member_id='ADM001',
-                prefix='นาย',
-                fullname='ผู้ดูแลระบบหลัก',
-                id_card='0000000000000',
-                username='Admin_rmutto',
-                password=generate_password_hash('rmutto2026'),
-                role='superadmin',
-                phone="081-000-0000",
-                email="admin@rmutto.ac.th"
-            )
-            db.session.add(main_admin)
+ # 1. บัญชี Admin หลัก (Admin_rmutto)
+    main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
+    if not main_admin:
+        main_admin = User(
+            member_id='ADM001',
+            prefix='นาย',
+            fullname='ผู้ดูแลระบบหลัก',
+            id_card='0000000000000',
+            username='Admin_rmutto',
+            password=generate_password_hash('rmutto2026'),
+            role='superadmin',
+            phone="081-000-0000",
+            email="admin@rmutto.ac.th"
+    )
+    db.session.add(main_admin)
+else:
+    # บังคับอัปเดต username และ role ให้ถูกต้องเสมอ
+    main_admin.username = 'Admin_rmutto'
+    main_admin.password = generate_password_hash('rmutto2026')
+    main_admin.role = 'superadmin'
+    main_admin.fullname = 'ผู้ดูแลระบบหลัก'
+
+db.session.commit()
 
         # 2. บัญชี Admin ใหม่ (Admin-999 / รหัสผ่าน 16092547)
         admin_999 = User.query.filter_by(username='Admin-999').first()
@@ -2886,6 +2894,7 @@ def login():
         if user and check_password_hash(user.password, password_input):
             session['user_id'] = user.id
             session['fullname'] = user.fullname
+            session['user_name'] = user.fullname  # 🎯 เพิ่มบรรทัดนี้เพื่อให้ตรงกับ session.get('user_name') ในหน้า admin.html
             session['role'] = user.role
             session['member_id'] = user.member_id
             if user.role in ['admin', 'superadmin']:
@@ -3035,14 +3044,22 @@ def admin_login():
 # =========================================================
 @app.route('/admin_panel')
 def admin_panel():
-    if session.get('role') not in ['admin', 'superadmin']:
+    # 1. เช็กว่าล็อกอินหรือยัง
+    user_id = session.get('user_id')
+    if not user_id:
         return redirect(url_for('login'))
-    try:
-        courses = Course.query.order_by(Course.course_code.asc()).all()
-    except Exception:
-        courses = []
-    return render_template('admin.html', courses=courses)
 
+    # 2. ดึงข้อมูลจาก user_id ที่ล็อกอินอยู่จริง (ป้องกันการดึง Admin-999 มาแสดงผิดคน)
+    current_user = User.query.get(user_id)
+    if not current_user or current_user.role not in ['admin', 'superadmin']:
+        return redirect(url_for('home'))
+
+    # อัปเดต session name ให้ตรงกับบัญชีปัจจุบัน
+    session['user_name'] = current_user.fullname
+
+    # ... (โค้ดดึงข้อมูลรายวิชา/คำร้องเดิมของคุณ) ...
+    
+    return render_template('admin.html', current_user=current_user)
 # =========================================================
 # 2. เพิ่มรายวิชาใหม่ (Add) แก้ไขรายวิชา (Edit)
 # =========================================================
