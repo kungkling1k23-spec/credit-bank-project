@@ -3047,69 +3047,88 @@ def admin_panel():
 # 2. เพิ่มรายวิชาใหม่ (Add)
 # =========================================================
 @app.route('/admin/course/add', methods=['POST'])
-def admin_add_course():
-    if session.get('role') not in ['admin', 'superadmin']:
-        return redirect(url_for('login'))
-    try:
-        code = request.form.get('course_code', '').strip().upper()
-        name = request.form.get('course_name', '').strip()
-        credits = int(request.form.get('credits', 3))
-        category = request.form.get('category', 'หมวดวิชาศึกษาทั่วไป')
-        institution = request.form.get('institution', 'ThaiMOOC')
-        hours = int(request.form.get('hours', 45))
-        description = request.form.get('description', '').strip()
+def admin_course_add():
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('login', role='admin'))
 
-        if code and name:
-            new_course = Course(
-                course_code=code,
-                course_name=name,
-                credits=credits,
-                category=category,
-                institution=institution,
-                hours=hours,
-                description=description
-            )
-            db.session.add(new_course)
-            db.session.commit()
-            flash('เพิ่มรายวิชาสำเร็จ', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'เกิดข้อผิดพลาดในการเพิ่มรายวิชา: {e}', 'error')
+    course_code = request.form.get('course_code', '').strip()
+    course_name = request.form.get('course_name', '').strip()
+    credits_val = request.form.get('credits', 3)
+    category = request.form.get('category', 'หมวดวิชาศึกษาทั่วไป')
+    institution = request.form.get('institution', 'ThaiMOOC')
+    hours_val = request.form.get('hours', 45)
+    description_val = request.form.get('description', '').strip()
 
+    if not course_code or not course_name:
+        flash('กรุณากรอกรหัสวิชาและชื่อวิชาให้ครบถ้วน', 'error')
+        return redirect(url_for('admin_panel'))
+
+    # ตรวจสอบวิชาซ้ำ
+    existing = Course.query.filter_by(course_code=course_code).first()
+    if existing:
+        flash(f'รหัสวิชา {course_code} มีอยู่ในระบบแล้ว', 'error')
+        return redirect(url_for('admin_panel'))
+
+    new_course = Course(
+        course_code=course_code,
+        course_name=course_name,
+        credits=int(credits_val) if credits_val else 3,
+        category=category,
+        institution=institution,
+        hours=int(hours_val) if hours_val else 45
+    )
+
+    # บันทึกลงคอลัมน์ description / online_lesson ในฐานข้อมูล
+    if hasattr(new_course, 'description'):
+        new_course.description = description_val
+    if hasattr(new_course, 'online_lesson'):
+        new_course.online_lesson = description_val
+
+    db.session.add(new_course)
+    db.session.commit()
+
+    flash(f'เพิ่มรายวิชา {course_code} {course_name} สำเร็จแล้ว', 'success')
     return redirect(url_for('admin_panel'))
 
 # =========================================================
 # 3. แก้ไขรายวิชา (Edit)
 # =========================================================
 @app.route('/admin/course/edit', methods=['POST'])
-def admin_edit_course():
-    if session.get('role') not in ['admin', 'superadmin']:
-        return redirect(url_for('login'))
-    try:
-        course_id = request.form.get('course_id')
-        code = request.form.get('course_code', '').strip().upper()
-        name = request.form.get('course_name', '').strip()
-        credits = int(request.form.get('credits', 3))
-        category = request.form.get('category', 'หมวดวิชาศึกษาทั่วไป')
-        institution = request.form.get('institution', 'ThaiMOOC')
-        hours = int(request.form.get('hours', 45))
-        description = request.form.get('description', '').strip()
+def admin_course_edit():
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('login', role='admin'))
 
-        course = db.session.get(Course, course_id) or Course.query.filter_by(course_code=course_id).first()
-        if course:
-            course.course_code = code
-            course.course_name = name
-            course.credits = credits
-            course.category = category
-            course.institution = institution
-            course.hours = hours
-            course.description = description
-            db.session.commit()
-            flash('แก้ไขรายวิชาสำเร็จ', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'เกิดข้อผิดพลาดในการแก้ไข: {e}', 'error')
+    old_course_id = request.form.get('course_id')
+    course = Course.query.filter_by(course_code=old_course_id).first()
 
+    if not course:
+        flash('ไม่พบรายวิชาที่ต้องการแก้ไข', 'error')
+        return redirect(url_for('admin_panel'))
+
+    course_code = request.form.get('course_code', '').strip()
+    course_name = request.form.get('course_name', '').strip()
+    credits_val = request.form.get('credits', 3)
+    category = request.form.get('category')
+    institution = request.form.get('institution')
+    hours_val = request.form.get('hours', 45)
+    description_val = request.form.get('description', '').strip()
+
+    # อัปเดตข้อมูลวิชา
+    course.course_code = course_code
+    course.course_name = course_name
+    course.credits = int(credits_val) if credits_val else 3
+    course.category = category
+    course.institution = institution
+    course.hours = int(hours_val) if hours_val else 45
+
+    # อัปเดตข้อมูลคอลัมน์ description / online_lesson ใน DB
+    if hasattr(course, 'description'):
+        course.description = description_val
+    if hasattr(course, 'online_lesson'):
+        course.online_lesson = description_val
+
+    db.session.commit()
+    flash(f'แก้ไขรายวิชา {course_code} สำเร็จแล้ว', 'success')
     return redirect(url_for('admin_panel'))
 
 # =========================================================
