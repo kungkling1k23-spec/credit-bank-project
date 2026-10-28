@@ -124,21 +124,29 @@ with app.app_context():
         pass
 
     try:
-        # 1. บัญชี Super Admin เดิม (Admin_rmutto)
-        main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
-        if not main_admin:
-            main_admin = User(
-                member_id='ADM001',
-                prefix='นาย',
-                fullname='ผู้ดูแลระบบหลัก',
-                id_card='0000000000000',
-                username='Admin_rmutto',
-                password=generate_password_hash('rmutto2026'),
-                role='superadmin',
-                phone="081-000-0000",
-                email="admin@rmutto.ac.th"
-            )
-            db.session.add(main_admin)
+        # 1. บัญชี Admin หลัก
+main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
+if not main_admin:
+    main_admin = User(
+        member_id='ADM001',
+        prefix='นาย',
+        fullname='ผู้ดูแลระบบหลัก',
+        id_card='0000000000000',
+        username='Admin_rmutto',
+        password=generate_password_hash('rmutto2026'),
+        role='admin',  # ปรับให้เป็น admin เพื่อให้เข้าหน้าแผงควบคุมเจ้าหน้าที่ได้
+        phone="081-000-0000",
+        email="admin@rmutto.ac.th"
+    )
+    db.session.add(main_admin)
+else:
+    # เพิ่มส่วนนี้เพื่ออัปเดตข้อมูลเดิมในฐานข้อมูลให้ตรงกัน
+    main_admin.username = 'Admin_rmutto'
+    main_admin.password = generate_password_hash('rmutto2026')
+    main_admin.role = 'admin'
+    main_admin.fullname = 'ผู้ดูแลระบบหลัก'
+
+db.session.commit()
 
         # 2. บัญชี Admin ใหม่ (Admin-999 / รหัสผ่าน 16092547)
         admin_999 = User.query.filter_by(username='Admin-999').first()
