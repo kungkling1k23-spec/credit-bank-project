@@ -3044,11 +3044,14 @@ def admin_panel():
     return render_template('admin.html', courses=courses)
 
 # =========================================================
-# 2. เพิ่มรายวิชาใหม่ (Add)
+# 2. เพิ่มรายวิชาใหม่ (Add) แก้ไขรายวิชา (Edit)
 # =========================================================
+import re
+
 @app.route('/admin/course/add', methods=['POST'])
 def admin_course_add():
     if not session.get('admin_logged_in') and not session.get('user_id'):
+        flash('กรุณาเข้าสู่ระบบเจ้าหน้าที่ก่อนทำรายการ', 'error')
         return redirect(url_for('login', role='admin'))
 
     course_code = request.form.get('course_code', '').strip()
@@ -3063,7 +3066,6 @@ def admin_course_add():
         flash('กรุณากรอกรหัสวิชาและชื่อวิชาให้ครบถ้วน', 'error')
         return redirect(url_for('admin_panel'))
 
-    # ตรวจสอบวิชาซ้ำ
     existing = Course.query.filter_by(course_code=course_code).first()
     if existing:
         flash(f'รหัสวิชา {course_code} มีอยู่ในระบบแล้ว', 'error')
@@ -3078,24 +3080,34 @@ def admin_course_add():
         hours=int(hours_val) if hours_val else 45
     )
 
-    # บันทึกลงคอลัมน์ description / online_lesson ในฐานข้อมูล
     if hasattr(new_course, 'description'):
         new_course.description = description_val
     if hasattr(new_course, 'online_lesson'):
         new_course.online_lesson = description_val
 
     db.session.add(new_course)
+
+    # === เพิ่มรายการลงตาราง CourseLesson อัตโนมัติ ===
+    if description_val and 'CourseLesson' in globals():
+        lines = [l.strip() for l in re.split(r'\|\||\n', description_val) if l.strip()]
+        for line in lines:
+            lesson = CourseLesson(
+                course_code=course_code,
+                lesson_name=line,
+                hours=None
+            )
+            db.session.add(lesson)
+
     db.session.commit()
 
     flash(f'เพิ่มรายวิชา {course_code} {course_name} สำเร็จแล้ว', 'success')
     return redirect(url_for('admin_panel'))
 
-# =========================================================
-# 3. แก้ไขรายวิชา (Edit)
-# =========================================================
+
 @app.route('/admin/course/edit', methods=['POST'])
 def admin_course_edit():
     if not session.get('admin_logged_in') and not session.get('user_id'):
+        flash('กรุณาเข้าสู่ระบบเจ้าหน้าที่ก่อนทำรายการ', 'error')
         return redirect(url_for('login', role='admin'))
 
     old_course_id = request.form.get('course_id')
@@ -3113,7 +3125,6 @@ def admin_course_edit():
     hours_val = request.form.get('hours', 45)
     description_val = request.form.get('description', '').strip()
 
-    # อัปเดตข้อมูลวิชา
     course.course_code = course_code
     course.course_name = course_name
     course.credits = int(credits_val) if credits_val else 3
@@ -3121,11 +3132,26 @@ def admin_course_edit():
     course.institution = institution
     course.hours = int(hours_val) if hours_val else 45
 
-    # อัปเดตข้อมูลคอลัมน์ description / online_lesson ใน DB
     if hasattr(course, 'description'):
         course.description = description_val
     if hasattr(course, 'online_lesson'):
         course.online_lesson = description_val
+
+    # === อัปเดตรายการในตาราง CourseLesson ===
+    if 'CourseLesson' in globals():
+        # ลบบทเรียนเดิมของวิชานี้ออกก่อน
+        CourseLesson.query.filter_by(course_code=old_course_id).delete()
+        
+        # เพิ่มบทเรียนใหม่ตามข้อความที่แก้ไข
+        if description_val:
+            lines = [l.strip() for l in re.split(r'\|\||\n', description_val) if l.strip()]
+            for line in lines:
+                lesson = CourseLesson(
+                    course_code=course_code,
+                    lesson_name=line,
+                    hours=None
+                )
+                db.session.add(lesson)
 
     db.session.commit()
     flash(f'แก้ไขรายวิชา {course_code} สำเร็จแล้ว', 'success')
