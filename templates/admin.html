@@ -30,23 +30,24 @@
         {% endif %}
     {% endfor %}
 
-<<!-- Header Navbar -->
+<!-- Header Navbar (นำปุ่มย้อนกลับออกแล้ว) -->
 <header class="bg-[#0f172a] text-white shadow-xl sticky top-0 z-40 border-b border-slate-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         
-        <!-- 1. โลโก้: พากลับหน้าศูนย์ควบคุมเจ้าหน้าที่ (def home) -->
-        <a href="{{ url_for('home') }}" class="flex items-center gap-3 hover:opacity-90 transition group" title="กลับหน้าหลัก">
-            <div class="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition">
+        <!-- Logo -->
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
                 <i class="fa-solid fa-graduation-cap text-2xl text-white"></i>
             </div>
             <div>
                 <h1 class="text-xl font-black tracking-tight flex items-center gap-2">CourseManager</h1>
                 <p class="text-[11px] text-slate-400 font-medium">ระบบจัดการรายวิชาและหน่วยกิตอัจฉริยะ</p>
             </div>
-        </a>
+        </div>
 
         <!-- Profile Badge & Action Buttons -->
         <div class="flex items-center gap-2.5">
+            <!-- User Badge -->
             <div class="hidden md:flex items-center gap-2.5 bg-slate-800/80 border border-slate-700/80 px-3.5 py-1.5 rounded-2xl text-xs font-bold text-slate-200">
                 <div class="w-7 h-7 bg-indigo-500 text-white rounded-xl flex items-center justify-center text-xs font-black">
                     {{ session.get('user_name', 'เจ้าหน้าที่')[0] if session.get('user_name') else 'A' }}
@@ -58,12 +59,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- 2. ปุ่มย้อนกลับ: พากลับหน้าศูนย์ควบคุมเจ้าหน้าที่ (def home) -->
-            <a href="{{ url_for('home') }}" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3.5 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 border border-slate-700/80 active:scale-95" title="ย้อนกลับหน้าศูนย์ควบคุมเจ้าหน้าที่">
-                <i class="fa-solid fa-arrow-left text-sm text-indigo-400"></i>
-                <span class="hidden sm:inline">ย้อนกลับ</span>
-            </a>
 
             <!-- Add Course Button -->
             <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-4 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 shadow-lg shadow-indigo-600/30 active:scale-95">
@@ -119,7 +114,7 @@
                     <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">หน่วยกิตรวม</p>
                     <h2 id="stat-total-credits" class="text-3xl font-black text-slate-800">{{ total_credits.val }}</h2>
                     <p class="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
-                        ★ หน่วยกิตสะสม
+                        ★ หน่วยกิตทั้งหมด
                     </p>
                 </div>
                 <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl">
@@ -133,7 +128,7 @@
                     <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ชั่วโมงเรียนรวม</p>
                     <h2 id="stat-total-hours" class="text-3xl font-black text-slate-800">{{ total_hours.val }}</h2>
                     <p class="text-[10px] font-bold text-amber-600 flex items-center gap-1">
-                        ⏳ ชั่วโมงทั้งหมด
+                        ⏳ ชั่วโมงเรียนทั้งหมด
                     </p>
                 </div>
                 <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-xl">
@@ -162,7 +157,7 @@
             <!-- Search Field -->
             <div class="relative flex-grow max-w-md w-full">
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                <input type="text" id="searchInput" onkeyup="filterCourses()" placeholder="ค้นหารหัสวิชา หรือชื่อวิชา..." 
+                <input type="text" id="searchInput" onkeyup="filterCourses()" placeholder="ค้นหารหัสวิชา หรือ ชื่อวิชา..." 
                        class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 focus:bg-white transition">
             </div>
 

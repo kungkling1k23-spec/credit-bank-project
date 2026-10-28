@@ -144,6 +144,28 @@ else:
     main_admin.username = 'Admin_rmutto'
     main_admin.password = generate_password_hash('rmutto2026')
     main_admin.role = 'superadmin'
+=======
+        # 1. บัญชี Admin หลัก
+main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
+if not main_admin:
+    main_admin = User(
+        member_id='ADM001',
+        prefix='นาย',
+        fullname='ผู้ดูแลระบบหลัก',
+        id_card='0000000000000',
+        username='Admin_rmutto',
+        password=generate_password_hash('rmutto2026'),
+        role='admin',  # ปรับให้เป็น admin เพื่อให้เข้าหน้าแผงควบคุมเจ้าหน้าที่ได้
+        phone="081-000-0000",
+        email="admin@rmutto.ac.th"
+    )
+    db.session.add(main_admin)
+else:
+    # เพิ่มส่วนนี้เพื่ออัปเดตข้อมูลเดิมในฐานข้อมูลให้ตรงกัน
+    main_admin.username = 'Admin_rmutto'
+    main_admin.password = generate_password_hash('rmutto2026')
+    main_admin.role = 'admin'
+>>>>>>> 1a47e69325ddf9442808855f5e0a527ef2590795
     main_admin.fullname = 'ผู้ดูแลระบบหลัก'
 
 db.session.commit()
