@@ -3048,7 +3048,7 @@ def admin_panel():
 # =========================================================
 @app.route('/admin/course/add', methods=['POST'])
 def admin_course_add():
-    if not session.get('admin_logged_in'):
+    if not session.get('admin_logged_in') and not session.get('user_id'):
         return redirect(url_for('login', role='admin'))
 
     course_code = request.form.get('course_code', '').strip()
@@ -3095,7 +3095,7 @@ def admin_course_add():
 # =========================================================
 @app.route('/admin/course/edit', methods=['POST'])
 def admin_course_edit():
-    if not session.get('admin_logged_in'):
+    if not session.get('admin_logged_in') and not session.get('user_id'):
         return redirect(url_for('login', role='admin'))
 
     old_course_id = request.form.get('course_id')
