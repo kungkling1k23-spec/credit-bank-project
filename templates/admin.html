@@ -34,7 +34,7 @@
                 <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-5 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 shadow-md hover:shadow-indigo-500/20">
                     <i class="fa-solid fa-circle-plus text-sm"></i> เพิ่มรายวิชา
                 </button>
-                <a href="/" class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl flex items-center justify-center transition border border-slate-700">
+                <a href="/logout" class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl flex items-center justify-center transition border border-slate-700" title="ออกจากระบบ">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 </a>
             </div>
@@ -96,9 +96,8 @@
 
                         <div>
                             <p class="text-[11px] font-bold text-slate-400">รายละเอียดวิชา / บทเรียนออนไลน์:</p>
-                            <!-- [ปรับจุดที่ 1] เพิ่ม whitespace-pre-line เพื่อรองรับการขึ้นบรรทัดใหม่ของบทเรียนย่อย -->
                             <div class="mt-1 p-3 bg-slate-50 rounded-2xl text-xs font-medium text-slate-700 border border-slate-100 min-h-[60px] max-h-[120px] overflow-y-auto whitespace-pre-line">
-                                {{ course.description or 'ไม่มีรายละเอียดวิชา' }}
+                                {{ course.description or course.online_lesson or 'ไม่มีรายละเอียดวิชา' }}
                             </div>
                         </div>
                     </div>
@@ -114,7 +113,7 @@
                             data-category="{{ course.category or 'หมวดวิชาศึกษาทั่วไป' }}"
                             data-institution="{{ course.institution or 'ThaiMOOC' }}"
                             data-hours="{{ course.hours or 45 }}"
-                            data-description="{{ course.description or '' }}"
+                            data-description="{{ course.description or course.online_lesson or '' }}"
                             onclick="openEditModal(this)"
                             class="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold rounded-2xl text-xs border border-amber-200 transition flex items-center gap-1.5 shadow-sm">
                         <i class="fa-solid fa-pen-to-square"></i> แก้ไข
@@ -194,7 +193,6 @@
                     <input type="number" name="hours" value="45" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500">
                 </div>
 
-                <!-- [ปรับจุดที่ 2] ปรับป้ายกำกับและตัวอย่างการกรอกข้อมูลบทเรียนย่อยใน Add Modal -->
                 <div>
                     <label class="block mb-1">รายละเอียดวิชา / บทเรียนออนไลน์</label>
                     <textarea name="description" rows="4" placeholder="พิมพ์รายชื่อบทเรียนย่อย (กด Enter ขึ้นบรรทัดใหม่) เช่น&#10;• ชีวิตและการสร้างคุณค่า&#10;• การคิดสร้างสรรค์ เพื่อการพัฒนาตนเอง" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 resize-y font-medium text-xs"></textarea>
@@ -225,7 +223,6 @@
             </div>
 
             <form method="POST" action="/admin/course/edit" class="space-y-4 text-xs font-bold text-slate-700">
-                <!-- course_id เดิมสำหรับใช้อ้างอิงการอัปเดต -->
                 <input type="hidden" name="course_id" id="edit_course_id">
 
                 <div class="grid grid-cols-2 gap-3">
@@ -267,7 +264,6 @@
                     <input type="number" name="hours" id="edit_hours" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500">
                 </div>
 
-                <!-- [ปรับจุดที่ 3] ปรับป้ายกำกับและสไตล์ช่องข้อความบทเรียนย่อยใน Edit Modal -->
                 <div>
                     <label class="block mb-1">รายละเอียดวิชา / บทเรียนออนไลน์</label>
                     <textarea name="description" id="edit_description" rows="4" placeholder="พิมพ์รายชื่อบทเรียนย่อย (กด Enter ขึ้นบรรทัดใหม่)" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500 resize-y font-medium text-xs"></textarea>
@@ -282,7 +278,6 @@
     </div>
 
     <script>
-        // ฟังก์ชันจัดการ Modal เพิ่มรายวิชา
         function openAddModal() {
             document.getElementById('addModal').classList.remove('hidden');
         }
@@ -290,7 +285,6 @@
             document.getElementById('addModal').classList.add('hidden');
         }
 
-        // ฟังก์ชันจัดการ Modal แก้ไขรายวิชา
         function openEditModal(btn) {
             document.getElementById('edit_course_id').value = btn.dataset.code;
             document.getElementById('edit_course_code').value = btn.dataset.code;
