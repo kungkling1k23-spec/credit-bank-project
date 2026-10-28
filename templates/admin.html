@@ -30,24 +30,23 @@
         {% endif %}
     {% endfor %}
 
-<!-- Header Navbar ในไฟล์ templates/admin.html -->
+<!-- Header Navbar -->
 <header class="bg-[#0f172a] text-white shadow-xl sticky top-0 z-40 border-b border-slate-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         
-      <!-- โลโก้ (กดย้อนกลับได้เหมือนกัน) -->
-<a href="javascript:history.back()" class="flex items-center gap-3 hover:opacity-90 transition group" title="ย้อนกลับหน้าเดิม">
-    <div class="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition">
-        <i class="fa-solid fa-graduation-cap text-2xl text-white"></i>
-    </div>
-    <div>
-        <h1 class="text-xl font-black tracking-tight flex items-center gap-2">CourseManager</h1>
-        <p class="text-[11px] text-slate-400 font-medium">ระบบจัดการรายวิชาและหน่วยกิตอัจฉริยะ</p>
-    </div>
-</a>
-        
+        <!-- 1. โลโก้: กดแล้วย้อนกลับมาหน้าศูนย์ควบคุมเจ้าหน้าที่ (Officer Command Center) -->
+        <a href="{{ url_for('admin_panel') }}" class="flex items-center gap-3 hover:opacity-90 transition group" title="กลับหน้าแผงควบคุมเจ้าหน้าที่">
+            <div class="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition">
+                <i class="fa-solid fa-graduation-cap text-2xl text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black tracking-tight flex items-center gap-2">CourseManager</h1>
+                <p class="text-[11px] text-slate-400 font-medium">ระบบจัดการรายวิชาและหน่วยกิตอัจฉริยะ</p>
+            </div>
+        </a>
+
         <!-- Profile Badge & Action Buttons -->
         <div class="flex items-center gap-2.5">
-            <!-- User Badge -->
             <div class="hidden md:flex items-center gap-2.5 bg-slate-800/80 border border-slate-700/80 px-3.5 py-1.5 rounded-2xl text-xs font-bold text-slate-200">
                 <div class="w-7 h-7 bg-indigo-500 text-white rounded-xl flex items-center justify-center text-xs font-black">
                     {{ session.get('user_name', 'เจ้าหน้าที่')[0] if session.get('user_name') else 'A' }}
@@ -60,8 +59,8 @@
                 </div>
             </div>
 
-            <!-- 🎯 วางปุ่มกดย้อนกลับตรงบรรทัดนี้ -->
-            <a href="/admin" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3.5 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 border border-slate-700/80 active:scale-95" title="ย้อนกลับหน้าแผงควบคุม">
+            <!-- 2. ปุ่มย้อนกลับ: กดแล้วกลับมาหน้าศูนย์ควบคุมเจ้าหน้าที่โดยตรง -->
+            <a href="{{ url_for('admin_panel') }}" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3.5 py-2.5 rounded-2xl text-xs transition flex items-center gap-2 border border-slate-700/80 active:scale-95" title="ย้อนกลับหน้าแผงควบคุมเจ้าหน้าที่">
                 <i class="fa-solid fa-arrow-left text-sm text-indigo-400"></i>
                 <span class="hidden sm:inline">ย้อนกลับ</span>
             </a>
