@@ -3207,7 +3207,8 @@ def admin_course_edit():
 # =========================================================
 @app.route('/admin/course/delete', methods=['POST'])
 def admin_delete_course():
-    if session.get('role') not in ['admin', 'superadmin']:
+    # อนุญาตให้ course_admin, admin และ superadmin สามารถลบได้
+    if session.get('role') not in ['admin', 'superadmin', 'course_admin']:
         return redirect(url_for('login'))
     try:
         course_id = request.form.get('course_id')
@@ -3220,7 +3221,7 @@ def admin_delete_course():
     except Exception as e:
         db.session.rollback()
         flash(f'เกิดข้อผิดพลาดในการลบ: {e}', 'error')
-
+        
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/request/action', methods=['POST'])
