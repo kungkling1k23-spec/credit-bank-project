@@ -344,10 +344,10 @@ def render_layout(content, active_page=''):
     if user_role in ['admin', 'superadmin', 'course_admin']:
         menu_items += '<p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>'
         
-        # เห็นได้เฉพาะ superadmin และ course_admin
-        if user_role in ['superadmin', 'course_admin']:
+        # เห็นได้เฉพาะ course_admin เท่านั้น
+        if user_role == 'course_admin':
             menu_items += f'<a href="/admin_panel" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active("admin_panel")}"><i class="fa-solid fa-gear text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">จัดการรายวิชา</span></a>'
-        
+
         # เห็นได้เฉพาะ superadmin และ admin ทั่วไป (ตรวจคำร้อง)
         if user_role in ['superadmin', 'admin']:
             menu_items += f'<a href="/admin/analytics" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active("admin_analytics")}"><i class="fa-solid fa-chart-line text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายงานวิเคราะห์สถิติ</span></a>'
@@ -3078,8 +3078,8 @@ def admin_panel():
         return redirect(url_for('login'))
 
     current_user = User.query.get(user_id)
-    # อนุญาตเฉพาะผู้ดูแลหลัก และ ผู้ดูแลรายวิชาเท่านั้น
-    if not current_user or current_user.role not in ['superadmin', 'course_admin']:
+    # อนุญาตเฉพาะผู้ดูแลรายวิชาเท่านั้น
+    if not current_user or current_user.role != 'course_admin':
         return redirect(url_for('home'))
 
     session['user_name'] = current_user.fullname
