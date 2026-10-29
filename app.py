@@ -123,52 +123,30 @@ with app.app_context():
     except Exception:
         pass
 
-    try:
- # 1. บัญชี Admin หลัก (Admin_rmutto)
-    main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
-    if not main_admin:
-        main_admin = User(
-            member_id='ADM001',
-            prefix='นาย',
-            fullname='ผู้ดูแลระบบหลัก',
-            id_card='0000000000000',
-            username='Admin_rmutto',
-            password=generate_password_hash('rmutto2026'),
-            role='superadmin',
-            phone="081-000-0000",
-            email="admin@rmutto.ac.th"
-    )
-    db.session.add(main_admin)
-else:
-    # บังคับอัปเดต username และ role ให้ถูกต้องเสมอ
-    main_admin.username = 'Admin_rmutto'
-    main_admin.password = generate_password_hash('rmutto2026')
-    main_admin.role = 'superadmin'
-=======
-        # 1. บัญชี Admin หลัก
-main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
-if not main_admin:
-    main_admin = User(
-        member_id='ADM001',
-        prefix='นาย',
-        fullname='ผู้ดูแลระบบหลัก',
-        id_card='0000000000000',
-        username='Admin_rmutto',
-        password=generate_password_hash('rmutto2026'),
-        role='admin',  # ปรับให้เป็น admin เพื่อให้เข้าหน้าแผงควบคุมเจ้าหน้าที่ได้
-        phone="081-000-0000",
-        email="admin@rmutto.ac.th"
-    )
-    db.session.add(main_admin)
-else:
-    # เพิ่มส่วนนี้เพื่ออัปเดตข้อมูลเดิมในฐานข้อมูลให้ตรงกัน
-    main_admin.username = 'Admin_rmutto'
-    main_admin.password = generate_password_hash('rmutto2026')
-    main_admin.role = 'admin'
->>>>>>> 1a47e69325ddf9442808855f5e0a527ef2590795
-    main_admin.fullname = 'ผู้ดูแลระบบหลัก'
+  try:
+        # 1. บัญชี Admin หลัก (Admin_rmutto)
+        main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
+        if not main_admin:
+            main_admin = User(
+                member_id='ADM001',
+                prefix='นาย',
+                fullname='ผู้ดูแลระบบหลัก',
+                id_card='0000000000000',
+                username='Admin_rmutto',
+                password=generate_password_hash('rmutto2026'),
+                role='superadmin', # ให้สิทธิ์เป็น superadmin
+                phone="081-000-0000",
+                email="admin@rmutto.ac.th"
+            )
+            db.session.add(main_admin)
+        else:
+            # บังคับอัปเดต username, password และ role ให้ถูกต้องเสมอ
+            main_admin.username = 'Admin_rmutto'
+            main_admin.password = generate_password_hash('rmutto2026')
+            main_admin.role = 'superadmin'
+            main_admin.fullname = 'ผู้ดูแลระบบหลัก'
 
-db.session.commit()
+        db.session.commit()
 
         # 2. บัญชี Admin ใหม่ (Admin-999 / รหัสผ่าน 16092547)
         admin_999 = User.query.filter_by(username='Admin-999').first()
@@ -186,13 +164,15 @@ db.session.commit()
             )
             db.session.add(admin_999)
         else:
-            # เพิ่ม 3 บรรทัดนี้เพื่ออัปเดตข้อมูลเดิมในฐานข้อมูล
+            # อัปเดตข้อมูลให้ตรงกับฐานข้อมูลปัจจุบัน
             admin_999.fullname = 'เจ้าหน้าที่ดูแลรายวิชา'
             admin_999.prefix = ''
+            admin_999.password = generate_password_hash('16092547')
 
         db.session.commit()
-    except Exception:
+    except Exception as e:
         db.session.rollback()
+        print(f"Error Database Setup: {e}")
 
     try:
         if Course.query.count() == 0:
@@ -3040,27 +3020,21 @@ def admin_login():
     username = request.form.get('username', '').strip()
     password = request.form.get('password', '').strip()
 
+    # ค้นหา user จาก Database และเช็กรหัสผ่าน
     user = User.query.filter((User.username == username) | (User.id_card == username)).first()
+    
     if user and check_password_hash(user.password, password) and user.role in ['admin', 'superadmin']:
         session['user_id'] = user.id
         session['fullname'] = user.fullname
+        session['user_name'] = user.fullname
         session['role'] = user.role
         session['member_id'] = user.member_id
         session['admin_logged_in'] = True
         return redirect(url_for('admin_panel'))
-    elif username == 'Admin-999' and password == '16092547':
-        admin_999 = User.query.filter_by(username='Admin-999').first()
-        if admin_999:
-            session['user_id'] = admin_999.id
-            session['fullname'] = 'เจ้าหน้าที่ดูแลรายวิชา'
-            session['role'] = admin_999.role
-            session['member_id'] = admin_999.member_id
-        session['admin_logged_in'] = True
-        return redirect(url_for('admin_panel'))
     else:
-        flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error')
+        flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือไม่มีสิทธิ์เข้าถึง', 'error')
         return redirect(url_for('login', role='admin'))
-
+    
 # =========================================================
 # 1. หน้าแผงควบคุมรายวิชา
 # =========================================================
