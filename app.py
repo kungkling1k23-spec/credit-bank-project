@@ -2927,11 +2927,10 @@ def login():
             
             # เช็ก Role เพื่อ Redirect ให้ถูกหน้า
             if user.role == 'course_admin':
-                return redirect(url_for('admin_panel'))
-            elif user.role in ['admin', 'superadmin']:
-                return redirect(url_for('admin_requests')) # ให้แอดมินปกติไปหน้าตรวจคำร้องแทน
+                return redirect(url_for('admin_panel')) # ผู้ดูแลรายวิชาไปหน้าจัดการวิชา
+            else:
+                return redirect(url_for('home')) # แอดมินหลัก, เจ้าหน้าที่ทั่วไป และนักศึกษา ไปหน้าแรก
                 
-            return redirect(url_for('home'))
         flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error')
 
     role_param = request.args.get('role', 'student')
