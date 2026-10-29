@@ -15,39 +15,61 @@
 </head>
 <body class="min-h-screen text-slate-800 antialiased flex flex-col">
 
-    <!-- คำนวณสถิติรวมสำหรับแสดงใน Widgets -->
+    <!-- คำนวณสถิติรวมและแยกตามสถาบัน + หมวดหมู่ -->
     {% set total_courses = courses|length %}
     {% set total_credits = namespace(val=0) %}
     {% set total_hours = namespace(val=0) %}
     {% set thaimooc_count = namespace(val=0) %}
     {% set chulamooc_count = namespace(val=0) %}
 
-    {% set cat_gen_count = namespace(val=0) %}
-    {% set cat_core_count = namespace(val=0) %}
-    {% set cat_elec_count = namespace(val=0) %}
+    <!-- ตัวแปรแยกสัดส่วนรายวิชา: ThaiMOOC / ChulaMOOC x หมวดหมู่ -->
+    {% set tm_gen_count = namespace(val=0) %}
+    {% set tm_core_count = namespace(val=0) %}
+    {% set tm_elec_count = namespace(val=0) %}
+    {% set cm_gen_count = namespace(val=0) %}
+    {% set cm_core_count = namespace(val=0) %}
+    {% set cm_elec_count = namespace(val=0) %}
 
-    {% set cat_gen_credits = namespace(val=0) %}
-    {% set cat_core_credits = namespace(val=0) %}
-    {% set cat_elec_credits = namespace(val=0) %}
+    <!-- ตัวแปรแยกสัดส่วนหน่วยกิต: ThaiMOOC / ChulaMOOC x หมวดหมู่ -->
+    {% set tm_gen_credits = namespace(val=0) %}
+    {% set tm_core_credits = namespace(val=0) %}
+    {% set tm_elec_credits = namespace(val=0) %}
+    {% set cm_gen_credits = namespace(val=0) %}
+    {% set cm_core_credits = namespace(val=0) %}
+    {% set cm_elec_credits = namespace(val=0) %}
 
     {% for c in courses %}
         {% set total_credits.val = total_credits.val + (c.credits or 0) %}
         {% set total_hours.val = total_hours.val + (c.hours or 0) %}
-        {% if c.institution == 'ThaiMOOC' %}
-            {% set thaimooc_count.val = thaimooc_count.val + 1 %}
-        {% elif c.institution == 'ChulaMOOC' %}
-            {% set chulamooc_count.val = chulamooc_count.val + 1 %}
-        {% endif %}
+        
+        {% set inst = c.institution or 'ThaiMOOC' %}
+        {% set cat = c.category or 'หมวดวิชาแกน' %}
+        {% set cred = c.credits or 3 %}
 
-        {% if c.category == 'หมวดวิชาศึกษาทั่วไป' %}
-            {% set cat_gen_count.val = cat_gen_count.val + 1 %}
-            {% set cat_gen_credits.val = cat_gen_credits.val + (c.credits or 0) %}
-        {% elif c.category == 'หมวดวิชาแกน' %}
-            {% set cat_core_count.val = cat_core_count.val + 1 %}
-            {% set cat_core_credits.val = cat_core_credits.val + (c.credits or 0) %}
-        {% elif c.category == 'หมวดวิชาเลือก' %}
-            {% set cat_elec_count.val = cat_elec_count.val + 1 %}
-            {% set cat_elec_credits.val = cat_elec_credits.val + (c.credits or 0) %}
+        {% if inst == 'ThaiMOOC' %}
+            {% set thaimooc_count.val = thaimooc_count.val + 1 %}
+            {% if cat == 'หมวดวิชาศึกษาทั่วไป' %}
+                {% set tm_gen_count.val = tm_gen_count.val + 1 %}
+                {% set tm_gen_credits.val = tm_gen_credits.val + cred %}
+            {% elif cat == 'หมวดวิชาแกน' %}
+                {% set tm_core_count.val = tm_core_count.val + 1 %}
+                {% set tm_core_credits.val = tm_core_credits.val + cred %}
+            {% elif cat == 'หมวดวิชาเลือก' %}
+                {% set tm_elec_count.val = tm_elec_count.val + 1 %}
+                {% set tm_elec_credits.val = tm_elec_credits.val + cred %}
+            {% endif %}
+        {% elif inst == 'ChulaMOOC' %}
+            {% set chulamooc_count.val = chulamooc_count.val + 1 %}
+            {% if cat == 'หมวดวิชาศึกษาทั่วไป' %}
+                {% set cm_gen_count.val = cm_gen_count.val + 1 %}
+                {% set cm_gen_credits.val = cm_gen_credits.val + cred %}
+            {% elif cat == 'หมวดวิชาแกน' %}
+                {% set cm_core_count.val = cm_core_count.val + 1 %}
+                {% set cm_core_credits.val = cm_core_credits.val + cred %}
+            {% elif cat == 'หมวดวิชาเลือก' %}
+                {% set cm_elec_count.val = cm_elec_count.val + 1 %}
+                {% set cm_elec_credits.val = cm_elec_credits.val + cred %}
+            {% endif %}
         {% endif %}
     {% endfor %}
 
@@ -163,17 +185,17 @@
             </div>
         </div>
 
-        <!-- SECTION 2: Analytics Donut Chart Dashboard (ปรับปรุงจัดระเบียบปุ่มและสัดส่วนใหม่ให้สวยงาม) -->
+        <!-- SECTION 2: Analytics Donut Chart Dashboard (แยกตามสถาบันและหมวดหมู่) -->
         <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80 space-y-6">
             <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-5">
                 <div>
                     <h3 class="text-base font-black text-slate-800 flex items-center gap-2">
                         <i class="fa-solid fa-chart-pie text-indigo-600"></i> แดชบอร์ดวิเคราะห์ข้อมูลเชิงลึก
                     </h3>
-                    <p class="text-xs text-slate-400 mt-1">เลือกมุมมองเพื่อดูสัดส่วนรายวิชาและหน่วยกิตตามหมวดหมู่แบบเรียลไทม์</p>
+                    <p class="text-xs text-slate-400 mt-1">สัดส่วนแยกตามแพลตฟอร์มและหมวดหมู่วิชาแบบเจาะลึก</p>
                 </div>
                 
-                <!-- ปุ่มสลับมุมมองกราฟ จัดให้อยู่ในกรอบสวยงาม ไม่ล้นหน้าจอ -->
+                <!-- ปุ่มสลับมุมมองกราฟ -->
                 <div class="flex bg-slate-100 p-1.5 rounded-2xl gap-1.5 w-full sm:w-auto">
                     <button onclick="switchChart('courses')" id="btnCourses" class="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm transition flex items-center justify-center gap-2">
                         <i class="fa-solid fa-book"></i> กราฟรายวิชาทั้งหมด
@@ -185,29 +207,48 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                <!-- พื้นที่แสดงกราฟโดนัท -->
+                <!-- กราฟโดนัท -->
                 <div class="lg:col-span-5 flex justify-center items-center p-4 bg-slate-50/80 rounded-3xl border border-slate-100 relative" style="height: 280px;">
                     <canvas id="analysisChart"></canvas>
                 </div>
 
-                <!-- รายละเอียดสัดส่วนหมวดหมู่แบบพรีเมียม -->
+                <!-- การ์ดสรุปย่อยแยกตามสถาบันและหมวดหมู่ -->
                 <div class="lg:col-span-7 space-y-4">
                     <h4 id="chartTitle" class="text-sm font-bold text-slate-700">
-                        สัดส่วนรายวิชาทั้งหมดแยกตามหมวดหมู่
+                        สัดส่วนแยกตามสถาบันและหมวดหมู่รายวิชา
                     </h4>
                     
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="bg-indigo-50/40 p-4 rounded-2xl border border-indigo-100 flex flex-col justify-between shadow-xs">
-                            <span class="text-[11px] font-bold text-indigo-700">หมวดวิชาศึกษาทั่วไป</span>
-                            <span id="legendGen" class="text-xl font-black text-indigo-900 mt-2">{{ cat_gen_count.val }} วิชา</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="bg-indigo-50/40 p-3.5 rounded-2xl border border-indigo-100 flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] font-bold text-indigo-600 block">ThaiMOOC</span>
+                                <span class="text-xs font-bold text-slate-700">ศึกษาทั่วไป</span>
+                            </div>
+                            <span id="legendTmGen" class="text-base font-black text-indigo-900">{{ tm_gen_count.val }} วิชา</span>
                         </div>
-                        <div class="bg-emerald-50/40 p-4 rounded-2xl border border-emerald-100 flex flex-col justify-between shadow-xs">
-                            <span class="text-[11px] font-bold text-emerald-700">หมวดวิชาแกน</span>
-                            <span id="legendCore" class="text-xl font-black text-emerald-900 mt-2">{{ cat_core_count.val }} วิชา</span>
+                        
+                        <div class="bg-emerald-50/40 p-3.5 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] font-bold text-emerald-600 block">ThaiMOOC</span>
+                                <span class="text-xs font-bold text-slate-700">หมวดวิชาแกน</span>
+                            </div>
+                            <span id="legendTmCore" class="text-base font-black text-emerald-900">{{ tm_core_count.val }} วิชา</span>
                         </div>
-                        <div class="bg-amber-50/40 p-4 rounded-2xl border border-amber-100 flex flex-col justify-between shadow-xs">
-                            <span class="text-[11px] font-bold text-amber-700">หมวดวิชาเลือก</span>
-                            <span id="legendElec" class="text-xl font-black text-amber-900 mt-2">{{ cat_elec_count.val }} วิชา</span>
+
+                        <div class="bg-amber-50/40 p-3.5 rounded-2xl border border-amber-100 flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] font-bold text-amber-600 block">ThaiMOOC</span>
+                                <span class="text-xs font-bold text-slate-700">หมวดวิชาเลือก</span>
+                            </div>
+                            <span id="legendTmElec" class="text-base font-black text-amber-900">{{ tm_elec_count.val }} วิชา</span>
+                        </div>
+
+                        <div class="bg-rose-50/40 p-3.5 rounded-2xl border border-rose-100 flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] font-bold text-rose-600 block">ChulaMOOC</span>
+                                <span class="text-xs font-bold text-slate-700">ทุกหมวดหมู่รวม</span>
+                            </div>
+                            <span id="legendCmTotal" class="text-base font-black text-rose-900">{{ chulamooc_count.val }} วิชา</span>
                         </div>
                     </div>
                 </div>
@@ -479,7 +520,7 @@
         </div>
     </div>
 
-    <!-- JavaScript -->
+    <!-- JavaScript สำหรับควบคุมกราฟโดนัทเจาะลึกตามสถาบันและหมวดหมู่ -->
     <script>
         let currentInst = 'all';
         let currentCat = 'all';
@@ -487,16 +528,36 @@
 
         const chartDataConfig = {
             courses: {
-                title: "สัดส่วนรายวิชาทั้งหมดแยกตามหมวดหมู่",
-                labels: ['หมวดวิชาศึกษาทั่วไป', 'หมวดวิชาแกน', 'หมวดวิชาเลือก'],
-                data: [{{ cat_gen_count.val }}, {{ cat_core_count.val }}, {{ cat_elec_count.val }}],
-                colors: ['#6366f1', '#10b981', '#f59e0b']
+                title: "สัดส่วนรายวิชาแยกตามสถาบันและหมวดหมู่",
+                labels: [
+                    'ThaiMOOC: หมวดวิชาศึกษาทั่วไป', 
+                    'ThaiMOOC: หมวดวิชาแกน', 
+                    'ThaiMOOC: หมวดวิชาเลือก', 
+                    'ChulaMOOC (รวม)'
+                ],
+                data: [
+                    {{ tm_gen_count.val }}, 
+                    {{ tm_core_count.val }}, 
+                    {{ tm_elec_count.val }}, 
+                    {{ chulamooc_count.val }}
+                ],
+                colors: ['#6366f1', '#10b981', '#f59e0b', '#f43f5e']
             },
             credits: {
-                title: "สัดส่วนหน่วยกิตรวมทั้งหมดแยกตามหมวดหมู่",
-                labels: ['หมวดวิชาศึกษาทั่วไป', 'หมวดวิชาแกน', 'หมวดวิชาเลือก'],
-                data: [{{ cat_gen_credits.val }}, {{ cat_core_credits.val }}, {{ cat_elec_credits.val }}],
-                colors: ['#3b82f6', '#059669', '#d97706']
+                title: "สัดส่วนหน่วยกิตรวมแยกตามสถาบันและหมวดหมู่",
+                labels: [
+                    'ThaiMOOC: หมวดวิชาศึกษาทั่วไป', 
+                    'ThaiMOOC: หมวดวิชาแกน', 
+                    'ThaiMOOC: หมวดวิชาเลือก', 
+                    'ChulaMOOC (รวม)'
+                ],
+                data: [
+                    {{ tm_gen_credits.val }}, 
+                    {{ tm_core_credits.val }}, 
+                    {{ tm_elec_credits.val }}, 
+                    {{ cm_gen_credits.val + cm_core_credits.val + cm_elec_credits.val }}
+                ],
+                colors: ['#3b82f6', '#059669', '#d97706', '#e11d48']
             }
         };
 
@@ -531,7 +592,7 @@
                                 boxWidth: 10,
                                 font: {
                                     family: 'Sarabun',
-                                    size: 11
+                                    size: 10
                                 }
                             }
                         }
@@ -549,18 +610,20 @@
                 btnCourses.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm transition flex items-center justify-center gap-2";
                 btnCredits.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-indigo-600 transition flex items-center justify-center gap-2";
                 
-                document.getElementById('legendGen').innerText = "{{ cat_gen_count.val }} วิชา";
-                document.getElementById('legendCore').innerText = "{{ cat_core_count.val }} วิชา";
-                document.getElementById('legendElec').innerText = "{{ cat_elec_count.val }} วิชา";
+                document.getElementById('legendTmGen').innerText = "{{ tm_gen_count.val }} วิชา";
+                document.getElementById('legendTmCore').innerText = "{{ tm_core_count.val }} วิชา";
+                document.getElementById('legendTmElec').innerText = "{{ tm_elec_count.val }} วิชา";
+                document.getElementById('legendCmTotal').innerText = "{{ chulamooc_count.val }} วิชา";
                 
                 renderChart('courses');
             } else {
                 btnCredits.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm transition flex items-center justify-center gap-2";
                 btnCourses.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-indigo-600 transition flex items-center justify-center gap-2";
                 
-                document.getElementById('legendGen').innerText = "{{ cat_gen_credits.val }} หน่วยกิต";
-                document.getElementById('legendCore').innerText = "{{ cat_core_credits.val }} หน่วยกิต";
-                document.getElementById('legendElec').innerText = "{{ cat_elec_credits.val }} หน่วยกิต";
+                document.getElementById('legendTmGen').innerText = "{{ tm_gen_credits.val }} หน่วยกิต";
+                document.getElementById('legendTmCore').innerText = "{{ tm_core_credits.val }} หน่วยกิต";
+                document.getElementById('legendTmElec').innerText = "{{ tm_elec_credits.val }} หน่วยกิต";
+                document.getElementById('legendCmTotal').innerText = "{{ cm_gen_credits.val + cm_core_credits.val + cm_elec_credits.val }} หน่วยกิต";
 
                 renderChart('credits');
             }
