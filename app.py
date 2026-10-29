@@ -123,7 +123,7 @@ with app.app_context():
     except Exception:
         pass
 
-  try:
+    try:
         # 1. บัญชี Admin หลัก (Admin_rmutto)
         main_admin = User.query.filter((User.username == 'Admin_rmutto') | (User.username == 'admin')).first()
         if not main_admin:
