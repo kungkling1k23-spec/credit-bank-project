@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CourseManager - ระบบจัดการรายวิชา</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Noto Sans Thai -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans Thai', sans-serif; background-color: #f8fafc; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Top Navigation Bar -->
+    <nav class="bg-slate-900 text-white px-6 py-3 flex justify-between items-center shadow-lg">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-2xl shadow-md">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide">CourseManager</h1>
+                <p class="text-[10px] text-slate-400">ระบบจัดการรายวิชาและหน่วยกิตอัจฉริยะ</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <!-- User Profile -->
+            <div class="flex items-center gap-3 bg-slate-800 px-4 py-2 rounded-full border border-slate-700">
+                <div class="w-8 h-8 rounded-full bg-indigo-400 flex items-center justify-center text-sm font-bold text-white">
+                    อ
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-xs font-bold">{{ current_user.fullname if current_user else 'เจ้าหน้าที่ดูแลรายวิชา' }}</span>
+                    <span class="text-[10px] text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-circle text-[6px]"></i> ออนไลน์</span>
+                </div>
+            </div>
+            <!-- Add Course Button -->
+            <button class="bg-indigo-500 hover:bg-indigo-600 transition-colors px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-md shadow-indigo-500/30">
+                <i class="fa-solid fa-plus"></i> เพิ่มรายวิชา
+            </button>
+            <!-- Logout -->
+            <a href="/logout" class="w-10 h-10 rounded-full border border-slate-700 hover:bg-slate-700 flex items-center justify-center transition-colors text-slate-300 hover:text-white">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- 2. Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <!-- Card 1: Total Courses -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex justify-between items-center">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">รายวิชาทั้งหมด</p>
+                    <h2 class="text-3xl font-bold text-slate-800 mt-1">{{ courses|length if courses else '0' }}</h2>
+                    <p class="text-[10px] text-indigo-600 mt-1 flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> บันทึกในบัญชีของคุณ</p>
+                </div>
+                <div class="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                </div>
+            </div>
+
+            <!-- Card 2: Total Credits -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex justify-between items-center">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">หน่วยกิตรวม</p>
+                    <!-- ตัวเลขสมมติ หรือคุณสามารถลูปคำนวณจาก backend ได้ -->
+                    <h2 class="text-3xl font-bold text-slate-800 mt-1">117</h2>
+                    <p class="text-[10px] text-emerald-600 mt-1 flex items-center gap-1"><i class="fa-solid fa-star"></i> หน่วยกิตทั้งหมด</p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+            </div>
+
+            <!-- Card 3: Total Hours -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex justify-between items-center">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">ชั่วโมงเรียนรวม</p>
+                    <h2 class="text-3xl font-bold text-slate-800 mt-1">497</h2>
+                    <p class="text-[10px] text-amber-600 mt-1 flex items-center gap-1"><i class="fa-solid fa-hourglass-half"></i> ชั่วโมงเรียนทั้งหมด</p>
+                </div>
+                <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-regular fa-clock"></i>
+                </div>
+            </div>
+
+            <!-- Card 4: Platform Stats -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                <p class="text-xs text-slate-500 font-medium mb-3">สถาบัน / ระบบ</p>
+                <div class="flex gap-2">
+                    <div class="flex-1 bg-blue-50/50 border border-blue-100 rounded-xl p-2 text-center">
+                        <p class="text-[10px] font-bold text-blue-600">ThaiMOOC</p>
+                        <p class="text-lg font-bold text-slate-700">38</p>
+                    </div>
+                    <div class="flex-1 bg-rose-50/50 border border-rose-100 rounded-xl p-2 text-center">
+                        <p class="text-[10px] font-bold text-rose-600">ChulaMOOC</p>
+                        <p class="text-lg font-bold text-slate-700">1</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Search and Filters -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-8 space-y-4">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                <input type="text" placeholder="ค้นหารหัสวิชา หรือ ชื่อวิชา..." class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+            </div>
+            
+            <div class="flex flex-wrap gap-4 items-center text-sm">
+                <!-- System Filter -->
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-500 text-xs font-medium"><i class="fa-solid fa-building-columns mr-1"></i> ระบบ:</span>
+                    <button class="px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-medium shadow-sm shadow-indigo-200">ทั้งหมด</button>
+                    <button class="px-4 py-1.5 text-slate-600 hover:bg-slate-100 rounded-full text-xs font-medium transition-colors">ThaiMOOC</button>
+                    <button class="px-4 py-1.5 text-slate-600 hover:bg-slate-100 rounded-full text-xs font-medium transition-colors">ChulaMOOC</button>
+                </div>
+                <div class="w-px h-6 bg-slate-200 mx-2 hidden md:block"></div>
+                <!-- Category Filter -->
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-500 text-xs font-medium"><i class="fa-solid fa-filter mr-1"></i> หมวดหมู่:</span>
+                    <button class="px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-medium shadow-sm shadow-indigo-200">ทั้งหมด</button>
+                    <button class="px-4 py-1.5 text-slate-600 hover:bg-slate-100 rounded-full text-xs font-medium transition-colors">หมวดวิชาศึกษาทั่วไป</button>
+                    <button class="px-4 py-1.5 text-slate-600 hover:bg-slate-100 rounded-full text-xs font-medium transition-colors">หมวดวิชาแกน</button>
+                    <button class="px-4 py-1.5 text-slate-600 hover:bg-slate-100 rounded-full text-xs font-medium transition-colors">หมวดวิชาเลือก</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Course Header -->
+        <div class="flex justify-between items-end mb-6 px-1">
+            <div class="flex items-center gap-3">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-list-ul text-indigo-500"></i> รายการรายวิชา
+                </h3>
+                <span class="bg-indigo-50 text-indigo-600 text-xs font-bold px-3 py-1 rounded-full border border-indigo-100">{{ courses|length if courses else '0' }} วิชา</span>
+            </div>
+            <p class="text-xs text-indigo-600 font-medium hidden md:block">ยินดีต้อนรับคุณ {{ current_user.fullname if current_user else 'เจ้าหน้าที่ดูแลรายวิชา' }}</p>
+        </div>
+
+        <!-- 5. Course Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {% if courses %}
+                {% for course in courses %}
+                <!-- Single Course Card (Jinja2 Loop) -->
+                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 flex flex-col group">
+                    <!-- Top badges -->
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="bg-slate-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-sm">{{ course.course_code }}</span>
+                        <div class="flex gap-2">
+                            <span class="bg-blue-50 border border-blue-100 text-blue-600 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1"><i class="fa-solid fa-building-columns"></i> {{ course.platform if course.platform else 'ThaiMOOC' }}</span>
+                            <span class="bg-emerald-50 border border-emerald-100 text-emerald-600 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1"><i class="fa-solid fa-star"></i> {{ course.credits }} หน่วยกิต</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Title & Category -->
+                    <h4 class="text-lg font-bold text-slate-800 mb-2 group-hover:text-indigo-600 transition-colors">{{ course.course_name }}</h4>
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="bg-amber-50 text-amber-700 text-[10px] font-semibold px-2 py-1 rounded flex items-center gap-1"><i class="fa-solid fa-tag"></i> {{ course.category if course.category else 'หมวดวิชาศึกษาทั่วไป' }}</span>
+                    </div>
+
+                    <!-- Hours -->
+                    <p class="text-xs font-medium text-slate-600 mb-3 flex items-center gap-1.5"><i class="fa-regular fa-clock text-indigo-400"></i> ชั่วโมงเรียน: <span class="font-bold text-slate-800">{{ course.hours if course.hours else '7' }} ชั่วโมง</span></p>
+
+                    <!-- Course Description Box -->
+                    <div class="bg-slate-50 rounded-2xl p-4 mb-5 flex-grow border border-slate-100">
+                        <p class="text-[10px] text-slate-400 mb-2 font-medium">รายละเอียดวิชา / บทเรียนออนไลน์:</p>
+                        <div class="text-xs text-slate-600 space-y-1">
+                            {{ course.description|safe if course.description else '• ไม่มีข้อมูลรายละเอียด' }}
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-end gap-2 mt-auto border-t border-slate-100 pt-4">
+                        <button class="px-4 py-2 rounded-xl text-amber-600 border border-amber-200 hover:bg-amber-50 text-xs font-bold flex items-center gap-1.5 transition-colors">
+                            <i class="fa-regular fa-pen-to-square"></i> แก้ไข
+                        </button>
+                        <button class="px-4 py-2 rounded-xl text-rose-600 border border-rose-200 hover:bg-rose-50 text-xs font-bold flex items-center gap-1.5 transition-colors">
+                            <i class="fa-regular fa-trash-can"></i> ลบ
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <!-- Empty State ถ้ายังไม่มีรายวิชา -->
+                <div class="col-span-1 md:col-span-2 lg:col-span-3 py-12 flex flex-col items-center justify-center text-slate-400 bg-white rounded-3xl border border-slate-100 border-dashed">
+                    <i class="fa-solid fa-folder-open text-4xl mb-3 text-slate-300"></i>
+                    <p class="text-sm font-medium">ยังไม่มีข้อมูลรายวิชาในระบบ</p>
+                </div>
+            {% endif %}
+
+        </div>
+    </main>
+
+</body>
+</html>
