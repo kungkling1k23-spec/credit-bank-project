@@ -158,7 +158,7 @@ with app.app_context():
                 id_card='9999999999999',
                 username='Admin-999',
                 password=generate_password_hash('16092547'),
-                role='admin',
+                role='course_admin', # <--- เปลี่ยนตรงนี้เป็น course_admin
                 phone="081-000-0001",
                 email="admin999@rmutto.ac.th"
             )
@@ -168,6 +168,7 @@ with app.app_context():
             admin_999.fullname = 'เจ้าหน้าที่ดูแลรายวิชา'
             admin_999.prefix = ''
             admin_999.password = generate_password_hash('16092547')
+            admin_999.role = 'course_admin' # <--- บังคับอัปเดต Role ด้วย
 
         db.session.commit()
     except Exception as e:
@@ -331,6 +332,51 @@ def render_layout(content, active_page=''):
         <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group mt-2 {is_active('manage_admins')}"><i class="fa-solid fa-user-shield text-lg w-6 text-center text-sky-600"></i><span class="nav-text font-bold">จัดการเจ้าหน้าที่</span></a>
         """
 
+    user_role = session.get('role', '')
+    manage_admin_menu = ""
+    if user_role == 'superadmin':
+        manage_admin_menu = f"""
+        <a href="/admin/manage_admins" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group mt-2 {is_active('manage_admins')}"><i class="fa-solid fa-user-shield text-lg w-6 text-center text-sky-600"></i><span class="nav-text font-bold">จัดการเจ้าหน้าที่</span></a>
+        """
+
+    # --- กำหนดเมนูตาม Role ---
+    menu_items = ""
+    if user_role in ['admin', 'superadmin', 'course_admin']:
+        menu_items += '<p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>'
+        
+        # เห็นได้เฉพาะ superadmin และ course_admin
+        if user_role in ['superadmin', 'course_admin']:
+            menu_items += f'<a href="/admin_panel" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active("admin_panel")}"><i class="fa-solid fa-gear text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">จัดการรายวิชา</span></a>'
+        
+        # เห็นได้เฉพาะ superadmin และ admin ทั่วไป (ตรวจคำร้อง)
+        if user_role in ['superadmin', 'admin']:
+            menu_items += f'<a href="/admin/analytics" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active("admin_analytics")}"><i class="fa-solid fa-chart-line text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายงานวิเคราะห์สถิติ</span></a>'
+            menu_items += f'<a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active("admin_students")}"><i class="fa-solid fa-users text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายชื่อนักศึกษา</span></a>'
+            menu_items += f'<a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active("admin_requests")}"><i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ตรวจสอบคำร้อง</span></a>'
+        
+        # เห็นได้ทุกคนที่เป็นเจ้าหน้าที่
+        menu_items += f'<a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active("all_courses")}"><i class="fa-solid fa-table-list text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หลักสูตรทั้งหมด</span></a>'
+        
+        if user_role == 'superadmin':
+            menu_items += manage_admin_menu
+
+    elif user_role == 'student':
+        menu_items += f"""
+        <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา IS</p>
+        <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('available_courses')}"><i class="fa-solid fa-magnifying-glass text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ค้นหารายวิชา (Search)</span></a>
+        <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('all_courses')}"><i class="fa-solid fa-table-list text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หลักสูตรทั้งหมด</span></a>
+        <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('submit_credit')}"><i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ยื่นคำขอเทียบโอน</span></a>
+        <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('credits')}"><i class="fa-solid fa-graduation-cap text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หน่วยกิตสะสม</span></a>
+        <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('history')}"><i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ประวัติคำร้องเทียบโอน</span></a>
+        """
+    else:
+        menu_items += f"""
+        <div class="pt-4 space-y-2">
+            <a href="/login" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group border border-sky-200 {is_active('login')}"><i class="fa-solid fa-right-to-bracket text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">เข้าสู่ระบบ</span></a>
+            <a href="/register" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold transition-all text-sm group shadow-md shadow-sky-400/30"><i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-100"></i><span class="nav-text">ลงทะเบียนนักศึกษา</span></a>
+        </div>
+        """
+
     sidebar_html = f"""
     <aside id="sidebar" class="sidebar-expanded sidebar-transition bg-sky-100 text-slate-700 h-screen flex flex-col fixed md:sticky top-0 z-40 shadow-xl border-r border-sky-200 hidden md:flex shrink-0 w-full md:w-auto">
         <div class="p-4 flex flex-col border-b border-sky-200 bg-sky-200/40 shrink-0">
@@ -344,37 +390,16 @@ def render_layout(content, active_page=''):
         <div class="flex-grow p-4 space-y-1.5 overflow-y-auto">
             <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-2">เมนูหลัก</p>
             <a href="/" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('home')}"><i class="fa-solid fa-house text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หน้าแรก</span></a>
+            
+            {menu_items}
 
-            {f'''
-                {f"""
-                    <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">จัดการระบบเจ้าหน้าที่</p>
-                    <a href="/admin_panel" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_panel')}"><i class="fa-solid fa-gear text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">จัดการรายวิชา</span></a>
-                    <a href="/admin/analytics" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_analytics')}"><i class="fa-solid fa-chart-line text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายงานวิเคราะห์สถิติ</span></a>
-                    <a href="/admin/students" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_students')}"><i class="fa-solid fa-users text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">รายชื่อนักศึกษา</span></a>
-                    <a href="/admin/requests" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('admin_requests')}"><i class="fa-solid fa-file-signature text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ตรวจสอบคำร้อง</span></a>
-                    <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('all_courses')}"><i class="fa-solid fa-table-list text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หลักสูตรทั้งหมด</span></a>
-                    {manage_admin_menu}
-                """ if user_role in ['admin', 'superadmin'] else f"""
-                    <p class="section-title text-[11px] font-extrabold text-sky-700 uppercase tracking-wider px-3 mb-2 pt-4">บริการนักศึกษา IS</p>
-                    <a href="/available_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('available_courses')}"><i class="fa-solid fa-magnifying-glass text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ค้นหารายวิชา (Search)</span></a>
-                    <a href="/all_courses" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('all_courses')}"><i class="fa-solid fa-table-list text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หลักสูตรทั้งหมด</span></a>
-                    <a href="/submit_credit" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('submit_credit')}"><i class="fa-solid fa-file-circle-plus text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ยื่นคำขอเทียบโอน</span></a>
-                    <a href="/credits" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('credits')}"><i class="fa-solid fa-graduation-cap text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">หน่วยกิตสะสม</span></a>
-                    <a href="/history" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group {is_active('history')}"><i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">ประวัติคำร้องเทียบโอน</span></a>
-                """}
-            ''' if session.get('user_id') else f"""
-                <div class="pt-4 space-y-2">
-                    <a href="/login" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all text-sm group border border-sky-200 {is_active('login')}"><i class="fa-solid fa-right-to-bracket text-lg w-6 text-center text-sky-500 group-hover:text-sky-700"></i><span class="nav-text">เข้าสู่ระบบ</span></a>
-                    <a href="/register" class="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold transition-all text-sm group shadow-md shadow-sky-400/30"><i class="fa-solid fa-user-plus text-lg w-6 text-center text-sky-100"></i><span class="nav-text">ลงทะเบียนนักศึกษา</span></a>
-                </div>
-            """}
         </div>
 
         {f'''
             <div class="p-4 border-t border-sky-200 bg-sky-200/40 shrink-0">
                 <a href="/profile" class="flex items-center gap-3 p-2 rounded-2xl transition-all group border {'border-sky-300 bg-sky-200/80' if active_page == 'profile' else 'border-transparent hover:bg-sky-200/60'}">
                     <div class="w-9 h-9 rounded-xl bg-sky-200 text-sky-700 font-bold flex items-center justify-center shrink-0"><i class="fa-regular fa-user"></i></div>
-                    <div class="flex flex-col min-w-0 nav-text"><span class="text-xs font-bold text-slate-800 truncate">{escape(session.get('fullname', 'ผู้ใช้งาน'))}</span><span class="text-[10px] text-sky-700 capitalize font-medium">{'เจ้าหน้าที่' if session.get('role') in ['admin', 'superadmin'] else 'นักศึกษา'}</span></div>
+                    <div class="flex flex-col min-w-0 nav-text"><span class="text-xs font-bold text-slate-800 truncate">{escape(session.get('fullname', 'ผู้ใช้งาน'))}</span><span class="text-[10px] text-sky-700 capitalize font-medium">{'นักศึกษา' if session.get('role') == 'student' else 'เจ้าหน้าที่'}</span></div>
                 </a>
                 <a href="/logout" class="mt-2 flex items-center gap-3 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all"><i class="fa-solid fa-arrow-right-from-bracket text-sm w-6 text-center"></i><span class="nav-text">ออกจากระบบ</span></a>
             </div>
@@ -2896,11 +2921,16 @@ def login():
         if user and check_password_hash(user.password, password_input):
             session['user_id'] = user.id
             session['fullname'] = user.fullname
-            session['user_name'] = user.fullname  # 🎯 เพิ่มบรรทัดนี้เพื่อให้ตรงกับ session.get('user_name') ในหน้า admin.html
+            session['user_name'] = user.fullname
             session['role'] = user.role
             session['member_id'] = user.member_id
-            if user.role in ['admin', 'superadmin']:
+            
+            # เช็ก Role เพื่อ Redirect ให้ถูกหน้า
+            if user.role == 'course_admin':
                 return redirect(url_for('admin_panel'))
+            elif user.role in ['admin', 'superadmin']:
+                return redirect(url_for('admin_requests')) # ให้แอดมินปกติไปหน้าตรวจคำร้องแทน
+                
             return redirect(url_for('home'))
         flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error')
 
@@ -3020,17 +3050,21 @@ def admin_login():
     username = request.form.get('username', '').strip()
     password = request.form.get('password', '').strip()
 
-    # ค้นหา user จาก Database และเช็กรหัสผ่าน
     user = User.query.filter((User.username == username) | (User.id_card == username)).first()
     
-    if user and check_password_hash(user.password, password) and user.role in ['admin', 'superadmin']:
+    if user and check_password_hash(user.password, password) and user.role in ['admin', 'superadmin', 'course_admin']:
         session['user_id'] = user.id
         session['fullname'] = user.fullname
         session['user_name'] = user.fullname
         session['role'] = user.role
         session['member_id'] = user.member_id
         session['admin_logged_in'] = True
-        return redirect(url_for('admin_panel'))
+        
+        # ให้ผู้ดูแลรายวิชาไป CourseManager นอกนั้นไปหน้าตรวจคำร้อง
+        if user.role == 'course_admin':
+            return redirect(url_for('admin_panel'))
+        else:
+            return redirect(url_for('admin_requests'))
     else:
         flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือไม่มีสิทธิ์เข้าถึง', 'error')
         return redirect(url_for('login', role='admin'))
@@ -3040,22 +3074,21 @@ def admin_login():
 # =========================================================
 @app.route('/admin_panel')
 def admin_panel():
-    # 1. เช็กว่าล็อกอินหรือยัง
     user_id = session.get('user_id')
     if not user_id:
         return redirect(url_for('login'))
 
-    # 2. ดึงข้อมูลจาก user_id ที่ล็อกอินอยู่จริง (ป้องกันการดึง Admin-999 มาแสดงผิดคน)
     current_user = User.query.get(user_id)
-    if not current_user or current_user.role not in ['admin', 'superadmin']:
+    # อนุญาตเฉพาะผู้ดูแลหลัก และ ผู้ดูแลรายวิชาเท่านั้น
+    if not current_user or current_user.role not in ['superadmin', 'course_admin']:
         return redirect(url_for('home'))
 
-    # อัปเดต session name ให้ตรงกับบัญชีปัจจุบัน
     session['user_name'] = current_user.fullname
 
-    # ... (โค้ดดึงข้อมูลรายวิชา/คำร้องเดิมของคุณ) ...
+    courses = Course.query.all()
     
-    return render_template('admin.html', current_user=current_user)
+    return render_template('admin.html', current_user=current_user, courses=courses)
+
 # =========================================================
 # 2. เพิ่มรายวิชาใหม่ (Add) แก้ไขรายวิชา (Edit)
 # =========================================================
