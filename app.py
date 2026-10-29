@@ -3086,7 +3086,7 @@ def admin_panel():
 
     courses = Course.query.all()
     
-    return render_template('admin.html', current_user=current_user, courses=courses)
+    return render_template('course_manager.html', current_user=current_user, courses=courses)
 
 # =========================================================
 # 2. เพิ่มรายวิชาใหม่ (Add) แก้ไขรายวิชา (Edit)
