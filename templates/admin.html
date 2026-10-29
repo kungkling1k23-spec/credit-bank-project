@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js สำหรับทำกราฟโดนัท -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
     </style>
@@ -20,6 +22,15 @@
     {% set thaimooc_count = namespace(val=0) %}
     {% set chulamooc_count = namespace(val=0) %}
 
+    <!-- ตัวแปรเก็บจำนวนแยกตามหมวดหมู่ สำหรับทำกราฟ -->
+    {% set cat_gen_count = namespace(val=0) %}
+    {% set cat_core_count = namespace(val=0) %}
+    {% set cat_elec_count = namespace(val=0) %}
+
+    {% set cat_gen_credits = namespace(val=0) %}
+    {% set cat_core_credits = namespace(val=0) %}
+    {% set cat_elec_credits = namespace(val=0) %}
+
     {% for c in courses %}
         {% set total_credits.val = total_credits.val + (c.credits or 0) %}
         {% set total_hours.val = total_hours.val + (c.hours or 0) %}
@@ -28,9 +39,20 @@
         {% elif c.institution == 'ChulaMOOC' %}
             {% set chulamooc_count.val = chulamooc_count.val + 1 %}
         {% endif %}
+
+        {% if c.category == 'หมวดวิชาศึกษาทั่วไป' %}
+            {% set cat_gen_count.val = cat_gen_count.val + 1 %}
+            {% set cat_gen_credits.val = cat_gen_credits.val + (c.credits or 0) %}
+        {% elif c.category == 'หมวดวิชาแกน' %}
+            {% set cat_core_count.val = cat_core_count.val + 1 %}
+            {% set cat_core_credits.val = cat_core_credits.val + (c.credits or 0) %}
+        {% elif c.category == 'หมวดวิชาเลือก' %}
+            {% set cat_elec_count.val = cat_elec_count.val + 1 %}
+            {% set cat_elec_credits.val = cat_elec_credits.val + (c.credits or 0) %}
+        {% endif %}
     {% endfor %}
 
-<!-- Header Navbar (นำปุ่มย้อนกลับออกแล้ว) -->
+<!-- Header Navbar -->
 <header class="bg-[#0f172a] text-white shadow-xl sticky top-0 z-40 border-b border-slate-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         
@@ -92,9 +114,8 @@
           {% endif %}
         {% endwith %}
 
-        <!-- SECTION 1: Summary Statistics Cards (Widgets 4 ช่อง) -->
+        <!-- SECTION 1: Summary Statistics Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Card 1: รายวิชาทั้งหมด -->
             <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between hover:shadow-md transition">
                 <div class="space-y-1">
                     <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">รายวิชาทั้งหมด</p>
@@ -108,7 +129,6 @@
                 </div>
             </div>
 
-            <!-- Card 2: หน่วยกิตรวม -->
             <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between hover:shadow-md transition">
                 <div class="space-y-1">
                     <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">หน่วยกิตรวม</p>
@@ -122,7 +142,6 @@
                 </div>
             </div>
 
-            <!-- Card 3: ชั่วโมงเรียนรวม -->
             <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between hover:shadow-md transition">
                 <div class="space-y-1">
                     <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ชั่วโมงเรียนรวม</p>
@@ -136,7 +155,6 @@
                 </div>
             </div>
 
-            <!-- Card 4: สถาบัน / ระบบ -->
             <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md transition space-y-2">
                 <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">สถาบัน / ระบบ</p>
                 <div class="grid grid-cols-2 gap-2 text-center">
@@ -152,18 +170,66 @@
             </div>
         </div>
 
-        <!-- SECTION 2: Filter and Search Bar -->
+        <!-- SECTION 2: Analytics Donut Chart Dashboard (กราฟโดนัท 2 มุมมองตามต้องการ) -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h3 class="text-base font-black text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-indigo-600"></i> แดชบอร์ดวิเคราะห์ข้อมูลเชิงลึก
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">เลือกมุมมองเพื่อดูสัดส่วนรายวิชาและหน่วยกิตตามหมวดหมู่</p>
+                </div>
+                
+                <!-- ปุ่มสลับมุมมองกราฟ -->
+                <div class="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
+                    <button onclick="switchChart('courses')" id="btnCourses" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm transition flex items-center gap-2">
+                        <i class="fa-solid fa-book"></i> กราฟรายวิชาทั้งหมด
+                    </button>
+                    <button onclick="switchChart('credits')" id="btnCredits" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-indigo-600 transition flex items-center gap-2">
+                        <i class="fa-solid fa-award"></i> กราฟหน่วยกิตรวม
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                <!-- พื้นที่แสดงกราฟโดนัท -->
+                <div class="lg:col-span-5 flex justify-center p-4 bg-slate-50 rounded-2xl border border-slate-100 relative" style="height: 260px;">
+                    <canvas id="analysisChart"></canvas>
+                </div>
+
+                <!-- รายละเอียดสัดส่วนหมวดหมู่ -->
+                <div class="lg:col-span-7 space-y-4">
+                    <h4 id="chartTitle" class="text-sm font-bold text-slate-700 border-b border-slate-100 pb-2">
+                        สัดส่วนรายวิชาทั้งหมดแยกตามหมวดหมู่
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                            <span class="text-[11px] font-bold text-slate-400">หมวดวิชาศึกษาทั่วไป</span>
+                            <span id="legendGen" class="text-lg font-black text-indigo-600 mt-1">{{ cat_gen_count.val }} วิชา</span>
+                        </div>
+                        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                            <span class="text-[11px] font-bold text-slate-400">หมวดวิชาแกน</span>
+                            <span id="legendCore" class="text-lg font-black text-emerald-600 mt-1">{{ cat_core_count.val }} วิชา</span>
+                        </div>
+                        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                            <span class="text-[11px] font-bold text-slate-400">หมวดวิชาเลือก</span>
+                            <span id="legendElec" class="text-lg font-black text-amber-600 mt-1">{{ cat_elec_count.val }} วิชา</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 3: Filter and Search Bar -->
         <div class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-4">
-            <!-- Search Field -->
             <div class="relative flex-grow max-w-md w-full">
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                 <input type="text" id="searchInput" onkeyup="filterCourses()" placeholder="ค้นหารหัสวิชา หรือ ชื่อวิชา..." 
                        class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 focus:bg-white transition">
             </div>
 
-            <!-- Filters -->
             <div class="flex flex-wrap items-center gap-3 text-xs font-bold">
-                <!-- Institution Filter -->
                 <div class="flex items-center gap-1.5 bg-slate-50 p-1 border border-slate-200 rounded-2xl">
                     <span class="text-[11px] text-slate-400 px-2 font-extrabold"><i class="fa-solid fa-building-columns mr-1"></i>ระบบ:</span>
                     <button type="button" onclick="setInstFilter('all')" class="inst-filter-btn px-3 py-1.5 rounded-xl bg-indigo-600 text-white transition" data-inst="all">ทั้งหมด</button>
@@ -171,7 +237,6 @@
                     <button type="button" onclick="setInstFilter('ChulaMOOC')" class="inst-filter-btn px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-200 transition" data-inst="ChulaMOOC">ChulaMOOC</button>
                 </div>
 
-                <!-- Category Filter -->
                 <div class="flex items-center gap-1.5 bg-slate-50 p-1 border border-slate-200 rounded-2xl">
                     <span class="text-[11px] text-slate-400 px-2 font-extrabold"><i class="fa-solid fa-filter mr-1"></i>หมวดหมู่:</span>
                     <button type="button" onclick="setCatFilter('all')" class="cat-filter-btn px-3 py-1.5 rounded-xl bg-indigo-600 text-white transition" data-cat="all">ทั้งหมด</button>
@@ -196,7 +261,7 @@
             </p>
         </div>
 
-        <!-- SECTION 3: Course Cards Grid -->
+        <!-- SECTION 4: Course Cards Grid -->
         <div id="courseGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for course in courses %}
             <div class="course-card bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
@@ -205,7 +270,6 @@
                  data-inst="{{ course.institution or 'ThaiMOOC' }}"
                  data-cat="{{ course.category or 'หมวดวิชาแกน' }}">
                 <div class="space-y-4">
-                    <!-- Badges -->
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <span class="font-mono text-xs font-black bg-slate-900 text-white px-3 py-1 rounded-xl tracking-wider">
                             {{ course.course_code }}
@@ -220,7 +284,6 @@
                         </div>
                     </div>
 
-                    <!-- Course Title & Category -->
                     <div>
                         <h3 class="text-lg font-black text-slate-800 leading-snug">{{ course.course_name }}</h3>
                         <span class="inline-block mt-2 text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-lg">
@@ -228,7 +291,6 @@
                         </span>
                     </div>
 
-                    <!-- Hours & Description -->
                     <div class="space-y-2 pt-2 border-t border-slate-100">
                         <p class="text-xs font-bold text-slate-600 flex items-center gap-1.5">
                             <i class="fa-regular fa-clock text-indigo-500"></i>
@@ -244,7 +306,6 @@
                     </div>
                 </div>
 
-                <!-- Action Buttons: แก้ไข & ลบ -->
                 <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-end gap-2">
                     <button type="button" 
                             data-code="{{ course.course_code }}"
@@ -270,7 +331,7 @@
             {% endfor %}
         </div>
 
-        <!-- SECTION 4: Empty State Box (กรณีไม่พบวิชาตรงตามเงื่อนไขค้นหา) -->
+        <!-- Empty State Box -->
         <div id="emptyState" class="hidden col-span-full py-16 text-center bg-white rounded-3xl border border-dashed border-slate-300 p-8 space-y-4 shadow-sm">
             <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center mx-auto text-2xl">
                 <i class="fa-solid fa-folder-open"></i>
@@ -286,7 +347,7 @@
 
     </main>
 
-    <!-- Modal 1: เพิ่มรายวิชา (Add Modal) -->
+    <!-- Modal 1: เพิ่มรายวิชา -->
     <div id="addModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative space-y-5 border border-slate-100">
             <button onclick="closeAddModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
@@ -344,7 +405,7 @@
 
                 <div>
                     <label class="block mb-1">รายละเอียดวิชา / บทเรียนออนไลน์</label>
-                    <textarea name="description" rows="4" placeholder="พิมพ์รายชื่อบทเรียนย่อย (กด Enter ขึ้นบรรทัดใหม่) เช่น&#10;• ชีวิตและการสร้างคุณค่า&#10;• การคิดสร้างสรรค์ เพื่อการพัฒนาตนเอง" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 resize-y font-medium text-xs"></textarea>
+                    <textarea name="description" rows="4" placeholder="พิมพ์รายชื่อบทเรียนย่อย (กด Enter ขึ้นบรรทัดใหม่)" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-indigo-500 resize-y font-medium text-xs"></textarea>
                 </div>
 
                 <div class="pt-4 border-t border-slate-100 flex gap-3">
@@ -355,7 +416,7 @@
         </div>
     </div>
 
-    <!-- Modal 2: แก้ไขรายวิชา (Edit Modal) -->
+    <!-- Modal 2: แก้ไขรายวิชา -->
     <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative space-y-5 border border-slate-100">
             <button onclick="closeEditModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
@@ -415,7 +476,7 @@
 
                 <div>
                     <label class="block mb-1">รายละเอียดวิชา / บทเรียนออนไลน์</label>
-                    <textarea name="description" id="edit_description" rows="4" placeholder="พิมพ์รายชื่อบทเรียนย่อย (กด Enter ขึ้นบรรทัดใหม่)" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500 resize-y font-medium text-xs"></textarea>
+                    <textarea name="description" id="edit_description" rows="4" class="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:border-amber-500 resize-y font-medium text-xs"></textarea>
                 </div>
 
                 <div class="pt-4 border-t border-slate-100 flex gap-3">
@@ -426,14 +487,99 @@
         </div>
     </div>
 
-    <!-- JavaScript For Modals & Real-time Search/Filters -->
+    <!-- JavaScript สำหรับควบคุมกราฟโดนัทและระบบกรอง -->
     <script>
         let currentInst = 'all';
         let currentCat = 'all';
+        let myChart = null;
+
+        // ข้อมูลจริงที่ดึงจาก Backend มาผูกกับ Chart.js
+        const chartDataConfig = {
+            courses: {
+                title: "สัดส่วนรายวิชาทั้งหมดแยกตามหมวดหมู่",
+                labels: ['หมวดวิชาศึกษาทั่วไป', 'หมวดวิชาแกน', 'หมวดวิชาเลือก'],
+                data: [{{ cat_gen_count.val }}, {{ cat_core_count.val }}, {{ cat_elec_count.val }}],
+                colors: ['#6366f1', '#10b981', '#f59e0b']
+            },
+            credits: {
+                title: "สัดส่วนหน่วยกิตรวมทั้งหมดแยกตามหมวดหมู่",
+                labels: ['หมวดวิชาศึกษาทั่วไป', 'หมวดวิชาแกน', 'หมวดวิชาเลือก'],
+                data: [{{ cat_gen_credits.val }}, {{ cat_core_credits.val }}, {{ cat_elec_credits.val }}],
+                colors: ['#3b82f6', '#059669', '#d97706']
+            }
+        };
+
+        function renderChart(type) {
+            const ctx = document.getElementById('analysisChart').getContext('2d');
+            const config = chartDataConfig[type];
+
+            document.getElementById('chartTitle').innerText = config.title;
+
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            myChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: config.labels,
+                    datasets: [{
+                        data: config.data,
+                        backgroundColor: config.colors,
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 10,
+                                font: {
+                                    family: 'Sarabun',
+                                    size: 11
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        function switchChart(type) {
+            const btnCourses = document.getElementById('btnCourses');
+            const btnCredits = document.getElementById('btnCredits');
+
+            if (type === 'courses') {
+                btnCourses.className = "px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm transition flex items-center gap-2";
+                btnCredits.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-indigo-600 transition flex items-center gap-2";
+                
+                // อัปเดตตัวเลขในกล่องคำอธิบายให้เป็นจำนวนวิชา
+                document.getElementById('legendGen').innerText = "{{ cat_gen_count.val }} วิชา";
+                document.getElementById('legendCore').innerText = "{{ cat_core_count.val }} วิชา";
+                document.getElementById('legendElec').innerText = "{{ cat_elec_count.val }} วิชา";
+                
+                renderChart('courses');
+            } else {
+                btnCredits.className = "px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm transition flex items-center gap-2";
+                btnCourses.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-indigo-600 transition flex items-center gap-2";
+                
+                // อัปเดตตัวเลขในกล่องคำอธิบายให้เป็นหน่วยกิต
+                document.getElementById('legendGen').innerText = "{{ cat_gen_credits.val }} หน่วยกิต";
+                document.getElementById('legendCore').innerText = "{{ cat_core_credits.val }} หน่วยกิต";
+                document.getElementById('legendElec').innerText = "{{ cat_elec_credits.val }} หน่วยกิต";
+
+                renderChart('credits');
+            }
+        }
 
         // Filter Logic
         function filterCourses() {
-            const query = document.getElementById('searchInput').value.toLowerCase().strip ? document.getElementById('searchInput').value.toLowerCase().trim() : document.getElementById('searchInput').value.toLowerCase();
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
             const cards = document.querySelectorAll('.course-card');
             let visibleCount = 0;
 
@@ -455,10 +601,7 @@
                 }
             });
 
-            // Update visible badge
             document.getElementById('visible-count-badge').innerText = visibleCount + ' วิชา';
-
-            // Show empty state if 0 matches
             const emptyState = document.getElementById('emptyState');
             if (visibleCount === 0) {
                 emptyState.classList.remove('hidden');
@@ -515,8 +658,9 @@
             document.getElementById('editModal').classList.add('hidden');
         }
 
-        // Initialize state check on load
+        // Initialize on load
         document.addEventListener('DOMContentLoaded', function() {
+            renderChart('courses');
             filterCourses();
         });
     </script>
